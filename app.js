@@ -78,27 +78,49 @@ class App {
     }
 
     /**
-     * MOCK LOGIN - To be replaced by Backend Call
+     * LOGIN - Call Backend
      */
     async handleLogin() {
         const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value; // In real app, hash this or send securely
+        const password = document.getElementById('password').value;
+        const submitBtn = this.loginForm.querySelector('button[type="submit"]');
 
-        // Mock Validation for now
-        // TODO: Replace with fetch(API_URL, { action: 'login', ... })
-        setTimeout(() => {
-            if (username.length > 3) {
-                const mockUser = {
-                    name: username.charAt(0).toUpperCase() + username.slice(1),
-                    role: username === 'admin' ? 'Master' : 'Operador',
-                    permissions: username === 'admin' ? ['dashboard', 'dispatch', 'movements', 'users'] : ['dashboard', 'dispatch']
-                };
+        const originalBtnText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Conectando...';
+        submitBtn.disabled = true;
 
-                this.setUser(mockUser);
+        try {
+            // IMPORTANT: Request as text/plain to avoid CORS Preflight (OPTIONS) which GAS doesn't handle.
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow', // GAS redirects 302
+                headers: {
+                    "Content-Type": "text/plain;charset=utf-8"
+                },
+                body: JSON.stringify({
+                    action: 'login',
+                    username: username,
+                    password: password
+                })
+            });
+
+            if (!response.ok) throw new Error('Error de red al conectar con el servidor');
+
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                this.setUser(result.user);
             } else {
-                alert('Usuario inválido (Mock: usa un nombre > 3 letras)');
+                alert(result.message || 'Error al iniciar sesión');
             }
-        }, 500);
+
+        } catch (error) {
+            console.error(error);
+            alert('Error : ' + error.message);
+        } finally {
+            submitBtn.innerHTML = originalBtnText;
+            submitBtn.disabled = false;
+        }
     }
 
     setUser(user) {
@@ -183,8 +205,7 @@ class App {
         // Update Buttons state
         const buttons = document.querySelectorAll('#view-dispatch .btn-secondary');
         buttons.forEach(btn => btn.classList.remove('active'));
-        // Find the button that called this (dirty but quick way for now, or pass event)
-        // For now just re-render is fine.
+        // In a real implementation we would identify the clicked button specifically
 
         if (tabName === 'requests') {
             this.renderDispatchRequests(container);
