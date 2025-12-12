@@ -824,8 +824,9 @@ class App {
 
 // Initialize App
 // Initialize App
+let app;
 try {
-    const app = new App();
+    app = new App();
 } catch (err) {
     console.error('Critical Init Error:', err);
     alert('Error crítico al iniciar la aplicación: ' + err.message);
