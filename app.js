@@ -320,6 +320,7 @@ class App {
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
+                redirect: 'follow', // FIXED: Required for GAS
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({ action: 'getProducts' })
             });
@@ -347,7 +348,17 @@ class App {
         } catch (e) {
             console.error('Error fetching products', e);
             const container = document.getElementById('zone-workspace');
-            if (container) container.innerHTML = '<p style="color:red; text-align:center;">Error al cargar inventario. Revise su conexión.</p>';
+            if (container) {
+                container.innerHTML = `
+                    <div style="text-align:center; padding:2rem; color:red;">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Error al cargar inventario.
+                        <br><br>
+                        <button class="btn-sm" onclick="app.fetchProducts()">
+                            <i class="fa-solid fa-rotate-right"></i> Reintentar
+                        </button>
+                    </div>
+                `;
+            }
         }
     }
 
@@ -355,6 +366,7 @@ class App {
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
+                redirect: 'follow', // FIXED
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({ action: 'getDispatchRequests' })
             });
@@ -404,7 +416,17 @@ class App {
 
     renderProductMasterList() {
         if (!this.data.products || Object.keys(this.data.products).length === 0) {
-            return '<div style="text-align:center; padding:2rem; color:#666;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando inventario...</div>';
+            return `
+                <div style="text-align:center; padding:2rem; color:#666;">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Cargando inventario...
+                    <div style="margin-top:1rem;">
+                        <small>¿Tarda demasiado?</small><br>
+                        <button class="btn-sm" style="margin-top:0.5rem;" onclick="app.fetchProducts()">
+                            <i class="fa-solid fa-rotate"></i> Forzar Recarga
+                        </button>
+                    </div>
+                </div>
+            `;
         }
 
         const productCards = Object.entries(this.data.products).map(([code, product]) => {
@@ -589,7 +611,7 @@ class App {
         try {
             await fetch(API_URL, {
                 method: 'POST',
-                redirect: 'follow', // Important for GAS
+                redirect: 'follow', // FIXED: Required for GAS
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({
                     action: 'updateRequests',
@@ -629,6 +651,7 @@ class App {
         try {
             await fetch(API_URL, {
                 method: 'POST',
+                redirect: 'follow', // FIXED: Required for GAS
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({ action: 'updateRequests', payload: toDispatch })
             });
@@ -638,7 +661,9 @@ class App {
             alert('Despacho realizado con éxito');
 
         } catch (e) {
-            alert('Error al despachar');
+            console.error(e);
+            alert('Error al despachar: ' + e.message);
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Despachar Todo'; // Reset button
         }
     }
 
@@ -769,6 +794,10 @@ class App {
         this.modalContainer.innerHTML = '';
     }
 }
+
+// Initialize App
+const app = new App();
+
 
 // Initialize App
 const app = new App();
