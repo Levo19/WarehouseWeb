@@ -145,7 +145,6 @@ class App {
         // Update UI
         this.userName.textContent = user.name;
         this.userRole.textContent = user.role;
-        this.userInitials.textContent = user.name.substring(0, 2).toUpperCase();
 
         // Setup Permissions
         this.setupPermissions();
@@ -153,6 +152,9 @@ class App {
         // Show App
         this.showApp();
         this.navigateTo('dashboard');
+
+        // Start Pre-load with visual feedback
+        this.loadInitialData();
     }
 
     setupPermissions() {
@@ -287,10 +289,28 @@ class App {
      */
     async loadInitialData() {
         console.log('Loading Initial Data...');
-        // Load Products
-        this.fetchProducts();
-        // Load Requests
-        this.fetchRequests();
+        const loadingToast = document.createElement('div');
+        loadingToast.id = 'loading-toast';
+        loadingToast.innerHTML = '<i class="fa-solid fa-sync fa-spin"></i> Sincronizando datos...';
+        loadingToast.style.cssText = `
+            position: fixed; bottom: 20px; right: 20px; 
+            background: var(--primary-color); color: white; 
+            padding: 10px 20px; border-radius: 50px; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 2000;
+            font-size: 0.9rem; transition: opacity 0.5s;
+        `;
+        document.body.appendChild(loadingToast);
+
+        await Promise.all([
+            this.fetchProducts(),
+            this.fetchRequests()
+        ]);
+
+        loadingToast.innerHTML = '<i class="fa-solid fa-check"></i> Datos sincronizados';
+        setTimeout(() => {
+            loadingToast.style.opacity = '0';
+            setTimeout(() => loadingToast.remove(), 500);
+        }, 2000);
     }
 
     async fetchProducts() {
@@ -338,8 +358,11 @@ class App {
     }
 
     getProductDescription(code) {
-        // Updated accessor for new structure
         return this.data.products[code]?.desc || 'Producto Desconocido';
+    }
+
+    getProductStock(code) {
+        return this.data.products[code]?.stock || 0;
     }
 
     /**
@@ -401,7 +424,7 @@ class App {
         // Highlight active zone logic
         const container = document.getElementById('zone-workspace');
 
-        // Update Buttons (Manually for now since they are re-rendered)
+        // Update Buttons
         const buttons = document.querySelectorAll('.zone-selection-header .btn-secondary');
         buttons.forEach(b => {
             if (b.innerText.toLowerCase().includes(zone.replace('zona', ''))) {
@@ -424,10 +447,8 @@ class App {
                     <h4 style="margin:0;">Gestionando: <span style="color:var(--primary-color); text-transform:uppercase;">${zone}</span></h4>
                     <button class="btn-sm" onclick="app.fetchRequests()"><i class="fa-solid fa-rotate"></i> Actualizar</button>
                 </div>
-                
-                <div id="zone-content">
-                    <!-- Content injected here -->
-                </div>
+                <!-- Content Area -->
+                <div id="zone-content"></div>
             </div>
         `;
 
@@ -436,7 +457,24 @@ class App {
 
     renderZonePickup(zone, container) {
         // Filter from LOCAL Cache
-        const zoneRequests = this.data.requests.filter(r => r.usuario === zone);
+        // Criteria: User matches Zone, Quantity > 0, Date is TODAY
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        const todayStr = `${day}/${month}/${year}`;
+
+        const zoneRequests = this.data.requests.filter(r => {
+            const datePart = r.fecha.split(' ')[0]; // Assumes dd/MM/yyyy
+            // Normalize dates for comparison (remove leading zeros if needed)
+            // simplified check: just includes
+            const isToday = r.fecha.includes(`${day}/${month}/${year}`) || r.fecha.includes(`${now.getDate()}/${now.getMonth() + 1}/${year}`);
+
+            return r.usuario === zone &&
+                parseFloat(r.cantidad) > 0 &&
+                isToday;
+        });
+
         const pending = zoneRequests.filter(r => r.categoria === 'solicitado');
         // Separated items are technically "done" for this stage if we hide them? 
         // User said: "abajo debe aparecer solo... los pendientes".
@@ -455,13 +493,16 @@ class App {
                         <div class="card-code">${req.codigo}</div>
                         <div class="card-desc">${this.getProductDescription(req.codigo)}</div>
                     </div>
+                    <div style="font-weight:bold; color:var(--primary-color);">
+                        <i class="fa-solid fa-cubes"></i> ${this.getProductStock(req.codigo)}
+                    </div>
                 </div>
                 <div class="card-actions" style="justify-content: space-between; margin-top:0.5rem;">
                     <div style="display:flex; align-items:center; gap:0.5rem;">
                          <label style="font-size:0.8rem;">Cant:</label>
                          <input type="number" id="qty-${req.idSolicitud}" class="qty-input" value="${req.cantidad}" min="0.5" step="1">
                     </div>
-                    <button class="btn-primary" style="padding: 0.4rem 0.8rem; font-size:0.85rem;" onclick="app.moveToSeparated('${req.idSolicitud}')">
+                    <button class="btn-primary" style="padding: 0.4rem 0.8rem; font-size:0.85rem;" onclick="app.moveToSeparated('${req.idSolicitud}', this)">
                         Separar <i class="fa-solid fa-arrow-right"></i>
                     </button>
                 </div>
@@ -507,13 +548,14 @@ class App {
         `;
     }
 
-    async moveToSeparated(id) {
+    async moveToSeparated(id, btnElement) {
         const qtyInput = document.getElementById(`qty-${id}`);
         const newQty = qtyInput.value;
-        const btn = qtyInput.nextElementSibling; // The button
 
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-        btn.disabled = true;
+        // UI Feedback
+        const originalText = btnElement.innerHTML;
+        btnElement.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+        btnElement.disabled = true;
 
         try {
             await fetch(API_URL, {
