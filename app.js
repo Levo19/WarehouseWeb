@@ -553,169 +553,208 @@ class App {
     }
 
     renderZonePickup(zone, container) {
-        // Filter from LOCAL Cache
-        // Criteria: User matches Zone, Quantity > 0, Date is TODAY
-        const now = new Date();
-        const day = String(now.getDate()).padStart(2, '0');
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const year = now.getFullYear();
-        const todayStr = `${day}/${month}/${year}`;
+        // Aggregate Data Logic
+        // Map<ProductCode, { requested: 0, separated: 0, desc, uniqueIds: [] }>
+        const aggregator = {};
 
-        const zoneRequests = this.data.requests.filter(r => {
-            const datePart = r.fecha.split(' ')[0]; // Assumes dd/MM/yyyy
-            // Normalize dates for comparison (remove leading zeros if needed)
-            // simplified check: just includes
-            const isToday = r.fecha.includes(`${day}/${month}/${year}`) || r.fecha.includes(`${now.getDate()}/${now.getMonth() + 1}/${year}`);
+        // Normalize Zone Name
+        const targetZone = zone.toLowerCase(); // 'zona1', 'zona2'
 
-            return r.usuario === zone &&
-                parseFloat(r.cantidad) > 0 &&
-                isToday;
+        this.data.requests.forEach(req => {
+            // Check Zone
+            if (req.usuario.toLowerCase() !== targetZone) return;
+
+            // Initialize Aggregator Item
+            if (!aggregator[req.codigo]) {
+                const product = this.data.products[req.codigo] || { desc: 'Producto Desconocido' };
+                aggregator[req.codigo] = {
+                    code: req.codigo,
+                    desc: product.desc,
+                    requested: 0, // Sum of 'solicitado'
+                    separated: 0, // Sum of 'separado'
+                    reqIds: []    // To track at least one ID for API call
+                };
+            }
+
+            const qty = parseFloat(req.cantidad);
+            if (req.categoria === 'solicitado') {
+                aggregator[req.codigo].requested += qty;
+                aggregator[req.codigo].reqIds.push(req.idSolicitud);
+            } else if (req.categoria === 'separado') {
+                aggregator[req.codigo].separated += qty;
+            }
         });
 
-        const pending = zoneRequests.filter(r => r.categoria === 'solicitado');
-        // Separated items are technically "done" for this stage if we hide them? 
-        // User said: "abajo debe aparecer solo... los pendientes".
-        // And "columna 'listos' debe esconderse si no hay nada".
-        const separated = zoneRequests.filter(r => r.categoria === 'separado');
+        // Split into Lists
+        const pendingList = [];
+        const separatedList = [];
 
-        // Logic to hide Separated Column if empty
-        const hideSeparated = separated.length === 0;
-        const gridTemplate = hideSeparated ? 'grid-template-columns: 1fr;' : 'grid-template-columns: 1fr 1fr;';
+        Object.values(aggregator).forEach(item => {
+            const pendingQty = item.requested - item.separated;
 
-        // Render Pending Cards
-        const pendingHtml = pending.map(req => `
-            <div class="product-card">
+            // If there is still something pending to separate
+            if (pendingQty > 0) {
+                // Determine ID to use (first valid one)
+                const useId = item.reqIds.length > 0 ? item.reqIds[0] : 'unknown';
+                pendingList.push({ ...item, qtyToShow: pendingQty, type: 'pending', useId: useId });
+            }
+
+            // If there is something already separated (User wants to see this list too)
+            if (item.separated > 0) {
+                separatedList.push({ ...item, qtyToShow: item.separated, type: 'separated', debt: pendingQty });
+            }
+        });
+
+        // Helper to render card
+        const renderCard = (item, isPending) => {
+            const btnAction = isPending
+                ? `<div class="card-inputs" style="margin-top:0.5rem; display:flex; gap:0.5rem; justify-content:flex-end;">
+                     <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <label style="font-size:0.8rem;">Cant:</label>
+                        <input type="number" id="qty-${item.useId}" value="${item.qtyToShow}" min="1" max="${item.qtyToShow}" style="width:60px; padding:5px; text-align:center; border:1px solid #ddd; border-radius:4px;">
+                     </div>
+                     <button class="btn-primary" onclick="app.moveToSeparated(this, '${item.useId}')">Separar</button>
+                   </div>`
+                : `<span class="badge" style="background:#e8f5e9; color:#2e7d32;"><i class="fa-solid fa-check"></i> Listo</span>`;
+
+            const debtBadge = (!isPending && item.debt > 0)
+                ? `<div style="font-size:0.75rem; color:#e53935; text-align:right; margin-top:0.2rem;">Falta: ${item.debt}</div>`
+                : '';
+
+            return `
+            <div class="product-card request-card" style="border-left: 4px solid ${isPending ? 'var(--primary-color)' : '#43a047'}; margin-bottom:1rem;">
                 <div class="card-header">
-                    <div>
-                        <div class="card-code">${req.codigo}</div>
-                        <div class="card-desc">${this.getProductDescription(req.codigo)}</div>
+                     <div>
+                        <div class="card-code" style="color:${isPending ? '#333' : '#43a047'}">${item.code}</div>
+                        <div class="card-desc">${item.desc}</div>
                     </div>
-                    <div style="font-weight:bold; color:var(--primary-color);">
-                        <i class="fa-solid fa-cubes"></i> ${this.getProductStock(req.codigo)}
+                     <div style="text-align:right;">
+                        <div style="font-weight:bold; font-size:1.2rem;">Total: ${item.qtyToShow} <span style="font-size:0.8rem;">un</span></div>
+                        ${debtBadge}
                     </div>
                 </div>
-                <div class="card-actions" style="justify-content: space-between; margin-top:0.5rem;">
-                    <div style="display:flex; align-items:center; gap:0.5rem;">
-                         <label style="font-size:0.8rem;">Cant:</label>
-                         <input type="number" id="qty-${req.idSolicitud}" class="qty-input" value="${req.cantidad}" min="0.5" step="1">
-                    </div>
-                    <button class="btn-primary" style="padding: 0.4rem 0.8rem; font-size:0.85rem;" onclick="app.moveToSeparated('${req.idSolicitud}', this)">
-                        Separar <i class="fa-solid fa-arrow-right"></i>
-                    </button>
-                </div>
-            </div>
-        `).join('');
+                ${isPending ? btnAction : ''}
+            </div>`;
+        };
 
-        // Render Separated Cards
-        const separatedHtml = separated.map(req => `
-             <div class="product-card" style="border-left: 4px solid #10B981;">
-                <div class="card-header">
-                    <div>
-                        <div class="card-code">${req.codigo}</div>
-                        <div class="card-desc">${this.getProductDescription(req.codigo)}</div>
-                    </div>
-                    <div style="font-weight:bold; color:#10B981; font-size:1.1rem;">
-                        ${req.cantidad} <span style="font-size:0.8rem; font-weight:normal;">un</span>
-                    </div>
-                </div>
-            </div>
-        `).join('');
+        const hasSeparated = separatedList.length > 0;
+        const gridCols = hasSeparated ? '1fr 1fr' : '1fr';
 
         container.innerHTML = `
-            <div class="pickup-layout" style="${gridTemplate}">
-                <div class="pickup-column">
-                    <h4 style="color: var(--primary-color);">
-                        <i class="fa-solid fa-list-check"></i> Pendientes (${pending.length})
-                    </h4>
-                    ${pending.length > 0 ? pendingHtml : '<div class="empty-state-small"><p>Todo al día 🎉</p></div>'}
-                </div>
-                
-                ${!hideSeparated ? `
-                <div class="pickup-column">
-                    <h4 style="color: #10B981;">
-                        <i class="fa-solid fa-box-open"></i> Listos para Despacho (${separated.length})
-                    </h4>
-                    ${separatedHtml}
-                </div>` : ''}
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                 <h4 style="margin:0;">Gestionando: <span style="color:var(--primary-color);">${zone.toUpperCase()}</span></h4>
+                 <button class="btn-sm" onclick="app.fetchRequests()"><i class="fa-solid fa-rotate"></i> Actualizar</button>
             </div>
 
-            <button id="fab-dispatch" class="fab-btn ${hideSeparated ? 'hidden' : ''}" onclick="app.dispatchAll('${zone}')">
-                <i class="fa-solid fa-paper-plane"></i> Despachar Todo
-            </button>
+            <div style="display: grid; grid-template-columns: ${gridCols}; gap: 2rem; align-items: start;">
+                
+                <!-- COLUMN 1: PENDING -->
+                <div class="column-pending" style="background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+                    <h5 style="color: var(--primary-color); border-bottom:1px solid #ddd; padding-bottom:0.5rem;">
+                        <i class="fa-solid fa-list-ul"></i> Pendientes (${pendingList.length})
+                    </h5>
+                    ${pendingList.length > 0
+                ? pendingList.map(i => renderCard(i, true)).join('')
+                : '<div style="text-align:center; padding:2rem; color:#999;">Todo al día 🎉</div>'}
+                </div>
+
+                <!-- COLUMN 2: SEPARATED -->
+                ${hasSeparated ? `
+                <div class="column-separated" style="background: #e8f5e9; padding: 1rem; border-radius: 8px;">
+                    <h5 style="color: #2e7d32; border-bottom:1px solid #a5d6a7; padding-bottom:0.5rem;">
+                        <i class="fa-solid fa-boxes-packing"></i> Separados (${separatedList.length})
+                    </h5>
+                     ${separatedList.map(i => renderCard(i, false)).join('')}
+                </div>` : ''}
+            </div>
         `;
     }
 
-    async moveToSeparated(id, btnElement) {
+    async moveToSeparated(btnElement, id) {
+        // Correct signature: btnElement first, then ID
         const qtyInput = document.getElementById(`qty-${id}`);
+        // Safety check
+        if (!qtyInput) {
+            console.error('Input not found for ID:', id);
+            return;
+        }
+
         const newQty = qtyInput.value;
 
+        if (newQty <= 0) { alert('Cantidad inválida'); return; }
+
         // UI Feedback
-        const originalText = btnElement.innerHTML;
         btnElement.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
         btnElement.disabled = true;
 
         try {
             await fetch(API_URL, {
                 method: 'POST',
-                redirect: 'follow', // FIXED: Required for GAS
+                redirect: 'follow',
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({
-                    action: 'updateRequests',
-                    payload: [{ idSolicitud: id, cantidad: newQty, categoria: 'separado' }]
+                    action: 'separateRequest',
+                    payload: {
+                        idSolicitud: id,
+                        cantidad: newQty
+                    }
                 })
             });
 
             // Re-fetch to sync
             await this.fetchRequests();
 
-            // Refresh View (Find active zone)
-            const activeZoneTitle = document.querySelector('#zone-workspace h4 span');
-            if (activeZoneTitle) {
-                const zone = activeZoneTitle.innerText.toLowerCase();
-                // Refresh Zone Content directly using current container
+            // Refresh View logic 
+            const activeBtn = document.querySelector('.zone-carousel .btn-secondary.active');
+            if (activeBtn) {
+                const zone = activeBtn.innerText.toLowerCase().replace('zona ', 'zona');
                 const zoneContainer = document.getElementById('zone-content');
                 if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
             }
 
-        } catch (e) {
-            console.error(e);
-            alert('Error al conectar: ' + e.message);
-            // Fix: btnElement (param) vs btn (undefined)
-            if (btnElement) {
-                btnElement.innerHTML = 'Error';
-                btnElement.disabled = false;
-            }
+        } catch (error) {
+            console.error(error);
+            alert('Error de conexión.');
+            btnElement.innerHTML = 'Error';
+            setTimeout(() => { btnElement.innerHTML = 'Separar'; btnElement.disabled = false; }, 2000);
         }
     }
-
     async dispatchAll(zone) {
         if (!confirm('¿Despachar todos los ítems separados?')) return;
 
         const btn = document.getElementById('fab-dispatch');
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
         const toDispatch = this.data.requests
             .filter(r => r.usuario === zone && r.categoria === 'separado')
             .map(r => ({ idSolicitud: r.idSolicitud, categoria: 'despachado' }));
 
-        if (toDispatch.length === 0) return;
+        if (toDispatch.length === 0) {
+            alert('No hay ítems para despachar');
+            if (btn) btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Despachar Todo';
+            return;
+        }
 
         try {
             await fetch(API_URL, {
                 method: 'POST',
-                redirect: 'follow', // FIXED: Required for GAS
+                redirect: 'follow',
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({ action: 'updateRequests', payload: toDispatch })
             });
 
             await this.fetchRequests();
-            this.renderZonePickup(zone, document.getElementById('zone-tab-content'));
+
+            // Refresh View
+            const zoneContainer = document.getElementById('zone-content');
+            if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
+
             alert('Despacho realizado con éxito');
 
         } catch (e) {
             console.error(e);
             alert('Error al despachar: ' + e.message);
-            btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Despachar Todo'; // Reset button
+            if (btn) btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Despachar Todo';
         }
     }
 
