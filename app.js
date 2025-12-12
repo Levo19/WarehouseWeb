@@ -12,7 +12,11 @@ class App {
             currentView: 'login',
             currentModule: null
         };
-        this.products = {};
+        this.data = {
+            products: {}, // Map: Code -> Desc
+            requests: [], // Array if all requests
+            lastFetch: 0
+        };
 
         this.init();
     }
@@ -21,7 +25,10 @@ class App {
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
-        this.loadProducts(); // Background fetch
+        // Load data if logged in
+        if (this.currentUser) {
+            this.loadInitialData();
+        }
     }
 
     cacheDOM() {
@@ -179,6 +186,15 @@ class App {
         this.mainApp.classList.add('active');
     }
 
+    /**
+     * Dispatch Module Functions
+     */
+    switchDispatchTab(tabName) {
+        // Legacy Support or Redirection
+        // Now we render the Module Entry point (Zone Selection)
+    }
+
+    // New Entry point for navigation
     navigateTo(viewName) {
         // Update Sidebar UI
         this.navLinks.forEach(link => {
@@ -202,23 +218,10 @@ class App {
         this.subViews.forEach(view => view.classList.remove('active'));
         const targetView = document.getElementById(`view-${viewName}`);
         if (targetView) targetView.classList.add('active');
-    }
 
-    /**
-     * Dispatch Module Functions
-     */
-    switchDispatchTab(tabName) {
-        const container = document.getElementById('dispatch-content');
-
-        // Update Buttons state
-        const buttons = document.querySelectorAll('#view-dispatch .btn-secondary');
-        buttons.forEach(btn => btn.classList.remove('active'));
-        // In a real implementation we would identify the clicked button specifically
-
-        if (tabName === 'requests') {
-            this.renderDispatchRequests(container);
-        } else if (tabName === 'pickup') {
-            this.renderDispatchPickup(container);
+        // Specific Module Init
+        if (viewName === 'dispatch') {
+            this.renderDispatchModule();
         }
     }
 
@@ -279,101 +282,182 @@ class App {
         }
     }
 
-    async loadProducts() {
+    /**
+     * DATA LOADING
+     */
+    async loadInitialData() {
+        console.log('Loading Initial Data...');
+        // Load Products
+        this.fetchProducts();
+        // Load Requests
+        this.fetchRequests();
+    }
+
+    async fetchProducts() {
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
-                redirect: 'follow',
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({ action: 'getProducts' })
             });
             const result = await response.json();
             if (result.status === 'success') {
                 result.data.forEach(p => {
-                    this.products[p.codigo] = p.descripcion;
+                    this.data.products[p.codigo] = p.descripcion;
                 });
-                console.log('Productos cargados:', Object.keys(this.products).length);
             }
         } catch (e) {
-            console.error('Error cargando productos', e);
+            console.error('Error fetching products', e);
         }
     }
 
-    getProductDescription(code) {
-        return this.products[code] || 'Producto Desconocido';
-    }
-
-    renderDispatchPickup(container) {
-        // Initial Layout
-        container.innerHTML = `
-            <h4>Pickup / Recolección</h4>
-            <div class="pickup-header" style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; margin-bottom:1rem;">
-                <div class="zone-selector" style="display:flex; gap:1rem;">
-                    <button class="btn-secondary active" onclick="app.loadPickupForZone('zona1', this)">Zona 1</button>
-                    <button class="btn-secondary" onclick="app.loadPickupForZone('zona2', this)">Zona 2</button>
-                </div>
-                <div style="font-size:0.9rem; color:#666;">
-                    <i class="fa-solid fa-circle-info"></i> Separa los pedidos para habilitar el despacho
-                </div>
-            </div>
-            
-            <div id="pickup-kanban" class="pickup-layout">
-                <!-- Columns injected here -->
-                <div style="grid-column: 1 / 3; text-align:center; padding:2rem;">Cargando...</div>
-            </div>
-
-            <button id="fab-dispatch" class="fab-btn hidden" onclick="app.dispatchAll()">
-                <i class="fa-solid fa-paper-plane"></i> Despachar Todo
-            </button>
-        `;
-
-        this.loadPickupForZone('zona1', container.querySelector('.zone-selector button'));
-    }
-
-    async loadPickupForZone(zone, btnElement) {
-        if (btnElement) {
-            const btns = document.querySelectorAll('.zone-selector .btn-secondary');
-            btns.forEach(b => b.classList.remove('active'));
-            btnElement.classList.add('active');
-        }
-
-        const kanbanContainer = document.getElementById('pickup-kanban');
-        kanbanContainer.innerHTML = '<div style="grid-column: 1 / 3; text-align:center; padding:2rem;"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando...</div>';
-
-        // Hide FAB initially
-        document.getElementById('fab-dispatch').classList.add('hidden');
-
+    async fetchRequests() {
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
-                redirect: 'follow',
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({ action: 'getDispatchRequests' })
             });
             const result = await response.json();
-
             if (result.status === 'success') {
-                // Filter by Zone
-                const zoneRequests = result.data.filter(r => r.usuario === zone);
+                this.data.requests = result.data;
+                this.data.lastFetch = Date.now();
+                console.log('Requests loaded:', this.data.requests.length);
 
-                // Split by Status
-                const pending = zoneRequests.filter(r => r.categoria === 'solicitado');
-                const separated = zoneRequests.filter(r => r.categoria === 'separado');
-
-                this.renderPickupColumns(kanbanContainer, pending, separated);
-
-                // Show FAB if items are separated
-                if (separated.length > 0) {
-                    document.getElementById('fab-dispatch').classList.remove('hidden');
-                }
+                // If currently in a view that needs update, re-render? 
+                // For now user interactions triggers render
             }
         } catch (e) {
-            kanbanContainer.innerHTML = `<p style="color:red">Error: ${e.message}</p>`;
+            console.error('Error fetching requests', e);
         }
     }
 
-    renderPickupColumns(container, pending, separated) {
-        // Left Column: Pending
+    getProductDescription(code) {
+        return this.data.products[code] || 'Producto Desconocido';
+    }
+
+    /**
+     * DISPATCH MODULE - NEW HIERARCHY
+     * Zone Selection -> Tabs (Requests | Pickup)
+     */
+    renderDispatchModule() {
+        // Entry point for "Despachos" link
+        const container = document.getElementById('dispatch-content');
+        container.innerHTML = `
+            <div class="zone-selection-header" style="text-align: center; margin-bottom: 2rem;">
+                <h3 style="margin-bottom:1rem; color: var(--primary-color);">Selecciona Cliente / Zona</h3>
+                <div style="display:flex; justify-content:center; gap:1rem;">
+                    <button class="btn-secondary" onclick="app.selectZone('zona1')">ZONA 1</button>
+                    <button class="btn-secondary" onclick="app.selectZone('zona2')">ZONA 2</button>
+                </div>
+            </div>
+            <div id="zone-workspace">
+                <p style="text-align:center; color:#666;">Selecciona una zona arriba para comenzar a trabajar.</p>
+            </div>
+        `;
+    }
+
+    selectZone(zone) {
+        // Highlight active zone logic could go here
+        const container = document.getElementById('zone-workspace');
+        container.innerHTML = `
+            <div style="border-top:1px solid #eee; margin-top:1rem; padding-top:1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <h4 style="margin:0;">Gestionando: <span style="color:var(--primary-color); text-transform:uppercase;">${zone}</span></h4>
+                    <button class="btn-sm" onclick="app.fetchRequests()"><i class="fa-solid fa-rotate"></i> Actualizar</button>
+                </div>
+                
+                <!-- TABS -->
+                <div class="tabs" style="display:flex; gap:1rem; border-bottom:2px solid #eee; margin-bottom:1.5rem;">
+                    <button class="tab-link active" onclick="app.switchZoneTab('${zone}', 'requests', this)">Solicitudes</button>
+                    <button class="tab-link" onclick="app.switchZoneTab('${zone}', 'pickup', this)">Pickup / Separación</button>
+                </div>
+
+                <div id="zone-tab-content">
+                    <!-- Content injected here -->
+                </div>
+            </div>
+        `;
+        // Load default tab
+        this.switchZoneTab(zone, 'requests', container.querySelector('.tab-link'));
+    }
+
+    switchZoneTab(zone, tab, btn) {
+        // Update tab UI
+        if (btn) {
+            const allTabs = btn.parentElement.querySelectorAll('.tab-link');
+            allTabs.forEach(t => {
+                t.style.borderBottom = 'none';
+                t.style.color = '#666';
+                t.style.fontWeight = 'normal';
+            });
+            btn.style.borderBottom = '2px solid var(--primary-color)';
+            btn.style.color = 'var(--primary-color)';
+            btn.style.fontWeight = 'bold';
+        }
+
+        const content = document.getElementById('zone-tab-content');
+        if (tab === 'requests') {
+            this.renderZoneRequests(zone, content);
+        } else {
+            this.renderZonePickup(zone, content);
+        }
+    }
+
+    renderZoneRequests(zone, container) {
+        // Filter from LOCAL Cache
+        const requests = this.data.requests.filter(r => r.usuario === zone);
+
+        const rows = requests.map(req => `
+            <tr>
+                <td style="padding: 1rem;"><strong>${req.codigo}</strong><br><span style="font-size:0.8rem; color:#666;">${this.getProductDescription(req.codigo)}</span></td>
+                <td style="padding: 1rem;">${req.cantidad}</td>
+                <td style="padding: 1rem;">${req.fecha}</td>
+                <td style="padding: 1rem;">
+                    <span style="
+                        padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem; font-weight:bold;
+                        background:${req.categoria === 'solicitado' ? '#FEF3C7' : (req.categoria === 'separado' ? '#D1FAE5' : '#E5E7EB')};
+                        color:${req.categoria === 'solicitado' ? '#D97706' : (req.categoria === 'separado' ? '#059669' : '#374151')};
+                    ">
+                        ${req.categoria.toUpperCase()}
+                    </span>
+                </td>
+            </tr>
+        `).join('');
+
+        container.innerHTML = `
+            <div style="margin-bottom:1rem; text-align:right;">
+                 <button class="btn-primary" onclick="app.openNewRequestModal()">+ Nueva Solicitud</button>
+            </div>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; text-align: left; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #eee; color: #666;">
+                            <th style="padding: 1rem;">PRODUCTO</th>
+                            <th style="padding: 1rem;">CANTIDAD</th>
+                            <th style="padding: 1rem;">FECHA</th>
+                            <th style="padding: 1rem;">ESTADO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length > 0 ? rows : '<tr><td colspan="4" style="padding:1rem; text-align:center;">No hay datos</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    renderZonePickup(zone, container) {
+        // Filter from LOCAL Cache
+        const zoneRequests = this.data.requests.filter(r => r.usuario === zone);
+        const pending = zoneRequests.filter(r => r.categoria === 'solicitado');
+        const separated = zoneRequests.filter(r => r.categoria === 'separado');
+
+        // Logic to hide Separated Column if empty
+        const hideSeparated = separated.length === 0;
+        const gridTemplate = hideSeparated ? 'grid-template-columns: 1fr;' : 'grid-template-columns: 1fr 1fr;';
+
+        // Render Pending Cards
         const pendingHtml = pending.map(req => `
             <div class="product-card">
                 <div class="card-header">
@@ -381,10 +465,12 @@ class App {
                         <div class="card-code">${req.codigo}</div>
                         <div class="card-desc">${this.getProductDescription(req.codigo)}</div>
                     </div>
-                    <div style="font-size:0.8rem; color:#999;">${req.fecha.split(' ')[1] || ''}</div>
                 </div>
                 <div class="card-actions" style="justify-content: space-between; margin-top:0.5rem;">
-                    <input type="number" id="qty-${req.idSolicitud}" class="qty-input" value="${req.cantidad}" min="0.5" step="0.5">
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                         <label style="font-size:0.8rem;">Cant:</label>
+                         <input type="number" id="qty-${req.idSolicitud}" class="qty-input" value="${req.cantidad}" min="0.5" step="0.5">
+                    </div>
                     <button class="btn-primary" style="padding: 0.4rem 0.8rem; font-size:0.85rem;" onclick="app.moveToSeparated('${req.idSolicitud}')">
                         Separar <i class="fa-solid fa-arrow-right"></i>
                     </button>
@@ -392,7 +478,7 @@ class App {
             </div>
         `).join('');
 
-        // Right Column: Separated
+        // Render Separated Cards
         const separatedHtml = separated.map(req => `
              <div class="product-card" style="border-left: 4px solid #10B981;">
                 <div class="card-header">
@@ -408,26 +494,33 @@ class App {
         `).join('');
 
         container.innerHTML = `
-            <div class="pickup-column">
-                <h4 style="color: var(--primary-color);">
-                    <i class="fa-solid fa-list-check"></i> Pedidos Pendientes (${pending.length})
-                </h4>
-                ${pending.length > 0 ? pendingHtml : '<div class="empty-state-small"><p>No hay pedidos pendientes</p></div>'}
+            <div class="pickup-layout" style="${gridTemplate}">
+                <div class="pickup-column">
+                    <h4 style="color: var(--primary-color);">
+                        <i class="fa-solid fa-list-check"></i> Pendientes (${pending.length})
+                    </h4>
+                    ${pending.length > 0 ? pendingHtml : '<div class="empty-state-small"><p>Todo al día 🎉</p></div>'}
+                </div>
+                
+                ${!hideSeparated ? `
+                <div class="pickup-column">
+                    <h4 style="color: #10B981;">
+                        <i class="fa-solid fa-box-open"></i> Listos para Despacho (${separated.length})
+                    </h4>
+                    ${separatedHtml}
+                </div>` : ''}
             </div>
-            
-            <div class="pickup-column" style="${separated.length === 0 ? 'opacity:0.5;' : ''}">
-                <h4 style="color: #10B981;">
-                    <i class="fa-solid fa-box-open"></i> Listos para Despacho (${separated.length})
-                </h4>
-                ${separated.length > 0 ? separatedHtml : '<div class="empty-state-small"><p>Nada separado aún</p></div>'}
-            </div>
+
+            <button id="fab-dispatch" class="fab-btn ${hideSeparated ? 'hidden' : ''}" onclick="app.dispatchAll('${zone}')">
+                <i class="fa-solid fa-paper-plane"></i> Despachar Todo
+            </button>
         `;
     }
 
     async moveToSeparated(id) {
         const qtyInput = document.getElementById(`qty-${id}`);
         const newQty = qtyInput.value;
-        const btn = qtyInput.nextElementSibling;
+        const btn = qtyInput.nextElementSibling; // The button
 
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         btn.disabled = true;
@@ -435,70 +528,56 @@ class App {
         try {
             await fetch(API_URL, {
                 method: 'POST',
-                redirect: 'follow',
+                redirect: 'follow', // Important for GAS
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({
                     action: 'updateRequests',
                     payload: [{ idSolicitud: id, cantidad: newQty, categoria: 'separado' }]
                 })
             });
-            // Refresh
-            const activeZone = document.querySelector('.zone-selector .btn-secondary.active').innerText.toLowerCase().replace(' ', '');
-            this.loadPickupForZone(activeZone, null);
 
-        } catch (e) {
-            alert('Error al separar');
-        }
-    }
+            // Re-fetch to sync
+            await this.fetchRequests();
 
-    async dispatchAll() {
-        if (!confirm('¿Estás seguro de despachar todos los ítems separados?')) return;
-
-        const fab = document.getElementById('fab-dispatch');
-        fab.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
-
-        // Find all separated items currently visible
-        // Actually, safer to fetch fresh list or trust UI? Trust UI for now to get IDs is hard without storing them.
-        // Better: Fetch again and filter 'separado'. 
-        // Or simplified: We can just use 'updateRequests' if we knew the IDs.
-        // Let's use getDispatchRequests to find what to update.
-
-        try {
-            // 1. Get current separated items for this zone
-            const activeZone = document.querySelector('.zone-selector .btn-secondary.active').innerText.toLowerCase().replace(' ', '');
-
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ action: 'getDispatchRequests' })
-            });
-            const result = await response.json();
-            const separated = result.data.filter(r => r.usuario === activeZone && r.categoria === 'separado');
-
-            if (separated.length === 0) {
-                alert('No hay ítems para despachar');
-                return;
+            // Refresh View (Find active zone)
+            const activeZoneTitle = document.querySelector('#zone-workspace h4 span');
+            if (activeZoneTitle) {
+                const zone = activeZoneTitle.innerText.toLowerCase();
+                this.switchZoneTab(zone, 'pickup', null); // Refresh tab
             }
-
-            // 2. Update them to 'despachado'
-            const updates = separated.map(r => ({
-                idSolicitud: r.idSolicitud,
-                categoria: 'despachado'
-            }));
-
-            await fetch(API_URL, {
-                method: 'POST',
-                redirect: 'follow',
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ action: 'updateRequests', payload: updates })
-            });
-
-            alert('¡Despacho Exitoso!');
-            this.loadPickupForZone(activeZone, null);
 
         } catch (e) {
             console.error(e);
-            alert('Error despachando');
+            alert('Error al conectar');
+            btn.innerHTML = 'Error';
+        }
+    }
+
+    async dispatchAll(zone) {
+        if (!confirm('¿Despachar todos los ítems separados?')) return;
+
+        const btn = document.getElementById('fab-dispatch');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+        const toDispatch = this.data.requests
+            .filter(r => r.usuario === zone && r.categoria === 'separado')
+            .map(r => ({ idSolicitud: r.idSolicitud, categoria: 'despachado' }));
+
+        if (toDispatch.length === 0) return;
+
+        try {
+            await fetch(API_URL, {
+                method: 'POST',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: 'updateRequests', payload: toDispatch })
+            });
+
+            await this.fetchRequests();
+            this.renderZonePickup(zone, document.getElementById('zone-tab-content'));
+            alert('Despacho realizado con éxito');
+
+        } catch (e) {
+            alert('Error al despachar');
         }
     }
 
