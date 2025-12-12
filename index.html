@@ -144,23 +144,20 @@
 
                 <!-- DISPATCH VIEW -->
                 <div id="view-dispatch" class="sub-view">
-                    <div class="module-header">
-                        <h3>Gestión de Despachos</h3>
-                        <div class="module-actions">
-                            <button class="btn-secondary active"
-                                onclick="app.switchDispatchTab('requests')">Solicitudes</button>
-                            <button class="btn-secondary" onclick="app.switchDispatchTab('pickup')">Pickup</button>
-                        </div>
-                    </div>
-
-                    <!-- Dispatch Sub-views -->
-                    <div id="dispatch-content" class="content-panel">
-                        <!-- Content injected via JS -->
-                        <div class="empty-state-small">
-                            <p>Seleccione una opción de despacho</p>
-                        </div>
-                    </div>
+                    <button class="btn-secondary active"
+                        onclick="app.switchDispatchTab('requests')">Solicitudes</button>
+                    <button class="btn-secondary" onclick="app.switchDispatchTab('pickup')">Pickup</button>
                 </div>
+            </div>
+
+            <!-- Dispatch Sub-views -->
+            <div id="dispatch-content" class="content-panel">
+                <!-- Content injected via JS -->
+                <div class="empty-state-small">
+                    <p>Seleccione una opción de despacho</p>
+                </div>
+            </div>
+            </div>
 
             </div>
         </main>
