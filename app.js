@@ -317,6 +317,7 @@ class App {
     }
 
     async fetchProducts() {
+        console.log('Starting fetchProducts...');
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
@@ -324,19 +325,36 @@ class App {
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({ action: 'getProducts' })
             });
-            const result = await response.json();
+            console.log('fetchProducts: Received Response', response.status);
+
+            const text = await response.text(); // Get text first to debug
+            console.log('fetchProducts: Body size', text.length);
+
+            let result;
+            try {
+                result = JSON.parse(text);
+            } catch (err) {
+                console.error('fetchProducts: JSON Parse Error', text.substring(0, 100)); // Log start of body
+                throw new Error('Invalid JSON from server');
+            }
+
+            console.log('fetchProducts: Parsed Result', result.status);
             if (result.status === 'success') {
-                // Update to store full product object if needed or just desc
+                // Update to store full product object
                 result.data.forEach(p => {
                     this.data.products[p.codigo] = { desc: p.descripcion, stock: p.stock };
                 });
 
+                // DATA DEBUG
+                console.log('Products Loaded:', Object.keys(this.data.products).length);
+                if (Object.keys(this.data.products).length === 0) {
+                    alert('Alerta: Se descargaron 0 productos. Revise la hoja de Google.');
+                }
+
                 // Auto-refresh view if on Dispatch
                 if (this.state.currentModule === 'dispatch' || document.querySelector('#view-dispatch.active')) {
-                    console.log('Auto-refreshing Dispatch View with Data');
+                    // ... same logic
                     const workspace = document.getElementById('zone-workspace');
-                    // Only refresh if showing master list (no zone selected and no pending layout)
-                    // If workspace is empty or just has the spinner
                     if (workspace && (!workspace.querySelector('.pickup-layout') || workspace.innerText.includes('Cargando'))) {
                         const activeBtn = document.querySelector('.zone-selection-header .btn-secondary.active');
                         if (!activeBtn) {
@@ -344,6 +362,9 @@ class App {
                         }
                     }
                 }
+            } else {
+                console.error('API Error:', result);
+                alert('Error del servidor: ' + (result.message || 'Desconocido'));
             }
         } catch (e) {
             console.error('Error fetching products', e);
@@ -626,13 +647,19 @@ class App {
             const activeZoneTitle = document.querySelector('#zone-workspace h4 span');
             if (activeZoneTitle) {
                 const zone = activeZoneTitle.innerText.toLowerCase();
-                this.switchZoneTab(zone, 'pickup', null); // Refresh tab
+                // Refresh Zone Content directly using current container
+                const zoneContainer = document.getElementById('zone-content');
+                if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
             }
 
         } catch (e) {
             console.error(e);
-            alert('Error al conectar');
-            btn.innerHTML = 'Error';
+            alert('Error al conectar: ' + e.message);
+            // Fix: btnElement (param) vs btn (undefined)
+            if (btnElement) {
+                btnElement.innerHTML = 'Error';
+                btnElement.disabled = false;
+            }
         }
     }
 
@@ -796,4 +823,11 @@ class App {
 }
 
 // Initialize App
-const app = new App();
+// Initialize App
+try {
+    const app = new App();
+} catch (err) {
+    console.error('Critical Init Error:', err);
+    alert('Error crítico al iniciar la aplicación: ' + err.message);
+}
+
