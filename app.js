@@ -324,12 +324,22 @@ class App {
             if (result.status === 'success') {
                 // Update to store full product object if needed or just desc
                 result.data.forEach(p => {
-                    // To support Stock in Product List, we need to store full object.
-                    // Let's refactor this.data.products to store the whole object.
-                    // Or keep 'products' as Map<Code, Desc> for lookup and 'productList' as Array for Master List.
-                    // Simplest: this.data.products returns { desc, stock }
                     this.data.products[p.codigo] = { desc: p.descripcion, stock: p.stock };
                 });
+
+                // Auto-refresh view if on Dispatch
+                if (this.state.currentModule === 'dispatch' || document.getElementById('view-dispatch').classList.contains('active')) {
+                    const workspace = document.getElementById('zone-workspace');
+                    // Only refresh if showing master list (no zone selected)
+                    if (workspace && !workspace.querySelector('.pickup-layout')) {
+                        // Check if we are really in "no zone" mode or just empty
+                        // Simplest is to re-render master list if no zone buttons are active
+                        const activeBtn = document.querySelector('.zone-selection-header .btn-secondary.active');
+                        if (!activeBtn) {
+                            workspace.innerHTML = this.renderProductMasterList();
+                        }
+                    }
+                }
             }
         } catch (e) {
             console.error('Error fetching products', e);
@@ -421,13 +431,27 @@ class App {
     }
 
     selectZone(zone) {
-        // Highlight active zone logic
+        // Toggle Logic
         const container = document.getElementById('zone-workspace');
+        const clickedBtn = Array.from(document.querySelectorAll('.zone-selection-header .btn-secondary'))
+            .find(b => b.innerText.toLowerCase().includes(zone.replace('zona', '')));
 
-        // Update Buttons
+        // Check if already active
+        if (clickedBtn && clickedBtn.classList.contains('active')) {
+            // DESELECT: Remove active class and show Master List
+            clickedBtn.classList.remove('active');
+            clickedBtn.style.backgroundColor = 'white';
+            clickedBtn.style.color = 'var(--text-main)';
+            clickedBtn.style.borderColor = 'var(--border-color)';
+
+            container.innerHTML = this.renderProductMasterList();
+            return; // Exit
+        }
+
+        // Highlight active zone logic
         const buttons = document.querySelectorAll('.zone-selection-header .btn-secondary');
         buttons.forEach(b => {
-            if (b.innerText.toLowerCase().includes(zone.replace('zona', ''))) {
+            if (b === clickedBtn) {
                 b.classList.add('active');
                 b.style.backgroundColor = 'var(--primary-light)';
                 b.style.color = 'var(--primary-color)';
