@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LEVO ERP | Warehouse Management</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@500;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- NOTIFICATION SYSTEM -->
+    <div id="notification-container"></div>
+
+    <!-- LOGIN SCREEN -->
+    <section id="login-view" class="view active">
+        <div class="login-container">
+            <div class="login-card">
+                <div class="login-header">
+                    <div class="logo-circle">
+                        <i class="fa-solid fa-cube"></i>
+                    </div>
+                    <h1>LEVO ERP</h1>
+                    <p>Logística y Almacén</p>
+                </div>
+                <form id="login-form">
+                    <div class="input-group">
+                        <i class="fa-regular fa-user"></i>
+                        <input type="text" id="username" placeholder="Usuario" required autocomplete="username">
+                    </div>
+                    <div class="input-group">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" id="password" placeholder="Contraseña" required
+                            autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn-primary">
+                        Ingresar <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                    <p class="login-footer">Sistema Interno v1.0</p>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- MAIN DASHBOARD SHELL (Hidden by default) -->
+    <section id="main-app" class="view">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <i class="fa-solid fa-cube"></i> LEVO
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">PRINCIPAL</div>
+
+                <a href="#" class="nav-link active" data-target="dashboard">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+
+                <div class="nav-section">MÓDULOS</div>
+
+                <a href="#" class="nav-link" data-target="movements">
+                    <i class="fa-solid fa-dolly"></i>
+                    <span>Movimientos</span>
+                </a>
+
+                <a href="#" class="nav-link" data-target="dispatch">
+                    <i class="fa-solid fa-truck-fast"></i>
+                    <span>Despachos</span>
+                </a>
+
+                <a href="#" class="nav-link" data-target="users" id="nav-users" style="display: none;">
+                    <i class="fa-solid fa-users-gear"></i>
+                    <span>Usuarios</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="avatar">
+                        <span id="user-initials">AD</span>
+                    </div>
+                    <div class="user-details">
+                        <span id="user-name">Admin</span>
+                        <span id="user-role" class="role-badge">Master</span>
+                    </div>
+                </div>
+                <button id="logout-btn" class="logout-btn" title="Cerrar Sesión">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="content-area">
+
+            <!-- HEADER -->
+            <header class="top-bar">
+                <h2 id="page-title">Dashboard</h2>
+                <div class="top-actions">
+                    <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
+                    <button class="icon-btn"><i class="fa-solid fa-gear"></i></button>
+                </div>
+            </header>
+
+            <!-- VIEWS CONTAINER -->
+            <div class="views-wrapper">
+
+                <!-- DASHBOARD VIEW -->
+                <div id="view-dashboard" class="sub-view active">
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fa-solid fa-chart-simple"></i>
+                        </div>
+                        <h3>Panel de Control</h3>
+                        <p>Bienvenido al sistema LEVO. Seleccione un módulo para comenzar.</p>
+                    </div>
+                </div>
+
+                <!-- MOVEMENTS VIEW (Placeholder) -->
+                <div id="view-movements" class="sub-view">
+                    <div class="module-header">
+                        <h3>Movimientos de Almacén</h3>
+                        <div class="tabs">
+                            <button class="tab-btn active">Pre-ingresos</button>
+                            <button class="tab-btn">Ingresos</button>
+                        </div>
+                    </div>
+                    <div class="content-panel">
+                        <p>Módulo de Movimientos en construcción...</p>
+                    </div>
+                </div>
+
+                <!-- DISPATCH VIEW -->
+                <div id="view-dispatch" class="sub-view">
+                    <div class="module-header">
+                        <h3>Gestión de Despachos</h3>
+                        <div class="module-actions">
+                            <button class="btn-secondary active"
+                                onclick="app.switchDispatchTab('requests')">Solicitudes</button>
+                            <button class="btn-secondary" onclick="app.switchDispatchTab('pickup')">Pickup</button>
+                        </div>
+                    </div>
+
+                    <!-- Dispatch Sub-views -->
+                    <div id="dispatch-content" class="content-panel">
+                        <!-- Content injected via JS -->
+                        <div class="empty-state-small">
+                            <p>Seleccione una opción de despacho</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+    </section>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
