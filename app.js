@@ -317,7 +317,6 @@ class App {
     }
 
     async fetchProducts() {
-        console.log('Starting fetchProducts...');
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
@@ -325,20 +324,8 @@ class App {
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({ action: 'getProducts' })
             });
-            console.log('fetchProducts: Received Response', response.status);
+            const result = await response.json();
 
-            const text = await response.text(); // Get text first to debug
-            console.log('fetchProducts: Body size', text.length);
-
-            let result;
-            try {
-                result = JSON.parse(text);
-            } catch (err) {
-                console.error('fetchProducts: JSON Parse Error', text.substring(0, 100)); // Log start of body
-                throw new Error('Invalid JSON from server');
-            }
-
-            console.log('fetchProducts: Parsed Result', result.status);
             if (result.status === 'success') {
                 // Update to store full product object
                 result.data.forEach(p => {
@@ -468,9 +455,16 @@ class App {
             </div>`;
         }).join('');
 
+        // Check for duplicates during mapping (debug)
+        const uniqueCodes = new Set(Object.keys(this.data.products));
+        console.log(`Rendering ${uniqueCodes.size} unique products.`);
+
         return `
             <div style="margin-top:2rem;">
-                <h4 style="margin-bottom:1rem; color:#666;">Inventario General</h4>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <h4 style="color:#666; margin:0;">Inventario General (${Object.keys(this.data.products).length})</h4>
+                    <span style="font-size:0.8rem; color:#999;">Si faltan productos, revise códigos duplicados en la hoja.</span>
+                </div>
                 <div class="pickup-layout" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
                     ${productCards}
                 </div>
@@ -831,4 +825,3 @@ try {
     console.error('Critical Init Error:', err);
     alert('Error crítico al iniciar la aplicación: ' + err.message);
 }
-
