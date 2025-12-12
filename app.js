@@ -108,7 +108,7 @@ class App {
             // IMPORTANT: Request as text/plain to avoid CORS Preflight (OPTIONS) which GAS doesn't handle.
             const response = await fetch(API_URL, {
                 method: 'POST',
-                redirect: 'follow', // GAS redirects 302
+                redirect: 'follow', // FIXED: Required for GAS
                 headers: {
                     "Content-Type": "text/plain;charset=utf-8"
                 },
@@ -794,10 +794,6 @@ class App {
         this.modalContainer.innerHTML = '';
     }
 }
-
-// Initialize App
-const app = new App();
-
 
 // Initialize App
 const app = new App();
