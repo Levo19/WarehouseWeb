@@ -302,8 +302,13 @@ class App {
             });
             const result = await response.json();
             if (result.status === 'success') {
+                // Update to store full product object if needed or just desc
                 result.data.forEach(p => {
-                    this.data.products[p.codigo] = p.descripcion;
+                    // To support Stock in Product List, we need to store full object.
+                    // Let's refactor this.data.products to store the whole object.
+                    // Or keep 'products' as Map<Code, Desc> for lookup and 'productList' as Array for Master List.
+                    // Simplest: this.data.products returns { desc, stock }
+                    this.data.products[p.codigo] = { desc: p.descripcion, stock: p.stock };
                 });
             }
         } catch (e) {
@@ -333,7 +338,8 @@ class App {
     }
 
     getProductDescription(code) {
-        return this.data.products[code] || 'Producto Desconocido';
+        // Updated accessor for new structure
+        return this.data.products[code]?.desc || 'Producto Desconocido';
     }
 
     /**
@@ -352,14 +358,66 @@ class App {
                 </div>
             </div>
             <div id="zone-workspace">
-                <p style="text-align:center; color:#666;">Selecciona una zona arriba para comenzar a trabajar.</p>
+                <!-- If no zone selected, show Product Master List -->
+                ${this.renderProductMasterList()}
+            </div>
+        `;
+    }
+
+    renderProductMasterList() {
+        if (!this.data.products || Object.keys(this.data.products).length === 0) {
+            return '<div style="text-align:center; padding:2rem; color:#666;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando inventario...</div>';
+        }
+
+        const productCards = Object.entries(this.data.products).map(([code, product]) => {
+            // We need to find stock if available in this.data (It might be in products map if we changed data structure)
+            // Currently products is Map<Code, Desc>. Let's see if we updated fetchProducts logic.
+            // Actually, let's fix fetchProducts first to store full object, not just description map.
+            return `
+            <div class="product-card">
+                <div class="card-header">
+                     <div>
+                        <div class="card-code">${code}</div>
+                        <div class="card-desc">${product.desc}</div>
+                    </div>
+                     <div style="font-weight:bold; color:var(--primary-color);">
+                        <i class="fa-solid fa-cubes"></i> ${product.stock}
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+        return `
+            <div style="margin-top:2rem;">
+                <h4 style="margin-bottom:1rem; color:#666;">Inventario General</h4>
+                <div class="pickup-layout" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+                    ${productCards}
+                </div>
             </div>
         `;
     }
 
     selectZone(zone) {
-        // Highlight active zone logic could go here
+        // Highlight active zone logic
         const container = document.getElementById('zone-workspace');
+
+        // Update Buttons (Manually for now since they are re-rendered)
+        const buttons = document.querySelectorAll('.zone-selection-header .btn-secondary');
+        buttons.forEach(b => {
+            if (b.innerText.toLowerCase().includes(zone.replace('zona', ''))) {
+                b.classList.add('active');
+                b.style.backgroundColor = 'var(--primary-light)';
+                b.style.color = 'var(--primary-color)';
+                b.style.borderColor = 'var(--primary-color)';
+            } else {
+                b.classList.remove('active');
+                b.style.backgroundColor = 'white';
+                b.style.color = 'var(--text-main)';
+                b.style.borderColor = 'var(--border-color)';
+            }
+        });
+
+        // Directly Render Pickup/Pending View (No Tabs)
         container.innerHTML = `
             <div style="border-top:1px solid #eee; margin-top:1rem; padding-top:1rem;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
@@ -367,90 +425,22 @@ class App {
                     <button class="btn-sm" onclick="app.fetchRequests()"><i class="fa-solid fa-rotate"></i> Actualizar</button>
                 </div>
                 
-                <!-- TABS -->
-                <div class="tabs" style="display:flex; gap:1rem; border-bottom:2px solid #eee; margin-bottom:1.5rem;">
-                    <button class="tab-link active" onclick="app.switchZoneTab('${zone}', 'requests', this)">Solicitudes</button>
-                    <button class="tab-link" onclick="app.switchZoneTab('${zone}', 'pickup', this)">Pickup / Separación</button>
-                </div>
-
-                <div id="zone-tab-content">
+                <div id="zone-content">
                     <!-- Content injected here -->
                 </div>
             </div>
         `;
-        // Load default tab
-        this.switchZoneTab(zone, 'requests', container.querySelector('.tab-link'));
-    }
 
-    switchZoneTab(zone, tab, btn) {
-        // Update tab UI
-        if (btn) {
-            const allTabs = btn.parentElement.querySelectorAll('.tab-link');
-            allTabs.forEach(t => {
-                t.style.borderBottom = 'none';
-                t.style.color = '#666';
-                t.style.fontWeight = 'normal';
-            });
-            btn.style.borderBottom = '2px solid var(--primary-color)';
-            btn.style.color = 'var(--primary-color)';
-            btn.style.fontWeight = 'bold';
-        }
-
-        const content = document.getElementById('zone-tab-content');
-        if (tab === 'requests') {
-            this.renderZoneRequests(zone, content);
-        } else {
-            this.renderZonePickup(zone, content);
-        }
-    }
-
-    renderZoneRequests(zone, container) {
-        // Filter from LOCAL Cache
-        const requests = this.data.requests.filter(r => r.usuario === zone);
-
-        const rows = requests.map(req => `
-            <tr>
-                <td style="padding: 1rem;"><strong>${req.codigo}</strong><br><span style="font-size:0.8rem; color:#666;">${this.getProductDescription(req.codigo)}</span></td>
-                <td style="padding: 1rem;">${req.cantidad}</td>
-                <td style="padding: 1rem;">${req.fecha}</td>
-                <td style="padding: 1rem;">
-                    <span style="
-                        padding:0.25rem 0.5rem; border-radius:4px; font-size:0.8rem; font-weight:bold;
-                        background:${req.categoria === 'solicitado' ? '#FEF3C7' : (req.categoria === 'separado' ? '#D1FAE5' : '#E5E7EB')};
-                        color:${req.categoria === 'solicitado' ? '#D97706' : (req.categoria === 'separado' ? '#059669' : '#374151')};
-                    ">
-                        ${req.categoria.toUpperCase()}
-                    </span>
-                </td>
-            </tr>
-        `).join('');
-
-        container.innerHTML = `
-            <div style="margin-bottom:1rem; text-align:right;">
-                 <button class="btn-primary" onclick="app.openNewRequestModal()">+ Nueva Solicitud</button>
-            </div>
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; text-align: left; border-collapse: collapse;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid #eee; color: #666;">
-                            <th style="padding: 1rem;">PRODUCTO</th>
-                            <th style="padding: 1rem;">CANTIDAD</th>
-                            <th style="padding: 1rem;">FECHA</th>
-                            <th style="padding: 1rem;">ESTADO</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${rows.length > 0 ? rows : '<tr><td colspan="4" style="padding:1rem; text-align:center;">No hay datos</td></tr>'}
-                    </tbody>
-                </table>
-            </div>
-        `;
+        this.renderZonePickup(zone, document.getElementById('zone-content'));
     }
 
     renderZonePickup(zone, container) {
         // Filter from LOCAL Cache
         const zoneRequests = this.data.requests.filter(r => r.usuario === zone);
         const pending = zoneRequests.filter(r => r.categoria === 'solicitado');
+        // Separated items are technically "done" for this stage if we hide them? 
+        // User said: "abajo debe aparecer solo... los pendientes".
+        // And "columna 'listos' debe esconderse si no hay nada".
         const separated = zoneRequests.filter(r => r.categoria === 'separado');
 
         // Logic to hide Separated Column if empty
@@ -469,7 +459,7 @@ class App {
                 <div class="card-actions" style="justify-content: space-between; margin-top:0.5rem;">
                     <div style="display:flex; align-items:center; gap:0.5rem;">
                          <label style="font-size:0.8rem;">Cant:</label>
-                         <input type="number" id="qty-${req.idSolicitud}" class="qty-input" value="${req.cantidad}" min="0.5" step="0.5">
+                         <input type="number" id="qty-${req.idSolicitud}" class="qty-input" value="${req.cantidad}" min="0.5" step="1">
                     </div>
                     <button class="btn-primary" style="padding: 0.4rem 0.8rem; font-size:0.85rem;" onclick="app.moveToSeparated('${req.idSolicitud}')">
                         Separar <i class="fa-solid fa-arrow-right"></i>
@@ -594,8 +584,9 @@ class App {
                 <form id="new-request-form">
                     <div class="modal-body">
                         <div class="input-group">
-                            <p style="margin-bottom:0.5rem; font-size:0.9rem; color:#666;">Código de Producto</p>
-                            <input type="text" id="req-code" placeholder="Ej: WHD-001" required>
+                            <p style="margin-bottom:0.5rem; font-size:0.9rem; color:#666;">Producto (Escanee o Escriba Código)</p>
+                            <input type="text" id="req-code" placeholder="Escanee aquí..." required autocomplete="off">
+                            <div id="product-preview" style="margin-top:0.5rem; font-size:0.9rem; color:var(--primary-color); font-weight:600; min-height:1.2em;"></div>
                         </div>
                         <div class="input-group">
                             <p style="margin-bottom:0.5rem; font-size:0.9rem; color:#666;">Cantidad</p>
@@ -616,6 +607,42 @@ class App {
         document.getElementById('new-request-form').addEventListener('submit', (e) => {
             e.preventDefault();
             this.handleSaveRequest();
+        });
+
+        // Scanner Logic (Enter triggers lookup)
+        const codeInput = document.getElementById('req-code');
+        const qtyInput = document.getElementById('req-qty');
+        const preview = document.getElementById('product-preview');
+
+        codeInput.focus(); // Auto-focus on open
+
+        codeInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Prevent form submit
+                const code = codeInput.value.trim();
+                const desc = this.getProductDescription(code);
+
+                if (desc !== 'Producto Desconocido') {
+                    preview.textContent = `✅ ${desc}`;
+                    preview.style.color = 'var(--primary-color)';
+                    qtyInput.focus();
+                } else {
+                    preview.textContent = '❌ Producto no encontrado';
+                    preview.style.color = 'red';
+                }
+            }
+        });
+
+        // Also lookup on blur
+        codeInput.addEventListener('blur', () => {
+            const code = codeInput.value.trim();
+            if (code) {
+                const desc = this.getProductDescription(code);
+                if (desc !== 'Producto Desconocido') {
+                    preview.textContent = `✅ ${desc}`;
+                    preview.style.color = 'var(--primary-color)';
+                }
+            }
         });
     }
 
