@@ -133,33 +133,24 @@
                     <div class="module-header">
                         <h3>Movimientos de Almacén</h3>
                         <div class="tabs">
-                            <button class="tab-btn active">Pre-ingresos</button>
-                            <button class="tab-btn">Ingresos</button>
+                            <div class="content-panel">
+                                <p>Módulo de Movimientos en construcción...</p>
+                            </div>
                         </div>
-                    </div>
-                    <div class="content-panel">
-                        <p>Módulo de Movimientos en construcción...</p>
                     </div>
                 </div>
 
                 <!-- DISPATCH VIEW -->
                 <div id="view-dispatch" class="sub-view">
-                    <button class="btn-secondary active"
-                        onclick="app.switchDispatchTab('requests')">Solicitudes</button>
-                    <button class="btn-secondary" onclick="app.switchDispatchTab('pickup')">Pickup</button>
+                    <div class="module-header">
+                        <h3>Gestión de Despachos</h3>
+                    </div>
+                    <div id="dispatch-content" class="content-panel">
+                        <!-- Content injected via JS -->
+                    </div>
                 </div>
             </div>
 
-            <!-- Dispatch Sub-views -->
-            <div id="dispatch-content" class="content-panel">
-                <!-- Content injected via JS -->
-                <div class="empty-state-small">
-                    <p>Seleccione una opción de despacho</p>
-                </div>
-            </div>
-            </div>
-
-            </div>
         </main>
 
     </section>
