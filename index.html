@@ -22,6 +22,9 @@
     <!-- NOTIFICATION SYSTEM -->
     <div id="notification-container"></div>
 
+    <!-- MODAL CONTAINER -->
+    <div id="modal-container" class="modal-overlay"></div>
+
     <!-- LOGIN SCREEN -->
     <section id="login-view" class="view active">
         <div class="login-container">
@@ -57,21 +60,16 @@
 
         <!-- SIDEBAR -->
         <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="brand">
-                    <i class="fa-solid fa-cube"></i> LEVO
-                </div>
+            <div class="brand">
+                <i class="fa-solid fa-cube"></i>
+                <span>LEVO</span>
             </div>
 
-            <nav class="sidebar-nav">
-                <div class="nav-section">PRINCIPAL</div>
-
+            <nav class="nav-menu">
                 <a href="#" class="nav-link active" data-target="dashboard">
                     <i class="fa-solid fa-chart-pie"></i>
                     <span>Dashboard</span>
                 </a>
-
-                <div class="nav-section">MÓDULOS</div>
 
                 <a href="#" class="nav-link" data-target="movements">
                     <i class="fa-solid fa-dolly"></i>
@@ -89,17 +87,14 @@
                 </a>
             </nav>
 
-            <div class="sidebar-footer">
+            <div class="user-profile">
+                <div class="user-initials" id="user-initials">AD</div>
                 <div class="user-info">
-                    <div class="avatar">
-                        <span id="user-initials">AD</span>
-                    </div>
-                    <div class="user-details">
-                        <span id="user-name">Admin</span>
-                        <span id="user-role" class="role-badge">Master</span>
-                    </div>
+                    <div class="user-name" id="user-name">Admin User</div>
+                    <div class="user-role" id="user-role">Master</div>
                 </div>
-                <button id="logout-btn" class="logout-btn" title="Cerrar Sesión">
+                <button id="logout-btn"
+                    style="background:none; border:none; color:#999; cursor:pointer; margin-left:auto;">
                     <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
             </div>
