@@ -460,12 +460,20 @@ class App {
         console.log(`Rendering ${uniqueCodes.size} unique products.`);
 
         return `
-            <div style="margin-top:2rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <div style="margin-top:2rem; height: calc(100vh - 160px); display: flex; flex-direction: column;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-shrink: 0;">
                     <h4 style="color:#666; margin:0;">Inventario General (${Object.keys(this.data.products).length})</h4>
-                    <span style="font-size:0.8rem; color:#999;">Si faltan productos, revise códigos duplicados en la hoja.</span>
                 </div>
-                <div class="pickup-layout" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+                <!-- Independent Scrolling Grid for Master List -->
+                <div style="
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                    gap: 1rem;
+                    overflow-y: auto;
+                    padding: 0.5rem;
+                    padding-bottom: 3rem; /* Space for FAB or bottom */
+                    flex: 1; 
+                ">
                     ${productCards}
                 </div>
             </div>
