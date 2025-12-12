@@ -223,7 +223,10 @@ class App {
 
         // Specific Module Init
         if (viewName === 'dispatch') {
+            this.state.currentModule = 'dispatch';
             this.renderDispatchModule();
+        } else {
+            this.state.currentModule = null;
         }
     }
 
@@ -328,12 +331,12 @@ class App {
                 });
 
                 // Auto-refresh view if on Dispatch
-                if (this.state.currentModule === 'dispatch' || document.getElementById('view-dispatch').classList.contains('active')) {
+                if (this.state.currentModule === 'dispatch' || document.querySelector('#view-dispatch.active')) {
+                    console.log('Auto-refreshing Dispatch View with Data');
                     const workspace = document.getElementById('zone-workspace');
-                    // Only refresh if showing master list (no zone selected)
-                    if (workspace && !workspace.querySelector('.pickup-layout')) {
-                        // Check if we are really in "no zone" mode or just empty
-                        // Simplest is to re-render master list if no zone buttons are active
+                    // Only refresh if showing master list (no zone selected and no pending layout)
+                    // If workspace is empty or just has the spinner
+                    if (workspace && (!workspace.querySelector('.pickup-layout') || workspace.innerText.includes('Cargando'))) {
                         const activeBtn = document.querySelector('.zone-selection-header .btn-secondary.active');
                         if (!activeBtn) {
                             workspace.innerHTML = this.renderProductMasterList();
@@ -343,6 +346,8 @@ class App {
             }
         } catch (e) {
             console.error('Error fetching products', e);
+            const container = document.getElementById('zone-workspace');
+            if (container) container.innerHTML = '<p style="color:red; text-align:center;">Error al cargar inventario. Revise su conexión.</p>';
         }
     }
 
