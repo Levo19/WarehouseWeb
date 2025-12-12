@@ -185,12 +185,49 @@ h3 {
 
 /* MAIN DASHBOARD LAYOUT */
 .sidebar {
-    width: 260px;
+    width: 80px;
+    /* Collapsed by default */
     background-color: var(--bg-sidebar);
     color: var(--text-light);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    transition: width 0.3s ease;
+    overflow: hidden;
+    white-space: nowrap;
+    /* Prevent text wrapping */
+}
+
+.sidebar:hover {
+    width: 260px;
+    /* Expand on hover */
+}
+
+/* Hide logo text when collapsed */
+.sidebar .brand span,
+.sidebar .nav-link span,
+.sidebar .user-info .user-details {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    display: none;
+    /* Hide completely to fix alignment */
+}
+
+.sidebar:hover .brand span,
+.sidebar:hover .nav-link span,
+.sidebar:hover .user-info .user-details {
+    opacity: 1;
+    pointer-events: auto;
+    display: flex;
+    /* Restore flex behavior */
+    flex-direction: column;
+    /* For user details */
+}
+
+.sidebar:hover .nav-link span {
+    display: inline;
+    /* For nav links */
 }
 
 .sidebar-header {
@@ -235,12 +272,28 @@ h3 {
 .nav-link {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.85rem 1.5rem;
+    gap: 1rem;
+    padding: 1rem;
+    /* Uniform padding */
     color: rgba(255, 255, 255, 0.7);
     text-decoration: none;
     transition: var(--transition);
     border-left: 3px solid transparent;
+    justify-content: center;
+    /* Center icon when collapsed */
+}
+
+.sidebar:hover .nav-link {
+    justify-content: flex-start;
+    /* Left align when expanded */
+    padding: 0.85rem 1.5rem;
+}
+
+.nav-link i {
+    font-size: 1.25rem;
+    min-width: 24px;
+    /* Ensure icon doesn't shift */
+    text-align: center;
 }
 
 .nav-link:hover,
@@ -445,14 +498,22 @@ h3 {
 }
 
 .modal-card {
-    background: white;
-    width: 100%;
+    background: #FFFFFF;
+    /* Ensure solid white */
+    width: 90%;
+    /* Responsive width */
     max-width: 500px;
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    /* Deep shadow */
     transform: translateY(20px);
     transition: var(--transition);
     overflow: hidden;
+    border: 1px solid var(--border-color);
+    /* Subtle border */
+    position: relative;
+    /* Stacking context */
+    z-index: 1001;
 }
 
 .modal-overlay.active .modal-card {
