@@ -343,7 +343,7 @@ class App {
                     // ... same logic
                     const workspace = document.getElementById('zone-workspace');
                     if (workspace && (!workspace.querySelector('.pickup-layout') || workspace.innerText.includes('Cargando'))) {
-                        const activeBtn = document.querySelector('.zone-selection-header .btn-secondary.active');
+                        const activeBtn = document.querySelector('.zone-carousel .btn-secondary.active');
                         if (!activeBtn) {
                             workspace.innerHTML = this.renderProductMasterList();
                         }
@@ -408,13 +408,36 @@ class App {
         // Entry point for "Despachos" link
         const container = document.getElementById('dispatch-content');
         container.innerHTML = `
-            <div class="zone-selection-header" style="text-align: center; margin-bottom: 2rem;">
-                <h3 style="margin-bottom:1rem; color: var(--primary-color);">Selecciona Cliente / Zona</h3>
-                <div style="display:flex; justify-content:center; gap:1rem;">
-                    <button class="btn-secondary" onclick="app.selectZone('zona1')">ZONA 1</button>
-                    <button class="btn-secondary" onclick="app.selectZone('zona2')">ZONA 2</button>
+            <div class="zone-selection-bar" style="
+                display: flex; 
+                justify-content: space-between; 
+                align-items: center; 
+                background: white; 
+                padding: 1rem; 
+                border-radius: var(--radius-lg); 
+                box-shadow: var(--shadow-sm); 
+                margin-bottom: 1rem;
+                gap: 1rem;
+            ">
+                <h4 style="margin:0; white-space:nowrap; color: var(--primary-color);">Selecciona Cliente:</h4>
+                
+                <div class="zone-carousel" style="
+                    display: flex; 
+                    gap: 0.5rem; 
+                    overflow-x: auto; 
+                    padding-bottom: 2px;
+                    scrollbar-width: thin; /* Firefox */
+                    flex: 1;
+                    justify-content: flex-end; /* Align to right */
+                ">
+                    <button class="btn-secondary" onclick="app.selectZone('zona1')" style="flex-shrink:0;">ZONA 1</button>
+                    <button class="btn-secondary" onclick="app.selectZone('zona2')" style="flex-shrink:0;">ZONA 2</button>
+                    <!-- Simulation of more clients -->
+                    <button class="btn-secondary" onclick="app.selectZone('zona3')" style="flex-shrink:0; display:none;">CLIENTE EXTRA 1</button>
+                    <button class="btn-secondary" onclick="app.selectZone('zona4')" style="flex-shrink:0; display:none;">CLIENTE EXTRA 2</button>
                 </div>
             </div>
+
             <div id="zone-workspace">
                 <!-- If no zone selected, show Product Master List -->
                 ${this.renderProductMasterList()}
@@ -483,7 +506,7 @@ class App {
     selectZone(zone) {
         // Toggle Logic
         const container = document.getElementById('zone-workspace');
-        const clickedBtn = Array.from(document.querySelectorAll('.zone-selection-header .btn-secondary'))
+        const clickedBtn = Array.from(document.querySelectorAll('.zone-carousel .btn-secondary'))
             .find(b => b.innerText.toLowerCase().includes(zone.replace('zona', '')));
 
         // Check if already active
@@ -499,7 +522,7 @@ class App {
         }
 
         // Highlight active zone logic
-        const buttons = document.querySelectorAll('.zone-selection-header .btn-secondary');
+        const buttons = document.querySelectorAll('.zone-carousel .btn-secondary');
         buttons.forEach(b => {
             if (b === clickedBtn) {
                 b.classList.add('active');
