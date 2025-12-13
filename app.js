@@ -329,7 +329,7 @@ class App {
             if (result.status === 'success') {
                 // Update to store full product object
                 result.data.forEach(p => {
-                    this.data.products[p.codigo] = { desc: p.descripcion, stock: p.stock };
+                    this.data.products[p.codigo] = { desc: p.descripcion, stock: p.stock, img: p.imagen };
                 });
 
                 // DATA DEBUG
@@ -464,15 +464,46 @@ class App {
             // We need to find stock if available in this.data (It might be in products map if we changed data structure)
             // Currently products is Map<Code, Desc>. Let's see if we updated fetchProducts logic.
             // Actually, let's fix fetchProducts first to store full object, not just description map.
+            // Image Logic
+            const imgHtml = product.img
+                ? `<img src="${product.img}" class="card-img" alt="${product.desc}" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\'fa-solid fa-image card-img-placeholder\'></i>'">`
+                : `<i class="fa-solid fa-box-open card-img-placeholder"></i>`;
+
             return `
-            <div class="product-card">
-                <div class="card-header">
-                     <div>
-                        <div class="card-code">${code}</div>
-                        <div class="card-desc">${product.desc}</div>
+            <div class="product-card" onclick="this.classList.toggle('flipped')">
+                <div class="product-card-inner">
+                    <!-- FRONT -->
+                    <div class="card-front">
+                        <div class="card-img-container">
+                            ${imgHtml}
+                        </div>
+                        <div class="card-content">
+                             <div>
+                                <div class="card-code">${code}</div>
+                                <div class="card-desc">${product.desc}</div>
+                            </div>
+                             <div style="margin-top:0.5rem; font-weight:bold; color:var(--primary-color); display:flex; align-items:center; gap:0.5rem;">
+                                <i class="fa-solid fa-cubes"></i> Stock: ${product.stock}
+                            </div>
+                        </div>
                     </div>
-                     <div style="font-weight:bold; color:var(--primary-color);">
-                        <i class="fa-solid fa-cubes"></i> ${product.stock}
+
+                    <!-- BACK -->
+                    <div class="card-back">
+                        <h5 style="margin-bottom:1rem; border-bottom:1px solid #ddd; padding-bottom:0.5rem;">Detalles del Producto</h5>
+                        
+                        <div class="back-label">Descripción Completa</div>
+                        <div class="back-value">${product.desc}</div>
+
+                        <div class="back-label">Código de Sistema</div>
+                        <div class="back-value">${code}</div>
+
+                        <div class="back-label">Stock Disponible</div>
+                        <div class="back-value" style="font-size:1.2rem; color:var(--primary-color);">${product.stock}</div>
+
+                        <div style="margin-top:auto; text-align:center; color:#999; font-size:0.8rem;">
+                            <i class="fa-solid fa-rotate"></i> Click para voltear
+                        </div>
                     </div>
                 </div>
             </div>`;
@@ -570,6 +601,7 @@ class App {
                 aggregator[req.codigo] = {
                     code: req.codigo,
                     desc: product.desc,
+                    img: product.img, // Pass image
                     requested: 0, // Sum of 'solicitado'
                     separated: 0, // Sum of 'separado'
                     reqIds: []    // To track at least one ID for API call
@@ -605,35 +637,76 @@ class App {
             }
         });
 
-        // Helper to render card
         const renderCard = (item, isPending) => {
+            // Image Logic for Requests
+            const imgHtml = item.img
+                ? `<img src="${item.img}" class="card-img" alt="${item.desc}" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\'fa-solid fa-image card-img-placeholder\'></i>'">`
+                : `<i class="fa-solid fa-box-open card-img-placeholder"></i>`;
+
             const btnAction = isPending
-                ? `<div class="card-inputs" style="margin-top:0.5rem; display:flex; gap:0.5rem; justify-content:flex-end;">
+                ? `<div class="card-inputs" style="margin-top:auto; padding-top:1rem; border-top:1px solid #eee; display:flex; gap:0.5rem; justify-content:flex-end;" onclick="event.stopPropagation()">
                      <div style="display:flex; align-items:center; gap:0.5rem;">
                         <label style="font-size:0.8rem;">Cant:</label>
                         <input type="number" id="qty-${item.useId}" value="${item.qtyToShow}" min="1" max="${item.qtyToShow}" style="width:60px; padding:5px; text-align:center; border:1px solid #ddd; border-radius:4px;">
                      </div>
                      <button class="btn-primary" onclick="app.moveToSeparated(this, '${item.useId}')">Separar</button>
                    </div>`
-                : `<span class="badge" style="background:#e8f5e9; color:#2e7d32;"><i class="fa-solid fa-check"></i> Listo</span>`;
+                : `<div style="margin-top:auto; padding-top:1rem; border-top:1px solid #eee; text-align:right;">
+                        <span class="badge" style="background:#e8f5e9; color:#2e7d32; padding:5px 10px; border-radius:20px; font-size:0.85rem;"><i class="fa-solid fa-check"></i> Listo para Despacho</span>
+                   </div>`;
 
             const debtBadge = (!isPending && item.debt > 0)
                 ? `<div style="font-size:0.75rem; color:#e53935; text-align:right; margin-top:0.2rem;">Falta: ${item.debt}</div>`
                 : '';
 
+            // Border color based on status
+            const statusColor = isPending ? 'var(--primary-color)' : '#43a047';
+
             return `
-            <div class="product-card request-card" style="border-left: 4px solid ${isPending ? 'var(--primary-color)' : '#43a047'}; margin-bottom:1rem;">
-                <div class="card-header">
-                     <div>
-                        <div class="card-code" style="color:${isPending ? '#333' : '#43a047'}">${item.code}</div>
-                        <div class="card-desc">${item.desc}</div>
+            <div class="product-card request-card" onclick="this.classList.toggle('flipped')">
+                <div class="product-card-inner" style="border-left: 4px solid ${statusColor};">
+                     <!-- FRONT -->
+                    <div class="card-front">
+                         <div class="card-img-container" style="height:140px;">
+                            ${imgHtml}
+                        </div>
+                        <div class="card-content">
+                             <div class="card-header">
+                                <div>
+                                    <div class="card-code" style="color:${statusColor}">${item.code}</div>
+                                    <div class="card-desc">${item.desc}</div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <div style="font-weight:bold; font-size:1.2rem;">${item.qtyToShow} <span style="font-size:0.8rem;">un</span></div>
+                                    ${debtBadge}
+                                </div>
+                            </div>
+                            ${isPending ? btnAction : ''}
+                        </div>
                     </div>
-                     <div style="text-align:right;">
-                        <div style="font-weight:bold; font-size:1.2rem;">Total: ${item.qtyToShow} <span style="font-size:0.8rem;">un</span></div>
-                        ${debtBadge}
+
+                    <!-- BACK -->
+                    <div class="card-back">
+                         <h5 style="color:${statusColor}; margin-bottom:1rem; border-bottom:1px solid #eee; padding-bottom:0.5rem;">
+                            ${isPending ? 'Detalles de Solicitud' : 'Ítem Separado'}
+                         </h5>
+                        
+                        <div class="back-label">Producto</div>
+                        <div class="back-value">${item.desc}</div>
+
+                        <div class="back-label">Cantidad ${isPending ? 'Solicitada' : 'Separada'}</div>
+                        <div class="back-value" style="font-size:1.2rem;">${item.qtyToShow}</div>
+
+                        ${isPending ? `
+                        <div class="back-label">ID Solicitud</div>
+                        <div class="back-value" style="font-size:0.7rem; font-family:monospace;">${item.useId}</div>
+                        ` : ''}
+
+                         <div style="margin-top:auto; text-align:center; color:#999; font-size:0.8rem;">
+                            <i class="fa-solid fa-rotate"></i> Click para volver
+                        </div>
                     </div>
                 </div>
-                ${isPending ? btnAction : ''}
             </div>`;
         };
 
@@ -672,7 +745,7 @@ class App {
 
     async moveToSeparated(btnElement, id) {
         // Correct signature: btnElement first, then ID
-        const qtyInput = document.getElementById(`qty-${id}`);
+        const qtyInput = document.getElementById(`qty - ${id} `);
         // Safety check
         if (!qtyInput) {
             console.error('Input not found for ID:', id);
@@ -763,7 +836,7 @@ class App {
      */
     openNewRequestModal() {
         const modalHtml = `
-                    < div class="modal-card" >
+            < div class="modal-card" >
                 <div class="modal-header">
                     <h3>Nueva Solicitud</h3>
                     <button class="modal-close" onclick="app.closeModal()">&times;</button>
@@ -786,7 +859,7 @@ class App {
                     </div>
                 </form>
             </div >
-                    `;
+            `;
 
         this.openModal(modalHtml);
 
@@ -810,7 +883,7 @@ class App {
                 const desc = this.getProductDescription(code);
 
                 if (desc !== 'Producto Desconocido') {
-                    preview.textContent = `✅ ${desc}`;
+                    preview.textContent = `✅ ${desc} `;
                     preview.style.color = 'var(--primary-color)';
                     qtyInput.focus();
                 } else {
@@ -826,7 +899,7 @@ class App {
             if (code) {
                 const desc = this.getProductDescription(code);
                 if (desc !== 'Producto Desconocido') {
-                    preview.textContent = `✅ ${desc}`;
+                    preview.textContent = `✅ ${desc} `;
                     preview.style.color = 'var(--primary-color)';
                 }
             }
