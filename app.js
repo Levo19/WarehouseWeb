@@ -400,6 +400,11 @@ class App {
         return this.data.products[code]?.stock || 0;
     }
 
+    handleImageError(imgElement) {
+        imgElement.onerror = null; // Prevent infinite loop
+        imgElement.parentElement.innerHTML = '<i class="fa-solid fa-image card-img-placeholder"></i>';
+    }
+
     /**
      * DISPATCH MODULE - NEW HIERARCHY
      * Zone Selection -> Tabs (Requests | Pickup)
@@ -466,7 +471,7 @@ class App {
             // Actually, let's fix fetchProducts first to store full object, not just description map.
             // Image Logic
             const imgHtml = product.img
-                ? `<img src="${product.img}" class="card-img" alt="${product.desc}" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\'fa-solid fa-image card-img-placeholder\'></i>'">`
+                ? `<img src="${product.img}" class="card-img" alt="${product.desc}" onerror="app.handleImageError(this)">`
                 : `<i class="fa-solid fa-box-open card-img-placeholder"></i>`;
 
             return `
@@ -640,7 +645,7 @@ class App {
         const renderCard = (item, isPending) => {
             // Image Logic for Requests
             const imgHtml = item.img
-                ? `<img src="${item.img}" class="card-img" alt="${item.desc}" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\'fa-solid fa-image card-img-placeholder\'></i>'">`
+                ? `<img src="${item.img}" class="card-img" alt="${item.desc}" onerror="app.handleImageError(this)">`
                 : `<i class="fa-solid fa-box-open card-img-placeholder"></i>`;
 
             const btnAction = isPending
