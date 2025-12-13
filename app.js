@@ -74,8 +74,13 @@ class App {
         this.navLinks.forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
-                const target = link.getAttribute('data-target');
-                this.navigateTo(target);
+                const targetId = link.dataset.target;
+
+                // Clear Header Dynamic Actions (Cleanup for Dispatch Module)
+                const headerActions = document.getElementById('header-dynamic-actions');
+                if (headerActions) headerActions.innerHTML = '';
+
+                this.navigateTo(targetId);
             });
         });
     }
@@ -352,9 +357,11 @@ class App {
                     // ... same logic
                     const workspace = document.getElementById('zone-workspace');
                     if (workspace && (!workspace.querySelector('.pickup-layout') || workspace.innerText.includes('Cargando'))) {
-                        const activeBtn = document.querySelector('.zone-carousel .btn-secondary.active');
-                        if (!activeBtn) {
-                            workspace.innerHTML = this.renderProductMasterList();
+                        if (workspace && (!workspace.querySelector('.pickup-layout') || workspace.innerText.includes('Cargando'))) {
+                            const activeBtn = document.querySelector('.zone-header-actions .btn-zone.active');
+                            if (!activeBtn) {
+                                workspace.innerHTML = this.renderProductMasterList();
+                            }
                         }
                     }
                 }
@@ -585,34 +592,26 @@ class App {
     selectZone(zone) {
         // Toggle Logic
         const container = document.getElementById('zone-workspace');
-        const clickedBtn = Array.from(document.querySelectorAll('.zone-carousel .btn-secondary'))
+        // Find buttons in the header now
+        const clickedBtn = Array.from(document.querySelectorAll('.zone-header-actions .btn-zone'))
             .find(b => b.innerText.toLowerCase().includes(zone.replace('zona', '')));
 
         // Check if already active
         if (clickedBtn && clickedBtn.classList.contains('active')) {
             // DESELECT: Remove active class and show Master List
             clickedBtn.classList.remove('active');
-            clickedBtn.style.backgroundColor = 'white';
-            clickedBtn.style.color = 'var(--text-main)';
-            clickedBtn.style.borderColor = 'var(--border-color)';
 
             container.innerHTML = this.renderProductMasterList();
             return; // Exit
         }
 
         // Highlight active zone logic
-        const buttons = document.querySelectorAll('.zone-carousel .btn-secondary');
+        const buttons = document.querySelectorAll('.zone-header-actions .btn-zone');
         buttons.forEach(b => {
             if (b === clickedBtn) {
-                b.classList.add('active');
-                b.style.backgroundColor = 'var(--primary-light)';
-                b.style.color = 'var(--primary-color)';
-                b.style.borderColor = 'var(--primary-color)';
+                b.classList.add('active'); // CSS handles Red Neon
             } else {
                 b.classList.remove('active');
-                b.style.backgroundColor = 'white';
-                b.style.color = 'var(--text-main)';
-                b.style.borderColor = 'var(--border-color)';
             }
         });
 
@@ -620,8 +619,9 @@ class App {
         container.innerHTML = `
             <div style="border-top:1px solid #eee; margin-top:1rem; padding-top:1rem;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                    <h4 style="margin:0;">Gestionando: <span style="color:var(--primary-color); text-transform:uppercase;">${zone}</span></h4>
-                    <button class="btn-sm" onclick="app.fetchRequests()"><i class="fa-solid fa-rotate"></i> Actualizar</button>
+                     <!-- Removed "Gestionando: ZONE" header as buttons are now prominent in top bar -->
+                     <h4 style="margin:0; color:var(--primary-color); text-transform:uppercase;">${zone}</h4>
+                     <button class="btn-sm" onclick="app.fetchRequests()"><i class="fa-solid fa-rotate"></i> Actualizar</button>
                 </div>
                 <!-- Content Area -->
                 <div id="zone-content"></div>
@@ -1015,4 +1015,3 @@ try {
     console.error('Critical Init Error:', err);
     alert('Error crítico al iniciar la aplicación: ' + err.message);
 }
-
