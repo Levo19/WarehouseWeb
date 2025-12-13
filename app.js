@@ -462,42 +462,64 @@ class App {
     renderDispatchModule() {
         // Entry point for "Despachos" link
         const container = document.getElementById('dispatch-content');
-        container.innerHTML = `
-            <div class="zone-selection-bar" style="
-                display: flex; 
-                justify-content: space-between; 
-                align-items: center; 
-                background: white; 
-                padding: 1rem; 
-                border-radius: var(--radius-lg); 
-                box-shadow: var(--shadow-sm); 
-                margin-bottom: 1rem;
-                gap: 1rem;
-            ">
-                <h4 style="margin:0; white-space:nowrap; color: var(--primary-color);">Selecciona Cliente:</h4>
-                
-                <div class="zone-carousel" style="
-                    display: flex; 
-                    gap: 0.5rem; 
-                    overflow-x: auto; 
-                    padding-bottom: 2px;
-                    scrollbar-width: thin; /* Firefox */
-                    flex: 1;
-                    justify-content: flex-end; /* Align to right */
-                ">
-                    <button class="btn-secondary" onclick="app.selectZone('zona1')" style="flex-shrink:0;">ZONA 1</button>
-                    <button class="btn-secondary" onclick="app.selectZone('zona2')" style="flex-shrink:0;">ZONA 2</button>
-                    <!-- Simulation of more clients -->
-                    <button class="btn-secondary" onclick="app.selectZone('zona3')" style="flex-shrink:0; display:none;">CLIENTE EXTRA 1</button>
-                    <button class="btn-secondary" onclick="app.selectZone('zona4')" style="flex-shrink:0; display:none;">CLIENTE EXTRA 2</button>
-                </div>
-            </div>
 
-            <div id="zone-workspace">
-                <!-- If no zone selected, show Product Master List -->
-                ${this.renderProductMasterList()}
+        // Clear main container (we will render workspace directly)
+        container.innerHTML = `<div id="zone-workspace" style="margin-top:1rem;"></div>`;
+
+        // Render Header Buttons (Inject into Top Bar)
+        const headerActions = document.getElementById('header-dynamic-actions');
+        if (headerActions) {
+            headerActions.innerHTML = `
+                <div class="zone-header-actions">
+                    <button class="btn-zone" onclick="app.selectZone('zona1')">ZONA 1</button>
+                    <button class="btn-zone" onclick="app.selectZone('zona2')">ZONA 2</button>
+                </div>
+            `;
+        }
+
+        // Initial render: show Master List (empty workspace)
+        document.getElementById('zone-workspace').innerHTML = this.renderProductMasterList();
+    }
+
+    selectZone(zone) {
+        // Toggle Logic
+        const container = document.getElementById('zone-workspace');
+        // Find buttons in the header now
+        const clickedBtn = Array.from(document.querySelectorAll('.zone-header-actions .btn-zone'))
+            .find(b => b.innerText.toLowerCase().includes(zone.replace('zona', '')));
+
+        // Check if already active
+        if (clickedBtn && clickedBtn.classList.contains('active')) {
+            // DESELECT: Remove active class and show Master List
+            clickedBtn.classList.remove('active');
+            container.innerHTML = this.renderProductMasterList();
+            return; // Exit
+        }
+
+        // Highlight active zone logic
+        const buttons = document.querySelectorAll('.zone-header-actions .btn-zone');
+        buttons.forEach(b => {
+            if (b === clickedBtn) {
+                b.classList.add('active'); // CSS handles Red Neon
+            } else {
+                b.classList.remove('active');
+            }
+        });
+
+        // Directly Render Pickup/Pending View (No Tabs)
+        container.innerHTML = `
+            <div style="border-top:1px solid #eee; margin-top:1rem; padding-top:1rem;">
+                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                     <!-- Removed "Gestionando: ZONE" header as buttons are now prominent in top bar -->
+                     <h4 style="margin:0; color:var(--primary-color); text-transform:uppercase;">${zone}</h4>
+                     <button class="btn-sm" onclick="app.fetchRequests()"><i class="fa-solid fa-rotate"></i> Actualizar</button>
+                 </div>
+                 <!-- Content Area -->
+                 <div id="zone-content"></div>
             </div>
         `;
+
+        this.renderZonePickup(zone, document.getElementById('zone-content'));
     }
 
     renderProductMasterList() {
@@ -587,48 +609,6 @@ class App {
                 </div>
             </div>
         `;
-    }
-
-    selectZone(zone) {
-        // Toggle Logic
-        const container = document.getElementById('zone-workspace');
-        // Find buttons in the header now
-        const clickedBtn = Array.from(document.querySelectorAll('.zone-header-actions .btn-zone'))
-            .find(b => b.innerText.toLowerCase().includes(zone.replace('zona', '')));
-
-        // Check if already active
-        if (clickedBtn && clickedBtn.classList.contains('active')) {
-            // DESELECT: Remove active class and show Master List
-            clickedBtn.classList.remove('active');
-
-            container.innerHTML = this.renderProductMasterList();
-            return; // Exit
-        }
-
-        // Highlight active zone logic
-        const buttons = document.querySelectorAll('.zone-header-actions .btn-zone');
-        buttons.forEach(b => {
-            if (b === clickedBtn) {
-                b.classList.add('active'); // CSS handles Red Neon
-            } else {
-                b.classList.remove('active');
-            }
-        });
-
-        // Directly Render Pickup/Pending View (No Tabs)
-        container.innerHTML = `
-            <div style="border-top:1px solid #eee; margin-top:1rem; padding-top:1rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                     <!-- Removed "Gestionando: ZONE" header as buttons are now prominent in top bar -->
-                     <h4 style="margin:0; color:var(--primary-color); text-transform:uppercase;">${zone}</h4>
-                     <button class="btn-sm" onclick="app.fetchRequests()"><i class="fa-solid fa-rotate"></i> Actualizar</button>
-                </div>
-                <!-- Content Area -->
-                <div id="zone-content"></div>
-            </div>
-        `;
-
-        this.renderZonePickup(zone, document.getElementById('zone-content'));
     }
 
     renderZonePickup(zone, container) {
@@ -1015,3 +995,4 @@ try {
     console.error('Critical Init Error:', err);
     alert('Error crítico al iniciar la aplicación: ' + err.message);
 }
+
