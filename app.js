@@ -772,18 +772,30 @@ class App {
     }
 
     renderZonePickup(zone, container) {
-        // 1. Get Today's Date for Filtering
+        // 1. Get Today's Date for Filtering (Local String Comparison)
         const today = new Date();
+        const localTodayStr = today.toLocaleDateString('es-PE'); // e.g., "13/12/2025" or similar
+
         const isSameDay = (dateStr) => {
             if (!dateStr) return false;
-            // Handle "DD/MM/YYYY" or ISO
-            let d = new Date(dateStr);
-            if (isNaN(d.getTime())) {
-                // Try parsing DD/MM/YYYY manually
+            let d;
+            // Handle "DD/MM/YYYY" manually (common in GAS/Sheets)
+            if (typeof dateStr === 'string' && dateStr.includes('/')) {
                 const parts = dateStr.split('/');
-                if (parts.length === 3) d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                if (parts.length === 3) {
+                    // Note: Month is 0-indexed in JS Constructor
+                    // Parsing as Local Time: new Date(2025, 11, 13)
+                    d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                }
+            } else {
+                // Formatting ISO or standard strings
+                d = new Date(dateStr);
             }
-            return d.toDateString() === today.toDateString();
+
+            if (!d || isNaN(d.getTime())) return false;
+
+            // Robust Comparison using Locale String
+            return d.toLocaleDateString('es-PE') === localTodayStr;
         };
 
         // 2. Aggregate Data Logic
@@ -796,13 +808,22 @@ class App {
         this.data.requests.forEach(req => {
             // Filter by Zone AND Date (TODAY)
             if (req.usuario.toLowerCase() !== targetZone) return;
-            if (!isSameDay(req.fecha)) return;
+
+            // Check Date
+            if (!isSameDay(req.fecha)) {
+                // Optional: Log excluded dates for debug if needed
+                // console.log(`Excluded Date: ${req.fecha} vs Today: ${localTodayStr}`);
+                return;
+            }
+
+            // Normalize Code to String to prevent mismatch
+            const codeKey = String(req.codigo).trim();
 
             // Initialize Aggregator Item
-            if (!aggregator[req.codigo]) {
-                const product = this.data.products[req.codigo] || { desc: 'Producto Desconocido - ' + req.codigo, img: '' };
-                aggregator[req.codigo] = {
-                    code: req.codigo,
+            if (!aggregator[codeKey]) {
+                const product = this.data.products[codeKey] || { desc: 'Producto Desconocido - ' + codeKey, img: '' };
+                aggregator[codeKey] = {
+                    code: codeKey,
                     desc: product.desc,
                     img: product.img, // Pass image
                     requested: 0, // Sum of 'solicitado'
@@ -813,10 +834,10 @@ class App {
 
             const qty = parseFloat(req.cantidad);
             if (req.categoria === 'solicitado') {
-                aggregator[req.codigo].requested += qty;
-                aggregator[req.codigo].reqIds.push(req.idSolicitud);
+                aggregator[codeKey].requested += qty;
+                aggregator[codeKey].reqIds.push(req.idSolicitud);
             } else if (req.categoria === 'separado') {
-                aggregator[req.codigo].separated += qty;
+                aggregator[codeKey].separated += qty;
             }
         });
 
