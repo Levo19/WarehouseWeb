@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 22 - PREPEDIDOS SEARCH");
+        console.log("🚀 APP VERSION 23 - DEBUG PROVIDERS");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
