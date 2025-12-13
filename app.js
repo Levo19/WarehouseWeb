@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 25 - SUPPLIER IMG FIX");
+        console.log("🚀 APP VERSION 26 - IMG ERROR HANDLER");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
