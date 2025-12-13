@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 23 - DEBUG PROVIDERS");
+        console.log("🚀 APP VERSION 24 - FIX PROVIDER SOURCE");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
