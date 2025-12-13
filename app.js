@@ -338,7 +338,7 @@ class App {
                 console.log('Products Loaded:', Object.keys(this.data.products).length);
                 const sampleProduct = Object.values(this.data.products).find(p => p.img);
                 if (sampleProduct) {
-                    console.log('Sample Image URL:', sampleProduct.img);
+                    console.log('Sample Image URL (Original):', sampleProduct.img); // transformed already
                 } else {
                     console.warn('No images found in product data.');
                 }
@@ -419,14 +419,26 @@ class App {
     getOptimizedImageUrl(url) {
         if (!url) return '';
         try {
-            // Check if it's a standard Drive Export URL
-            if (url.includes('drive.google.com') && url.includes('id=')) {
-                // Extract ID
-                const idMatch = url.match(/id=([^&]+)/);
-                if (idMatch && idMatch[1]) {
+            // Check if it's a Drive URL
+            if (url.includes('drive.google.com')) {
+                // Try to extract ID using flexible Regex or URL params
+                let id = null;
+
+                // Case 1: Standard id parameter
+                if (url.includes('id=')) {
+                    const idMatch = url.match(/id=([^&]+)/);
+                    if (idMatch) id = idMatch[1];
+                }
+                // Case 2: /d/ID/view format
+                else if (url.includes('/d/')) {
+                    const idMatch = url.match(/\/d\/([^\/]+)/);
+                    if (idMatch) id = idMatch[1];
+                }
+
+                if (id) {
                     // Return Thumbnail version (more reliable)
-                    // sz=w500 requests a width of 500px
-                    return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w500`;
+                    // sz=w500 requests a width of 500px, w1000 for high quality
+                    return `https://drive.google.com/thumbnail?id=${id}&sz=w500`;
                 }
             }
             return url;
@@ -1003,3 +1015,4 @@ try {
     console.error('Critical Init Error:', err);
     alert('Error crítico al iniciar la aplicación: ' + err.message);
 }
+
