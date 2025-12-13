@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 18 - SEARCH BARS ADDED");
+        console.log("🚀 APP VERSION 19 - SEARCH HTML FIX");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -955,9 +955,15 @@ class App {
                 
                 <!-- COLUMN 1: PENDING -->
                 <div class="column-pending" style="flex: 1; min-width: 0; background: #f8f9fa; padding: 1rem; border-radius: 8px; display: flex; flex-direction: column; height: 100%; transition: all 0.3s ease;">
-                    <h5 style="color: var(--primary-color); border-bottom:1px solid #ddd; padding-bottom:0.5rem; flex-shrink: 0;">
+                    <h5 style="color: var(--primary-color); border-bottom:1px solid #ddd; padding-bottom:0.5rem; flex-shrink: 0; margin-bottom: 0.5rem;">
                         <i class="fa-solid fa-list-ul"></i> Pendientes (${pendingList.length})
                     </h5>
+                    <!-- Search Input Pending -->
+                    <div style="margin-bottom: 1rem; position: relative; flex-shrink: 0;">
+                        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #999;"></i>
+                        <input type="text" placeholder="Filtrar pendientes..." onkeyup="app.filterColumnList(this, 'column-pending')" 
+                            style="width: 100%; padding: 8px 10px 8px 32px; border: 1px solid #ddd; border-radius: 20px; outline: none;">
+                    </div>
                     <div style="flex: 1; overflow-y: auto; padding-right: 5px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); grid-auto-rows: max-content; gap: 1rem; align-content: start;">
                         ${pendingList.length > 0
                 ? pendingList.map(i => renderCard(i, true)).join('')
@@ -967,9 +973,15 @@ class App {
 
                 <!-- COLUMN 2: SEPARATED -->
                 <div class="column-separated" style="${isCollapsed ? 'width: 320px; flex: 0 0 320px;' : 'flex: 1; min-width: 0;'} background: #e8f5e9; padding: 1rem; border-radius: 8px; display: flex; flex-direction: column; height: 100%; transition: all 0.3s ease;">
-                    <h5 style="color: #2e7d32; border-bottom:1px solid #a5d6a7; padding-bottom:0.5rem; flex-shrink: 0;">
+                    <h5 style="color: #2e7d32; border-bottom:1px solid #a5d6a7; padding-bottom:0.5rem; flex-shrink: 0; margin-bottom: 0.5rem;">
                         <i class="fa-solid fa-boxes-packing"></i> Separados (${separatedList.length})
                     </h5>
+                    <!-- Search Input Separated -->
+                    <div style="margin-bottom: 1rem; position: relative; flex-shrink: 0;">
+                        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #66bb6a;"></i>
+                        <input type="text" placeholder="Filtrar separados..." onkeyup="app.filterColumnList(this, 'column-separated')" 
+                            style="width: 100%; padding: 8px 10px 8px 32px; border: 1px solid #a5d6a7; border-radius: 20px; outline: none; background: #fff;">
+                    </div>
                      <div style="flex: 1; overflow-y: auto; padding-right: 5px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); grid-auto-rows: max-content; gap: 1rem; align-content: start;">
                         ${separatedList.length > 0
                 ? separatedList.map(i => renderCard(i, false)).join('')
