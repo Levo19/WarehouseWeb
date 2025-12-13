@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 29 - UI POLISH");
+        console.log("🚀 APP VERSION 30 - CSS CLASSES");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
