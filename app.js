@@ -601,8 +601,12 @@ class App {
         // SELECT NEW ZONE
         // Highlight active zone logic
         buttons.forEach(b => {
-            b.classList.remove('active'); // Clear others
-            if (b === clickedBtn) b.classList.add('active'); // CSS handles Red Neon
+            if (b === clickedBtn) {
+                b.classList.add('active');
+                console.log('Activating button:', b.innerText);
+            } else {
+                b.classList.remove('active');
+            }
         });
 
         // Hide Search Bar
@@ -1095,8 +1099,7 @@ class App {
 }
 
 // Initialize App
-// Initialize App
-let app;
+
 try {
     app = new App();
 } catch (err) {
