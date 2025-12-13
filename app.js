@@ -854,12 +854,10 @@ class App {
         const hasSeparated = separatedList.length > 0;
         const gridCols = hasSeparated ? '1fr 1fr' : '1fr';
 
-        container.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                 <h4 style="margin:0;">Gestionando: <span style="color:var(--primary-color);">${zone.toUpperCase()}</span></h4>
-                 <button class="btn-sm" onclick="app.fetchRequests()"><i class="fa-solid fa-rotate"></i> Actualizar</button>
-            </div>
 
+
+        container.innerHTML = `
+            <!-- Removed Duplicate Header, managed by renderZoneContent now -->
             <div style="display: grid; grid-template-columns: ${gridCols}; gap: 2rem; align-items: start;">
                 
                 <!-- COLUMN 1: PENDING -->
