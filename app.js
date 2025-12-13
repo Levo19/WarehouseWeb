@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 21 - PREPEDIDOS MODULE");
+        console.log("🚀 APP VERSION 22 - PREPEDIDOS SEARCH");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -1310,6 +1310,24 @@ class App {
             </div>
             `;
         }).join('');
+    }
+
+    filterPrepedidos(input) {
+        const term = input.value.toLowerCase().trim();
+        const container = document.getElementById('prepedidos-container');
+        const cards = container.querySelectorAll('.provider-card');
+
+        requestAnimationFrame(() => {
+            cards.forEach(card => {
+                // We search in the whole card text content (Name is in h3)
+                const text = card.textContent.toLowerCase();
+                if (!term || text.includes(term)) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
     }
 }
 
