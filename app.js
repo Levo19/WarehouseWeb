@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 10 - FINAL CLEANUP LOADED");
+        console.log("🚀 APP VERSION 11 - WIDTH FIXED");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
