@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 30 - CSS CLASSES");
+        console.log("🚀 APP VERSION 31 - RETROACTIVE FIX");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -1269,40 +1269,40 @@ class App {
 
     renderProviders(providers) {
         const container = document.getElementById('prepedidos-container');
-        if (!providers || providers.length === 0) {
-            container.innerHTML = '<div style="text-align:center; color:#999; grid-column:1/-1; padding:3rem;"><i class="fa-regular fa-folder-open fa-3x"></i><p>No hay proveedores registrados.</p></div>';
-            return;
-        }
+
+        const daysMap = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+        const todayName = daysMap[new Date().getDay()]; // e.g., "SABADO"
 
         container.innerHTML = providers.map(p => {
             const imgUrl = (p.imagen && p.imagen.trim() !== '') ? p.imagen : 'recursos/supplierDefault.png';
 
-            const diaPedido = p.diaPedido || '-';
-            const diaEntrega = p.diaEntrega || '-';
+            const diaPedido = p.diaPedido ? p.diaPedido.toUpperCase() : '-';
+            const diaEntrega = p.diaEntrega ? p.diaEntrega.toUpperCase() : '-';
+
+            // Class logic
+            const orderClass = (diaPedido === todayName) ? 'pill-today-order' : 'pill-default';
+            const deliveryClass = (diaEntrega === todayName) ? 'pill-today-delivery' : 'pill-default';
 
             return `
-            <div class="provider-card" style="background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s; border:1px solid #f0f0f0;">
-                <div style="height: 160px; overflow: hidden; position: relative; background: #e0e0e0;">
-                    <img src="${imgUrl}" alt="${p.nombre}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='recursos/supplierDefault.png'">
-                    <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); padding: 30px 15px 15px;">
-                        <h3 style="color: white; margin: 0; font-size: 1.1rem; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">${p.nombre}</h3>
+            <div class="provider-card">
+                <div class="provider-card-header">
+                    <img src="${imgUrl}" alt="${p.nombre}" class="provider-img" onerror="this.onerror=null; this.src='recursos/supplierDefault.png'">
+                </div>
+                <div class="provider-body">
+                    <div class="provider-name-container">
+                         <h3 class="provider-name">${p.nombre}</h3>
+                    </div>
+
+                    <div class="provider-info-row">
+                        <span class="provider-label"><i class="fa-regular fa-calendar-check" style="margin-right:5px;"></i> Día Pedido:</span>
+                        <span class="provider-pill ${orderClass}">${diaPedido}</span>
+                    </div>
+                    <div class="provider-info-row">
+                        <span class="provider-label"><i class="fa-solid fa-truck-ramp-box" style="margin-right:5px;"></i> Día Entrega:</span>
+                        <span class="provider-pill ${deliveryClass}">${diaEntrega}</span>
                     </div>
                 </div>
-                <div style="padding: 1.2rem; flex: 1; display: flex; flex-direction: column; gap: 0.8rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f5f5f5; padding-bottom: 0.5rem;">
-                        <span style="font-size: 0.85rem; color: #888;"><i class="fa-regular fa-calendar-check" style="margin-right:5px;"></i> Día Pedido:</span>
-                        <span style="font-weight: 600; color: #444; background: #f3f4f6; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem;">${diaPedido}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f5f5f5; padding-bottom: 0.5rem;">
-                        <span style="font-size: 0.85rem; color: #888;"><i class="fa-solid fa-truck-ramp-box" style="margin-right:5px;"></i> Día Entrega:</span>
-                        <span style="font-weight: 600; color: #2e7d32; background: #e8f5e9; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem;">${diaEntrega}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 0.85rem; color: #888;"><i class="fa-solid fa-money-bill-transfer" style="margin-right:5px;"></i> Forma Pago:</span>
-                        <span style="font-weight: 600; color: #1565c0; font-size: 0.85rem;">${p.formaPago || '-'}</span>
-                    </div>
-                </div>
-                <div style="padding: 1rem; background: #fafafa; border-top: 1px solid #eee; text-align: center;">
+                <div class="provider-footer">
                     <button class="btn-primary" style="width: 100%; padding: 10px; font-size: 0.9rem; border-radius: 8px; box-shadow: none;">
                         <i class="fa-solid fa-cart-plus"></i> Generar Prepedido
                     </button>
