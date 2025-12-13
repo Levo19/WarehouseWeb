@@ -624,10 +624,6 @@ class App {
         // Directly Render Pickup/Pending View (No Tabs)
         container.innerHTML = `
             <div class="slide-in-right" style="border-top:1px solid #eee; margin-top:1rem; padding-top:1rem;">
-                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                     <h4 style="margin:0; color:var(--primary-color); text-transform:uppercase;">${zone}</h4>
-                     <button class="btn-sm" onclick="app.fetchRequests()"><i class="fa-solid fa-rotate"></i> Actualizar</button>
-                 </div>
                  <!-- Content Area -->
                  <div id="zone-content"></div>
             </div>
