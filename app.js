@@ -848,8 +848,6 @@ class App {
                 aggregator[codeKey].reqIds.push(req.idSolicitud);
             } else if (cat === 'separado') {
                 aggregator[codeKey].separated += qty;
-                // DEBUG
-                if (codeKey.includes('WHSAXROZ')) console.log('>> SEPARATED ADDED:', qty);
             }
         });
 
@@ -859,11 +857,6 @@ class App {
 
         Object.values(aggregator).forEach(item => {
             const pendingQty = item.requested - item.separated;
-
-            // DEBUG
-            if (item.code.includes('WHSAXROZ')) {
-                console.log(`[AGGREGATE WHSAXROZ] Req:${item.requested}, Sep:${item.separated}, CalcPending:${pendingQty}`);
-            }
 
             // Logic: What is requested but NOT separated yet?
             // Actually, usually 'solicitado' records convert to 'separado'. 
@@ -956,16 +949,14 @@ class App {
         };
 
         const hasSeparated = separatedList.length > 0;
-        const gridCols = hasSeparated ? '1fr 1fr' : '1fr';
-
-
 
         container.innerHTML = `
             <!-- Removed Duplicate Header, managed by renderZoneContent now -->
-            <div style="display: grid; grid-template-columns: ${gridCols}; gap: 2rem; align-items: start;">
+            <!-- Flex Container for Side-by-Side Layout -->
+            <div style="display: flex; gap: 2rem; align-items: start; min-height: 80vh;">
                 
-                <!-- COLUMN 1: PENDING -->
-                <div class="column-pending" style="background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+                <!-- COLUMN 1: PENDING (Flex Grow 1) -->
+                <div class="column-pending" style="flex: 1; background: #f8f9fa; padding: 1rem; border-radius: 8px;">
                     <h5 style="color: var(--primary-color); border-bottom:1px solid #ddd; padding-bottom:0.5rem;">
                         <i class="fa-solid fa-list-ul"></i> Pendientes (${pendingList.length})
                     </h5>
@@ -976,7 +967,7 @@ class App {
 
                 <!-- COLUMN 2: SEPARATED -->
                 ${hasSeparated ? `
-                <div class="column-separated" style="background: #e8f5e9; padding: 1rem; border-radius: 8px;">
+                <div class="column-separated" style="flex: 1; background: #e8f5e9; padding: 1rem; border-radius: 8px;">
                     <h5 style="color: #2e7d32; border-bottom:1px solid #a5d6a7; padding-bottom:0.5rem;">
                         <i class="fa-solid fa-boxes-packing"></i> Separados (${separatedList.length})
                     </h5>
