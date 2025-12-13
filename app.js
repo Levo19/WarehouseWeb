@@ -329,7 +329,9 @@ class App {
             if (result.status === 'success') {
                 // Update to store full product object
                 result.data.forEach(p => {
-                    this.data.products[p.codigo] = { desc: p.descripcion, stock: p.stock, img: p.imagen };
+                    // Optimize the image URL immediately upon storage
+                    const stableImg = this.getOptimizedImageUrl(p.imagen);
+                    this.data.products[p.codigo] = { desc: p.descripcion, stock: p.stock, img: stableImg };
                 });
 
                 // DATA DEBUG
@@ -411,8 +413,27 @@ class App {
         imgElement.onerror = null; // Prevent infinite loop
         // Fallback to default image
         imgElement.src = 'recursos/defaultImageProduct.png';
-        // If even local default fails (rare), we could hide or show text, but for now this is what requested.
-        // imgElement.parentElement.innerHTML = '<i class="fa-solid fa-image card-img-placeholder"></i>'; 
+    }
+
+    // New Helper to stabilize Drive URLs
+    getOptimizedImageUrl(url) {
+        if (!url) return '';
+        try {
+            // Check if it's a standard Drive Export URL
+            if (url.includes('drive.google.com') && url.includes('id=')) {
+                // Extract ID
+                const idMatch = url.match(/id=([^&]+)/);
+                if (idMatch && idMatch[1]) {
+                    // Return Thumbnail version (more reliable)
+                    // sz=w500 requests a width of 500px
+                    return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w500`;
+                }
+            }
+            return url;
+        } catch (e) {
+            console.error('Error parsing image URL', e);
+            return url;
+        }
     }
 
     /**
