@@ -81,6 +81,11 @@
                     <span>Despachos</span>
                 </a>
 
+                <a href="#" class="nav-link" data-target="prepedidos">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                    <span>Prepedidos</span>
+                </a>
+
                 <a href="#" class="nav-link" data-target="users" id="nav-users" style="display: none;">
                     <i class="fa-solid fa-users-gear"></i>
                     <span>Usuarios</span>
@@ -148,6 +153,17 @@
                         <!-- Dynamic Content Loads Here -->
                     </div> <!-- Content injected via JS -->
                 </div>
+
+                <!-- PREPEDIDOS VIEW -->
+                <div id="view-prepedidos" class="sub-view">
+                    <div id="prepedidos-container"
+                        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; padding: 1.5rem;">
+                        <!-- Provider Cards injected here -->
+                        <div style="text-align:center; grid-column: 1/-1; color:#666;">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando proveedores...
+                        </div>
+                    </div>
+                </div>
             </div>
             </div>
 
@@ -156,8 +172,8 @@
     </section>
 
     <!-- Load Scripts -->
-    <script src="code_gs_partial.js?v=20"></script>
-    <script src="app.js?v=20"></script>
+    <script src="code_gs_partial.js?v=21"></script>
+    <script src="app.js?v=21"></script>
 </body>
 
 </html>
