@@ -571,29 +571,59 @@ class App {
         // Find buttons using robust data attribute
         const buttons = document.querySelectorAll('.zone-header-actions .btn-zone');
         const clickedBtn = document.querySelector(`.zone-header-actions .btn-zone[data-client="${zone}"]`);
+        const searchBar = document.querySelector('.search-bar-header');
 
-        // Check if already active
+        // Check if already active (DESELECT)
         if (clickedBtn && clickedBtn.classList.contains('active')) {
-            // DESELECT: Remove active class from ALL buttons and show Master List
+            // DESELECT: Remove active class from ALL buttons
             buttons.forEach(b => b.classList.remove('active'));
 
-            // Render Master List
-            container.innerHTML = this.renderProductMasterList();
+            // Show Search Bar
+            if (searchBar) searchBar.classList.remove('hidden');
+
+            // Animate Exit Right -> Enter Left (Back to Inventory)
+            if (container.firstElementChild) {
+                container.firstElementChild.classList.add('slide-out-right');
+
+                setTimeout(() => {
+                    container.innerHTML = this.renderProductMasterList();
+                    // Add Entrance Animation
+                    if (container.firstElementChild) {
+                        container.firstElementChild.classList.add('slide-in-left');
+                    }
+                }, 250); // Wait for exit animation
+            } else {
+                container.innerHTML = this.renderProductMasterList();
+            }
             return; // Exit
         }
 
+        // SELECT NEW ZONE
         // Highlight active zone logic
         buttons.forEach(b => {
-            if (b === clickedBtn) {
-                b.classList.add('active'); // CSS handles Red Neon
-            } else {
-                b.classList.remove('active');
-            }
+            b.classList.remove('active'); // Clear others
+            if (b === clickedBtn) b.classList.add('active'); // CSS handles Red Neon
         });
 
+        // Hide Search Bar
+        if (searchBar) searchBar.classList.add('hidden');
+
+        // Animate Exit Left -> Enter Right (Go to Detail)
+        if (container.firstElementChild) {
+            container.firstElementChild.classList.add('slide-out-left');
+
+            setTimeout(() => {
+                this.renderZoneContent(zone, container);
+            }, 250);
+        } else {
+            this.renderZoneContent(zone, container);
+        }
+    }
+
+    renderZoneContent(zone, container) {
         // Directly Render Pickup/Pending View (No Tabs)
         container.innerHTML = `
-            <div style="border-top:1px solid #eee; margin-top:1rem; padding-top:1rem;">
+            <div class="slide-in-right" style="border-top:1px solid #eee; margin-top:1rem; padding-top:1rem;">
                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
                      <h4 style="margin:0; color:var(--primary-color); text-transform:uppercase;">${zone}</h4>
                      <button class="btn-sm" onclick="app.fetchRequests()"><i class="fa-solid fa-rotate"></i> Actualizar</button>
