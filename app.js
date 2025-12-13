@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 28 - SUPPLIER IMG LOGIC FIX");
+        console.log("🚀 APP VERSION 29 - UI POLISH");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
