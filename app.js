@@ -497,7 +497,7 @@ class App {
         if (headerActions) {
             // Generate Buttons HTML
             const buttonsHtml = clients.map(client =>
-                `<button class="btn-zone" onclick="app.selectZone('${client}')">${client.toUpperCase()}</button>`
+                `<button class="btn-zone" data-client="${client}" onclick="app.selectZone('${client}')">${client.toUpperCase()}</button>`
             ).join('');
 
             // Inject Search + Buttons + Bell (Remove Gear)
@@ -567,20 +567,22 @@ class App {
     selectZone(zone) {
         // Toggle Logic
         const container = document.getElementById('zone-workspace');
-        // Find buttons in the header now
-        const clickedBtn = Array.from(document.querySelectorAll('.zone-header-actions .btn-zone'))
-            .find(b => b.innerText.toLowerCase().includes(zone.replace('zona', '')));
+
+        // Find buttons using robust data attribute
+        const buttons = document.querySelectorAll('.zone-header-actions .btn-zone');
+        const clickedBtn = document.querySelector(`.zone-header-actions .btn-zone[data-client="${zone}"]`);
 
         // Check if already active
         if (clickedBtn && clickedBtn.classList.contains('active')) {
-            // DESELECT: Remove active class and show Master List
-            clickedBtn.classList.remove('active');
+            // DESELECT: Remove active class from ALL buttons and show Master List
+            buttons.forEach(b => b.classList.remove('active'));
+
+            // Render Master List
             container.innerHTML = this.renderProductMasterList();
             return; // Exit
         }
 
         // Highlight active zone logic
-        const buttons = document.querySelectorAll('.zone-header-actions .btn-zone');
         buttons.forEach(b => {
             if (b === clickedBtn) {
                 b.classList.add('active'); // CSS handles Red Neon
@@ -593,7 +595,6 @@ class App {
         container.innerHTML = `
             <div style="border-top:1px solid #eee; margin-top:1rem; padding-top:1rem;">
                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-                     <!-- Removed "Gestionando: ZONE" header as buttons are now prominent in top bar -->
                      <h4 style="margin:0; color:var(--primary-color); text-transform:uppercase;">${zone}</h4>
                      <button class="btn-sm" onclick="app.fetchRequests()"><i class="fa-solid fa-rotate"></i> Actualizar</button>
                  </div>
