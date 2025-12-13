@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 12 - WIDTH 48% FIXED");
+        console.log("🚀 APP VERSION 13 - FIXED WIDTH 48% (RETRY)");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -815,10 +815,7 @@ class App {
             // Filter by Zone
             if (req.usuario.toLowerCase() !== targetZone) return;
 
-            // FILTER DEBUG: Trace specific product
-            if (req.codigo === 'WHSAXROZ' || req.codigo.includes('SAXROZ')) {
-                console.log(`[DEBUG WHSAXROZ] Date:${req.fecha}, User:${req.usuario}, Cat:${req.categoria}, Qty:${req.cantidad}, Included:${isSameDay(req.fecha)}`);
-            }
+            // Check Date
 
             // Check Date
             if (!isSameDay(req.fecha)) {
@@ -957,7 +954,7 @@ class App {
             <div style="display: flex; flex-direction: row; flex-wrap: nowrap; gap: 2rem; align-items: start; min-height: 80vh;">
                 
                 <!-- COLUMN 1: PENDING -->
-                <div class="column-pending" style="flex: 1; min-width: 0; width: 50%; background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+                <div class="column-pending" style="flex: 1; min-width: 0; width: 48%; background: #f8f9fa; padding: 1rem; border-radius: 8px;">
                     <h5 style="color: var(--primary-color); border-bottom:1px solid #ddd; padding-bottom:0.5rem;">
                         <i class="fa-solid fa-list-ul"></i> Pendientes (${pendingList.length})
                     </h5>
@@ -968,7 +965,7 @@ class App {
 
                 <!-- COLUMN 2: SEPARATED -->
                 ${hasSeparated ? `
-                <div class="column-separated" style="flex: 1; min-width: 0; width: 50%; background: #e8f5e9; padding: 1rem; border-radius: 8px;">
+                <div class="column-separated" style="flex: 1; min-width: 0; width: 48%; background: #e8f5e9; padding: 1rem; border-radius: 8px;">
                     <h5 style="color: #2e7d32; border-bottom:1px solid #a5d6a7; padding-bottom:0.5rem;">
                         <i class="fa-solid fa-boxes-packing"></i> Separados (${separatedList.length})
                     </h5>
