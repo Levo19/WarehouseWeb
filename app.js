@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 15 - UNIFIED 2-COL LAYOUT");
+        console.log("🚀 APP VERSION 16 - HTML STRUCT FIX");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -942,8 +942,7 @@ class App {
                         <div class="back-value">${item.desc}</div>
                         </div>
                     </div>
-                </div>
-            </div>`;
+                </div>`;
         };
 
         const hasSeparated = separatedList.length > 0;
@@ -1205,4 +1204,5 @@ try {
     console.error('Critical Init Error:', err);
     alert('Error crítico al iniciar la aplicación: ' + err.message);
 }
+
 
