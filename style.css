@@ -969,3 +969,81 @@ h3 {
     display: flex;
     gap: 0.5rem;
 }
+
+/* VIEW TRANSITIONS */
+@keyframes slideOutLeft {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(-50px);
+        opacity: 0;
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(50px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        transform: translateX(-50px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(50px);
+        opacity: 0;
+    }
+}
+
+.view-transition-container {
+    position: relative;
+    overflow-x: hidden;
+    /* Prevent scrollbar during slide */
+}
+
+.slide-out-left {
+    animation: slideOutLeft 0.3s forwards ease-in-out;
+}
+
+.slide-in-right {
+    animation: slideInRight 0.3s forwards ease-in-out;
+}
+
+.slide-in-left {
+    animation: slideInLeft 0.3s forwards ease-in-out;
+}
+
+.slide-out-right {
+    animation: slideOutRight 0.3s forwards ease-in-out;
+}
+
+/* HIDE SEARCH BAR UTILITY */
+.search-bar-header.hidden {
+    display: none !important;
+    opacity: 0;
+    pointer-events: none;
+}
