@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 17 - DYNAMIC SPLIT");
+        console.log("🚀 APP VERSION 18 - SEARCH BARS ADDED");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -978,6 +978,34 @@ class App {
                 </div>
             </div>
         `;
+    }
+
+    // Scoped Column Filtering
+    filterColumnList(input, columnClass) {
+        const term = input.value.toLowerCase().trim();
+        // Traverse up to find the closest container if needed, but here filtering by class is safer
+        // because we passed 'column-pending' or 'column-separated' specifically.
+        // However, we must ensure we only target the visible ones in the current view.
+
+        // Find the specific column container where this input lives would be even better to support multiple zones if ever needed
+        // But scoping by class is fine for now as there's only one active zone view at a time.
+        const container = input.closest(`.${columnClass}`);
+
+        if (!container) return;
+
+        const cards = container.querySelectorAll('.product-card');
+
+        requestAnimationFrame(() => {
+            cards.forEach(card => {
+                const searchable = card.dataset.search || "";
+
+                if (!term || searchable.includes(term)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
     }
 
     async moveToSeparated(btnElement, id) {
