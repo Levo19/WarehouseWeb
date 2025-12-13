@@ -402,7 +402,10 @@ class App {
 
     handleImageError(imgElement) {
         imgElement.onerror = null; // Prevent infinite loop
-        imgElement.parentElement.innerHTML = '<i class="fa-solid fa-image card-img-placeholder"></i>';
+        // Fallback to default image
+        imgElement.src = 'recursos/defaultImageProduct.png';
+        // If even local default fails (rare), we could hide or show text, but for now this is what requested.
+        // imgElement.parentElement.innerHTML = '<i class="fa-solid fa-image card-img-placeholder"></i>'; 
     }
 
     /**
@@ -470,9 +473,9 @@ class App {
             // Currently products is Map<Code, Desc>. Let's see if we updated fetchProducts logic.
             // Actually, let's fix fetchProducts first to store full object, not just description map.
             // Image Logic
-            const imgHtml = product.img
-                ? `<img src="${product.img}" class="card-img" alt="${product.desc}" onerror="app.handleImageError(this)">`
-                : `<i class="fa-solid fa-box-open card-img-placeholder"></i>`;
+            // If product.img is empty, use default immediately.
+            const imgSrc = product.img ? product.img : 'recursos/defaultImageProduct.png';
+            const imgHtml = `<img src="${imgSrc}" class="card-img" alt="${product.desc}" onerror="app.handleImageError(this)">`;
 
             return `
             <div class="product-card" onclick="this.classList.toggle('flipped')">
@@ -644,9 +647,8 @@ class App {
 
         const renderCard = (item, isPending) => {
             // Image Logic for Requests
-            const imgHtml = item.img
-                ? `<img src="${item.img}" class="card-img" alt="${item.desc}" onerror="app.handleImageError(this)">`
-                : `<i class="fa-solid fa-box-open card-img-placeholder"></i>`;
+            const imgSrc = item.img ? item.img : 'recursos/defaultImageProduct.png';
+            const imgHtml = `<img src="${imgSrc}" class="card-img" alt="${item.desc}" onerror="app.handleImageError(this)">`;
 
             const btnAction = isPending
                 ? `<div class="card-inputs" style="margin-top:auto; padding-top:1rem; border-top:1px solid #eee; display:flex; gap:0.5rem; justify-content:flex-end;" onclick="event.stopPropagation()">
@@ -973,4 +975,3 @@ try {
     console.error('Critical Init Error:', err);
     alert('Error crítico al iniciar la aplicación: ' + err.message);
 }
-
