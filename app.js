@@ -956,8 +956,7 @@ class App {
             <div style="display: flex; flex-direction: row; flex-wrap: nowrap; gap: 2rem; align-items: start; min-height: 80vh;">
                 
                 <!-- COLUMN 1: PENDING -->
-                <!-- min-width: 0 is CRITICAL for flex items to shrink below content size -->
-                <div class="column-pending" style="flex: 1; min-width: 0; background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+                <div class="column-pending" style="flex: 1; min-width: 0; width: 50%; background: #f8f9fa; padding: 1rem; border-radius: 8px;">
                     <h5 style="color: var(--primary-color); border-bottom:1px solid #ddd; padding-bottom:0.5rem;">
                         <i class="fa-solid fa-list-ul"></i> Pendientes (${pendingList.length})
                     </h5>
@@ -968,11 +967,11 @@ class App {
 
                 <!-- COLUMN 2: SEPARATED -->
                 ${hasSeparated ? `
-                <div class="column-separated" style="flex: 1; min-width: 0; background: #e8f5e9; padding: 1rem; border-radius: 8px;">
+                <div class="column-separated" style="flex: 1; min-width: 0; width: 50%; background: #e8f5e9; padding: 1rem; border-radius: 8px;">
                     <h5 style="color: #2e7d32; border-bottom:1px solid #a5d6a7; padding-bottom:0.5rem;">
                         <i class="fa-solid fa-boxes-packing"></i> Separados (${separatedList.length})
                     </h5>
-                     ${separatedList.map(i => renderCard(i, false)).join('')}
+                    ${separatedList.map(i => renderCard(i, false)).join('')}
                 </div>` : ''}
             </div>
         `;
@@ -980,7 +979,7 @@ class App {
 
     async moveToSeparated(btnElement, id) {
         // Correct signature: btnElement first, then ID
-        const qtyInput = document.getElementById(`qty - ${id} `);
+        const qtyInput = document.getElementById(`qty-${id}`);
         // Safety check
         if (!qtyInput) {
             console.error('Input not found for ID:', id);
