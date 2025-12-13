@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 20 - SEARCH ATTR FIX");
+        console.log("🚀 APP VERSION 21 - PREPEDIDOS MODULE");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -217,6 +217,7 @@ class App {
             'dashboard': 'Dashboard',
             'movements': 'Movimientos',
             'dispatch': 'Despachos',
+            'prepedidos': 'Prepedidos - Proveedores',
             'users': 'Gestión de Usuarios'
         };
         this.pageTitle.textContent = titles[viewName] || 'LEVO ERP';
@@ -230,6 +231,9 @@ class App {
         if (viewName === 'dispatch') {
             this.state.currentModule = 'dispatch';
             this.renderDispatchModule();
+        } else if (viewName === 'prepedidos') {
+            this.state.currentModule = 'prepedidos';
+            this.loadPrepedidos();
         } else {
             this.state.currentModule = null;
         }
@@ -1236,6 +1240,76 @@ class App {
     closeModal() {
         this.modalContainer.classList.remove('active');
         this.modalContainer.innerHTML = '';
+    }
+
+    // --- PREPEDIDOS LOGIC ---
+    async loadPrepedidos() {
+        const container = document.getElementById('prepedidos-container');
+        container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 3rem; color:#666;"><i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><p style="margin-top:1rem;">Cargando lista de proveedores...</p></div>';
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: 'getProviders' })
+            });
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                this.renderProviders(result.data);
+            } else {
+                container.innerHTML = `<div class="error-card" style="grid-column:1/-1; color:red; text-align:center;">Error: ${result.message}</div>`;
+            }
+        } catch (e) {
+            console.error(e);
+            container.innerHTML = `<div class="error-card" style="grid-column:1/-1; color:red; text-align:center;">Error de conexión. Intente nuevamente.</div>`;
+        }
+    }
+
+    renderProviders(providers) {
+        const container = document.getElementById('prepedidos-container');
+        if (!providers || providers.length === 0) {
+            container.innerHTML = '<div style="text-align:center; color:#999; grid-column:1/-1; padding:3rem;"><i class="fa-regular fa-folder-open fa-3x"></i><p>No hay proveedores registrados.</p></div>';
+            return;
+        }
+
+        container.innerHTML = providers.map(p => {
+            const imgUrl = (p.imagen && p.imagen.trim() !== '') ? p.imagen : 'recursos/defaultImageProduct.png';
+
+            const diaPedido = p.diaPedido || '-';
+            const diaEntrega = p.diaEntrega || '-';
+
+            return `
+            <div class="provider-card" style="background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s; border:1px solid #f0f0f0;">
+                <div style="height: 160px; overflow: hidden; position: relative; background: #e0e0e0;">
+                    <img src="${imgUrl}" alt="${p.nombre}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://via.placeholder.com/300x160?text=Proveedores'">
+                    <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); padding: 30px 15px 15px;">
+                        <h3 style="color: white; margin: 0; font-size: 1.1rem; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">${p.nombre}</h3>
+                    </div>
+                </div>
+                <div style="padding: 1.2rem; flex: 1; display: flex; flex-direction: column; gap: 0.8rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f5f5f5; padding-bottom: 0.5rem;">
+                        <span style="font-size: 0.85rem; color: #888;"><i class="fa-regular fa-calendar-check" style="margin-right:5px;"></i> Día Pedido:</span>
+                        <span style="font-weight: 600; color: #444; background: #f3f4f6; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem;">${diaPedido}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f5f5f5; padding-bottom: 0.5rem;">
+                        <span style="font-size: 0.85rem; color: #888;"><i class="fa-solid fa-truck-ramp-box" style="margin-right:5px;"></i> Día Entrega:</span>
+                        <span style="font-weight: 600; color: #2e7d32; background: #e8f5e9; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem;">${diaEntrega}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.85rem; color: #888;"><i class="fa-solid fa-money-bill-transfer" style="margin-right:5px;"></i> Forma Pago:</span>
+                        <span style="font-weight: 600; color: #1565c0; font-size: 0.85rem;">${p.formaPago || '-'}</span>
+                    </div>
+                </div>
+                <div style="padding: 1rem; background: #fafafa; border-top: 1px solid #eee; text-align: center;">
+                    <button class="btn-primary" style="width: 100%; padding: 10px; font-size: 0.9rem; border-radius: 8px; box-shadow: none;">
+                        <i class="fa-solid fa-cart-plus"></i> Generar Prepedido
+                    </button>
+                </div>
+            </div>
+            `;
+        }).join('');
     }
 }
 
