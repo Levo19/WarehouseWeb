@@ -699,8 +699,12 @@ class App {
             `;
         }
 
-        // Generate Cards HTML (Clean Loop)
-        const productCards = Object.entries(this.data.products).map(([code, product]) => {
+        // Generate Cards HTML (Alphabetical Sort)
+        const productEntries = Object.entries(this.data.products).sort(([, a], [, b]) => {
+            return a.desc.localeCompare(b.desc);
+        });
+
+        const productCards = productEntries.map(([code, product]) => {
             // Image Logic
             const imgSrc = product.img ? product.img : 'recursos/defaultImageProduct.png';
             const imgHtml = `<img src="${imgSrc}" class="card-img" alt="${product.desc}" referrerpolicy="no-referrer" loading="lazy" onerror="app.handleImageError(this)">`;
@@ -718,8 +722,8 @@ class App {
                         </div>
                         <div class="card-content">
                              <div>
-                                <div class="card-code">${code}</div>
-                                <div class="card-desc">${product.desc}</div>
+                                <div class="card-desc" style="font-weight:800; font-size:1.05rem; color:#1a1a1a; margin-bottom:0.3rem; line-height:1.2;">${product.desc}</div>
+                                <div class="card-code" style="font-size:0.9rem; color:#6b7280; font-family:monospace;">${code}</div>
                             </div>
                              <div style="margin-top:0.5rem; font-weight:bold; color:var(--primary-color); display:flex; align-items:center; gap:0.5rem;">
                                 <i class="fa-solid fa-cubes"></i> Stock: ${product.stock}
@@ -749,8 +753,7 @@ class App {
         }).join('');
 
         // Check for duplicates during mapping (debug)
-        const uniqueCodes = new Set(Object.keys(this.data.products));
-        console.log(`Rendering ${uniqueCodes.size} unique products.`);
+        console.log(`Rendering ${productEntries.length} products.`);
 
         // Removed Header and Nested Scroll as requested
         return `
