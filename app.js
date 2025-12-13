@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 24 - FIX PROVIDER SOURCE");
+        console.log("🚀 APP VERSION 25 - SUPPLIER IMG FIX");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
