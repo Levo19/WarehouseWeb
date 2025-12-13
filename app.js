@@ -772,7 +772,21 @@ class App {
     }
 
     renderZonePickup(zone, container) {
-        // Aggregate Data Logic
+        // 1. Get Today's Date for Filtering
+        const today = new Date();
+        const isSameDay = (dateStr) => {
+            if (!dateStr) return false;
+            // Handle "DD/MM/YYYY" or ISO
+            let d = new Date(dateStr);
+            if (isNaN(d.getTime())) {
+                // Try parsing DD/MM/YYYY manually
+                const parts = dateStr.split('/');
+                if (parts.length === 3) d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+            }
+            return d.toDateString() === today.toDateString();
+        };
+
+        // 2. Aggregate Data Logic
         // Map<ProductCode, { requested: 0, separated: 0, desc, uniqueIds: [] }>
         const aggregator = {};
 
@@ -780,12 +794,13 @@ class App {
         const targetZone = zone.toLowerCase(); // 'zona1', 'zona2'
 
         this.data.requests.forEach(req => {
-            // Check Zone
+            // Filter by Zone AND Date (TODAY)
             if (req.usuario.toLowerCase() !== targetZone) return;
+            if (!isSameDay(req.fecha)) return;
 
             // Initialize Aggregator Item
             if (!aggregator[req.codigo]) {
-                const product = this.data.products[req.codigo] || { desc: 'Producto Desconocido' };
+                const product = this.data.products[req.codigo] || { desc: 'Producto Desconocido - ' + req.codigo, img: '' };
                 aggregator[req.codigo] = {
                     code: req.codigo,
                     desc: product.desc,
@@ -810,18 +825,28 @@ class App {
         const separatedList = [];
 
         Object.values(aggregator).forEach(item => {
-            const pendingQty = item.requested - item.separated;
+            // Logic: What is requested but NOT separated yet?
+            // Actually, usually 'solicitado' records convert to 'separado'. 
+            // If the logic is "Movement based": 
+            // - 'solicitado' = Pending
+            // - 'separado' = Done
+            // But they might duplicate lines. 
+            // Simplified view: Show 'solicitado' items in left, 'separado' items in right.
 
-            // If there is still something pending to separate
-            if (pendingQty > 0) {
-                // Determine ID to use (first valid one)
-                const useId = item.reqIds.length > 0 ? item.reqIds[0] : 'unknown';
-                pendingList.push({ ...item, qtyToShow: pendingQty, type: 'pending', useId: useId });
+            // LEFT COLUMN (Pendientes)
+            // Show any item that has 'requested' amount > 0 (assuming 'solicitado' status means pending)
+            // Wait, if I approve it, does it change status to 'separado'?
+            // Assuming YES. So 'requested' sum represents the *current* pending load if the DB updates rows.
+            // If the DB *adds* new rows for separated, then we need to net them?
+            // Let's stick to the status:
+            // Left Col: Items with status 'solicitado'
+            // Right Col: Items with status 'separado'
+
+            if (item.requested > 0) {
+                pendingList.push({ ...item, qtyToShow: item.requested, type: 'pending', useId: item.reqIds[0] });
             }
-
-            // If there is something already separated (User wants to see this list too)
             if (item.separated > 0) {
-                separatedList.push({ ...item, qtyToShow: item.separated, type: 'separated', debt: pendingQty });
+                separatedList.push({ ...item, qtyToShow: item.separated, type: 'separated' });
             }
         });
 
@@ -830,28 +855,9 @@ class App {
             const imgSrc = item.img ? item.img : 'recursos/defaultImageProduct.png';
             const imgHtml = `<img src="${imgSrc}" class="card-img" alt="${item.desc}" referrerpolicy="no-referrer" loading="lazy" onerror="app.handleImageError(this)">`;
 
-            const btnAction = isPending
-                ? `<div class="card-inputs" style="margin-top:auto; padding-top:1rem; border-top:1px solid #eee; display:flex; gap:0.5rem; justify-content:flex-end;" onclick="event.stopPropagation()">
-                     <div style="display:flex; align-items:center; gap:0.5rem;">
-                        <label style="font-size:0.8rem;">Cant:</label>
-                        <input type="number" id="qty-${item.useId}" value="${item.qtyToShow}" min="1" max="${item.qtyToShow}" style="width:60px; padding:5px; text-align:center; border:1px solid #ddd; border-radius:4px;">
-                     </div>
-                     <button class="btn-primary" onclick="app.moveToSeparated(this, '${item.useId}')">Separar</button>
-                   </div>`
-                : `<div style="margin-top:auto; padding-top:1rem; border-top:1px solid #eee; text-align:right;">
-                        <span class="badge" style="background:#e8f5e9; color:#2e7d32; padding:5px 10px; border-radius:20px; font-size:0.85rem;"><i class="fa-solid fa-check"></i> Listo para Despacho</span>
-                   </div>`;
-
-            const debtBadge = (!isPending && item.debt > 0)
-                ? `<div style="font-size:0.75rem; color:#e53935; text-align:right; margin-top:0.2rem;">Falta: ${item.debt}</div>`
-                : '';
-
-            // Border color based on status
-            const statusColor = isPending ? 'var(--primary-color)' : '#43a047';
-
             return `
             <div class="product-card request-card" onclick="this.classList.toggle('flipped')">
-                <div class="product-card-inner" style="border-left: 4px solid ${statusColor};">
+                <div class="product-card-inner" style="border-left: 4px solid ${isPending ? 'var(--primary-color)' : '#2e7d32'};">
                      <!-- FRONT -->
                     <div class="card-front">
                          <div class="card-img-container" style="height:140px;">
@@ -860,37 +866,36 @@ class App {
                         <div class="card-content">
                              <div class="card-header">
                                 <div>
-                                    <div class="card-code" style="color:${statusColor}">${item.code}</div>
-                                    <div class="card-desc">${item.desc}</div>
+                                    <div class="card-desc" style="font-weight:700; color:#000;">${item.desc}</div>
+                                    <div class="card-code" style="color:#666; font-size:0.85rem;">${item.code}</div>
                                 </div>
                                 <div style="text-align:right;">
                                     <div style="font-weight:bold; font-size:1.2rem;">${item.qtyToShow} <span style="font-size:0.8rem;">un</span></div>
-                                    ${debtBadge}
                                 </div>
                             </div>
-                            ${isPending ? btnAction : ''}
+                            ${isPending ? `
+                             <div class="card-inputs" style="margin-top:auto; padding-top:1rem; border-top:1px solid #eee; display:flex; gap:0.5rem; justify-content:flex-end;" onclick="event.stopPropagation()">
+                                 <div style="display:flex; align-items:center; gap:0.5rem;">
+                                    <label style="font-size:0.8rem;">Cant:</label>
+                                    <input type="number" id="qty-${item.useId}" value="${item.qtyToShow}" min="1" max="${item.qtyToShow}" style="width:60px; padding:5px; text-align:center; border:1px solid #ddd; border-radius:4px;">
+                                 </div>
+                                 <button class="btn-primary" onclick="app.moveToSeparated(this, '${item.useId}')">Separar</button>
+                               </div>
+                            ` : `
+                               <div style="margin-top:auto; padding-top:0.5rem; text-align:right;">
+                                    <span style="color:#2e7d32; font-weight:600; font-size:0.85rem;"><i class="fa-solid fa-check-circle"></i> Separado</span>
+                               </div>
+                            `}
                         </div>
                     </div>
 
                     <!-- BACK -->
                     <div class="card-back">
-                         <h5 style="color:${statusColor}; margin-bottom:1rem; border-bottom:1px solid #eee; padding-bottom:0.5rem;">
+                         <h5 style="margin-bottom:1rem; border-bottom:1px solid #eee; padding-bottom:0.5rem;">
                             ${isPending ? 'Detalles de Solicitud' : 'Ítem Separado'}
                          </h5>
-                        
-                        <div class="back-label">Producto</div>
+                        <div class="back-label">Descripción</div>
                         <div class="back-value">${item.desc}</div>
-
-                        <div class="back-label">Cantidad ${isPending ? 'Solicitada' : 'Separada'}</div>
-                        <div class="back-value" style="font-size:1.2rem;">${item.qtyToShow}</div>
-
-                        ${isPending ? `
-                        <div class="back-label">ID Solicitud</div>
-                        <div class="back-value" style="font-size:0.7rem; font-family:monospace;">${item.useId}</div>
-                        ` : ''}
-
-                         <div style="margin-top:auto; text-align:center; color:#999; font-size:0.8rem;">
-                            <i class="fa-solid fa-rotate"></i> Click para volver
                         </div>
                     </div>
                 </div>
