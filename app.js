@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 26 - IMG ERROR HANDLER");
+        console.log("🚀 APP VERSION 27 - FIXED IMG FALLBACK");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -1283,7 +1283,7 @@ class App {
             return `
             <div class="provider-card" style="background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s; border:1px solid #f0f0f0;">
                 <div style="height: 160px; overflow: hidden; position: relative; background: #e0e0e0;">
-                    <img src="${imgUrl}" alt="${p.nombre}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://via.placeholder.com/300x160?text=Proveedores'">
+                    <img src="${imgUrl}" alt="${p.nombre}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.src='recursos/supplierDefault.png'">
                     <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); padding: 30px 15px 15px;">
                         <h3 style="color: white; margin: 0; font-size: 1.1rem; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">${p.nombre}</h3>
                     </div>
