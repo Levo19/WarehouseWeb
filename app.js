@@ -541,34 +541,27 @@ class App {
     }
 
     filterDispatchView(query) {
-        // Debounce or basic optimization? 
-        // For 1800 items, direct DOM manipulation can be slow if done on every keypress.
-        // However, simple display:none is usually okay.
-        // Let's improve the matching logic to be stricter and safer.
+        // Clear previous timeout (Debounce)
+        if (this.searchTimeout) clearTimeout(this.searchTimeout);
 
-        if (!query) {
-            // If empty, show all (remove hidden attribute/style)
-            document.querySelectorAll('.product-card').forEach(c => c.style.display = 'flex');
-            return;
-        }
+        this.searchTimeout = setTimeout(() => {
+            const term = query.toLowerCase().trim();
+            const cards = document.querySelectorAll('.product-card');
 
-        const term = query.toLowerCase().trim();
-        const cards = document.querySelectorAll('.product-card');
+            // Use requestAnimationFrame for batch DOM update
+            requestAnimationFrame(() => {
+                cards.forEach(card => {
+                    // Fast lookup using data attribute (no reflow)
+                    const searchable = card.dataset.search || "";
 
-        // Batch updates to avoid reflow thrashing?
-        requestAnimationFrame(() => {
-            cards.forEach(card => {
-                // Search in the entire card text content (includes Code, Desc, Stock)
-                const text = card.innerText.toLowerCase();
-                // Also check explicit data attributes if we had them, but innerText covers visible code.
-
-                if (text.includes(term)) {
-                    card.style.display = 'flex';
-                } else {
-                    card.style.display = 'none';
-                }
+                    if (!term || searchable.includes(term)) {
+                        card.style.display = 'flex';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
             });
-        });
+        }, 300); // Wait 300ms after typing stops
     }
 
     selectZone(zone) {
@@ -627,17 +620,17 @@ class App {
             `;
         }
 
+        // Generate Cards HTML (Clean Loop)
         const productCards = Object.entries(this.data.products).map(([code, product]) => {
-            // We need to find stock if available in this.data (It might be in products map if we changed data structure)
-            // Currently products is Map<Code, Desc>. Let's see if we updated fetchProducts logic.
-            // Actually, let's fix fetchProducts first to store full object, not just description map.
             // Image Logic
-            // If product.img is empty, use default immediately.
             const imgSrc = product.img ? product.img : 'recursos/defaultImageProduct.png';
             const imgHtml = `<img src="${imgSrc}" class="card-img" alt="${product.desc}" referrerpolicy="no-referrer" loading="lazy" onerror="app.handleImageError(this)">`;
 
+            // Searchable Text for Performance
+            const searchText = `${code} ${product.desc}`.toLowerCase();
+
             return `
-            <div class="product-card" onclick="this.classList.toggle('flipped')">
+            <div class="product-card" data-search="${searchText}" onclick="this.classList.toggle('flipped')">
                 <div class="product-card-inner">
                     <!-- FRONT -->
                     <div class="card-front">
