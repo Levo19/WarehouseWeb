@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 14 - GRID CARDS & SCROLL");
+        console.log("🚀 APP VERSION 15 - UNIFIED 2-COL LAYOUT");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -955,11 +955,11 @@ class App {
             <div style="display: flex; flex-direction: row; flex-wrap: nowrap; gap: 2rem; align-items: start; height: 85vh; overflow: hidden;">
                 
                 <!-- COLUMN 1: PENDING -->
-                <div class="column-pending" style="flex: 1; min-width: 0; ${hasSeparated ? 'width: 48%;' : 'width: 100%;'} background: #f8f9fa; padding: 1rem; border-radius: 8px; display: flex; flex-direction: column; height: 100%;">
+                <div class="column-pending" style="flex: 1; min-width: 0; width: 48%; background: #f8f9fa; padding: 1rem; border-radius: 8px; display: flex; flex-direction: column; height: 100%;">
                     <h5 style="color: var(--primary-color); border-bottom:1px solid #ddd; padding-bottom:0.5rem; flex-shrink: 0;">
                         <i class="fa-solid fa-list-ul"></i> Pendientes (${pendingList.length})
                     </h5>
-                    <div style="flex: 1; overflow-y: auto; padding-right: 5px; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); grid-auto-rows: max-content; gap: 1rem; align-content: start;">
+                    <div style="flex: 1; overflow-y: auto; padding-right: 5px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); grid-auto-rows: max-content; gap: 1rem; align-content: start;">
                         ${pendingList.length > 0
                 ? pendingList.map(i => renderCard(i, true)).join('')
                 : '<div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:#999;">Todo al día 🎉</div>'}
@@ -967,15 +967,16 @@ class App {
                 </div>
 
                 <!-- COLUMN 2: SEPARATED -->
-                ${hasSeparated ? `
                 <div class="column-separated" style="flex: 1; min-width: 0; width: 48%; background: #e8f5e9; padding: 1rem; border-radius: 8px; display: flex; flex-direction: column; height: 100%;">
                     <h5 style="color: #2e7d32; border-bottom:1px solid #a5d6a7; padding-bottom:0.5rem; flex-shrink: 0;">
                         <i class="fa-solid fa-boxes-packing"></i> Separados (${separatedList.length})
                     </h5>
-                     <div style="flex: 1; overflow-y: auto; padding-right: 5px; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); grid-auto-rows: max-content; gap: 1rem; align-content: start;">
-                        ${separatedList.map(i => renderCard(i, false)).join('')}
+                     <div style="flex: 1; overflow-y: auto; padding-right: 5px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); grid-auto-rows: max-content; gap: 1rem; align-content: start;">
+                        ${separatedList.length > 0
+                ? separatedList.map(i => renderCard(i, false)).join('')
+                : '<div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:#81c784; font-style:italic;">Nada separado aún</div>'}
                     </div>
-                </div>` : ''}
+                </div>
             </div>
         `;
     }
@@ -1204,3 +1205,4 @@ try {
     console.error('Critical Init Error:', err);
     alert('Error crítico al iniciar la aplicación: ' + err.message);
 }
+
