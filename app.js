@@ -76,9 +76,8 @@ class App {
                 e.preventDefault();
                 const targetId = link.dataset.target;
 
-                // Clear Header Dynamic Actions (Cleanup for Dispatch Module)
-                const headerActions = document.getElementById('header-dynamic-actions');
-                if (headerActions) headerActions.innerHTML = '';
+                // Cleanup Dispatch Header (Restore Default)
+                this.restoreDefaultHeader();
 
                 this.navigateTo(targetId);
             });
@@ -459,26 +458,94 @@ class App {
      * DISPATCH MODULE - NEW HIERARCHY
      * Zone Selection -> Tabs (Requests | Pickup)
      */
+    /**
+     * DISPATCH MODULE - NEW HIERARCHY
+     * Header: [Title] [Search] [Dynamic Client Buttons] [Bell]
+     */
     renderDispatchModule() {
-        // Entry point for "Despachos" link
         const container = document.getElementById('dispatch-content');
-
-        // Clear main container (we will render workspace directly)
         container.innerHTML = `<div id="zone-workspace" style="margin-top:1rem;"></div>`;
 
-        // Render Header Buttons (Inject into Top Bar)
-        const headerActions = document.getElementById('header-dynamic-actions');
+        // 1. Calculate Unique Clients
+        const clients = this.getUniqueClients();
+
+        // 2. Render Custom Header
+        this.updateHeaderForDispatch(clients);
+
+        // 3. Initial render: show Master List
+        document.getElementById('zone-workspace').innerHTML = this.renderProductMasterList();
+    }
+
+    getUniqueClients() {
+        if (!this.data.requests) return ['zona1', 'zona2']; // Default fallback
+        const clients = new Set(this.data.requests.map(r => r.usuario.toLowerCase()));
+
+        // Ensure default zones always exist if they have no requests? 
+        // User said "clients are born from requests". So strictly from requests.
+        // But let's keep 'zona1' and 'zona2' as seeded if empty for demo.
+        if (clients.size === 0) return ['zona1', 'zona2'];
+
+        return Array.from(clients).sort();
+    }
+
+    updateHeaderForDispatch(clients) {
+        const headerTitle = document.getElementById('page-title');
+        const headerActions = document.querySelector('.top-actions');
+
+        if (headerTitle) headerTitle.innerText = 'Despachos';
+
         if (headerActions) {
+            // Generate Buttons HTML
+            const buttonsHtml = clients.map(client =>
+                `<button class="btn-zone" onclick="app.selectZone('${client}')">${client.toUpperCase()}</button>`
+            ).join('');
+
+            // Inject Search + Buttons + Bell (Remove Gear)
             headerActions.innerHTML = `
-                <div class="zone-header-actions">
-                    <button class="btn-zone" onclick="app.selectZone('zona1')">ZONA 1</button>
-                    <button class="btn-zone" onclick="app.selectZone('zona2')">ZONA 2</button>
+                <div class="header-dispatch-toolbar">
+                    <div class="search-bar-header">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" placeholder="Buscar producto..." onkeyup="app.filterDispatchView(this.value)">
+                    </div>
+                    <div class="client-buttons-group">
+                        ${buttonsHtml}
+                    </div>
                 </div>
+                <!-- Bell Only, No Gear -->
+                <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
             `;
         }
+    }
 
-        // Initial render: show Master List (empty workspace)
-        document.getElementById('zone-workspace').innerHTML = this.renderProductMasterList();
+    restoreDefaultHeader() {
+        const headerTitle = document.getElementById('page-title');
+        const headerActions = document.querySelector('.top-actions');
+
+        if (headerTitle) headerTitle.innerText = 'Dashboard'; // Or dynamic based on page
+
+        // Restore Default Actions
+        if (headerActions) {
+            headerActions.innerHTML = `
+                <div id="header-dynamic-actions"></div>
+                <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
+                <button class="icon-btn"><i class="fa-solid fa-gear"></i></button>
+            `;
+        }
+    }
+
+    filterDispatchView(query) {
+        const term = query.toLowerCase();
+        // Determine context: Master List or Zone View?
+        // We can just filter .product-card elements in the DOM for simplicity and performance
+        const cards = document.querySelectorAll('.product-card');
+        cards.forEach(card => {
+            const text = card.innerText.toLowerCase();
+            if (text.includes(term)) {
+                card.style.display = 'flex'; // Restore
+            } else {
+                card.style.display = 'none';
+            }
+        });
     }
 
     selectZone(zone) {
@@ -995,4 +1062,5 @@ try {
     console.error('Critical Init Error:', err);
     alert('Error crítico al iniciar la aplicación: ' + err.message);
 }
+
 
