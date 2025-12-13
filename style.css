@@ -908,8 +908,10 @@ h3 {
     background: #ff0000 !important;
     color: white !important;
     border-color: #ff0000 !important;
-    box-shadow: 0 0 10px rgba(255, 0, 0, 0.6), 0 0 20px rgba(255, 0, 0, 0.4);
-    font-weight: 600;
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.8), 0 0 30px rgba(255, 0, 0, 0.5) !important;
+    font-weight: 700 !important;
+    transform: scale(1.05);
+    /* Slight pop */
 }
 
 /* HEADER DISPATCH TOOLBAR */
