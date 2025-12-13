@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 19 - SEARCH HTML FIX");
+        console.log("🚀 APP VERSION 20 - SEARCH ATTR FIX");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -899,8 +899,11 @@ class App {
             const imgSrc = item.img ? item.img : 'recursos/defaultImageProduct.png';
             const imgHtml = `<img src="${imgSrc}" class="card-img" alt="${item.desc}" referrerpolicy="no-referrer" loading="lazy" onerror="app.handleImageError(this)">`;
 
+            // Combine code and desc for search, normalized
+            const searchTerms = `${item.code} ${item.desc}`.toLowerCase();
+
             return `
-            <div class="product-card request-card" onclick="this.classList.toggle('flipped')">
+            <div class="product-card request-card" data-search="${searchTerms}" onclick="this.classList.toggle('flipped')">
                 <div class="product-card-inner" style="border-left: 4px solid ${isPending ? 'var(--primary-color)' : '#2e7d32'};">
                      <!-- FRONT -->
                     <div class="card-front">
