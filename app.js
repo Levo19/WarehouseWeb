@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 27 - FIXED IMG FALLBACK");
+        console.log("🚀 APP VERSION 28 - SUPPLIER IMG LOGIC FIX");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -1275,7 +1275,7 @@ class App {
         }
 
         container.innerHTML = providers.map(p => {
-            const imgUrl = (p.imagen && p.imagen.trim() !== '') ? p.imagen : 'recursos/defaultImageProduct.png';
+            const imgUrl = (p.imagen && p.imagen.trim() !== '') ? p.imagen : 'recursos/supplierDefault.png';
 
             const diaPedido = p.diaPedido || '-';
             const diaEntrega = p.diaEntrega || '-';
