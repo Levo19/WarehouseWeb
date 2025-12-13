@@ -334,6 +334,13 @@ class App {
 
                 // DATA DEBUG
                 console.log('Products Loaded:', Object.keys(this.data.products).length);
+                const sampleProduct = Object.values(this.data.products).find(p => p.img);
+                if (sampleProduct) {
+                    console.log('Sample Image URL:', sampleProduct.img);
+                } else {
+                    console.warn('No images found in product data.');
+                }
+
                 if (Object.keys(this.data.products).length === 0) {
                     alert('Alerta: Se descargaron 0 productos. Revise la hoja de Google.');
                 }
@@ -475,7 +482,7 @@ class App {
             // Image Logic
             // If product.img is empty, use default immediately.
             const imgSrc = product.img ? product.img : 'recursos/defaultImageProduct.png';
-            const imgHtml = `<img src="${imgSrc}" class="card-img" alt="${product.desc}" onerror="app.handleImageError(this)">`;
+            const imgHtml = `<img src="${imgSrc}" class="card-img" alt="${product.desc}" referrerpolicy="no-referrer" loading="lazy" onerror="app.handleImageError(this)">`;
 
             return `
             <div class="product-card" onclick="this.classList.toggle('flipped')">
@@ -648,7 +655,7 @@ class App {
         const renderCard = (item, isPending) => {
             // Image Logic for Requests
             const imgSrc = item.img ? item.img : 'recursos/defaultImageProduct.png';
-            const imgHtml = `<img src="${imgSrc}" class="card-img" alt="${item.desc}" onerror="app.handleImageError(this)">`;
+            const imgHtml = `<img src="${imgSrc}" class="card-img" alt="${item.desc}" referrerpolicy="no-referrer" loading="lazy" onerror="app.handleImageError(this)">`;
 
             const btnAction = isPending
                 ? `<div class="card-inputs" style="margin-top:auto; padding-top:1rem; border-top:1px solid #eee; display:flex; gap:0.5rem; justify-content:flex-end;" onclick="event.stopPropagation()">
