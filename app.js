@@ -357,7 +357,7 @@ class App {
                     const workspace = document.getElementById('zone-workspace');
                     if (workspace && (!workspace.querySelector('.pickup-layout') || workspace.innerText.includes('Cargando'))) {
                         if (workspace && (!workspace.querySelector('.pickup-layout') || workspace.innerText.includes('Cargando'))) {
-                            const activeBtn = document.querySelector('.zone-header-actions .btn-zone.active');
+                            const activeBtn = document.querySelector('.client-buttons-group .btn-zone.active');
                             if (!activeBtn) {
                                 workspace.innerHTML = this.renderProductMasterList();
                             }
@@ -569,8 +569,9 @@ class App {
         const container = document.getElementById('zone-workspace');
 
         // Find buttons using robust data attribute
-        const buttons = document.querySelectorAll('.zone-header-actions .btn-zone');
-        const clickedBtn = document.querySelector(`.zone-header-actions .btn-zone[data-client="${zone}"]`);
+        const buttons = document.querySelectorAll('.client-buttons-group .btn-zone');
+        // Use attribute selector that works regardless of container
+        const clickedBtn = document.querySelector(`.client-buttons-group .btn-zone[data-client="${zone}"]`);
         const searchBar = document.querySelector('.search-bar-header');
 
         // Check if already active (DESELECT)
@@ -1106,3 +1107,4 @@ try {
     console.error('Critical Init Error:', err);
     alert('Error crítico al iniciar la aplicación: ' + err.message);
 }
+
