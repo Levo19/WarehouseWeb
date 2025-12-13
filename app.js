@@ -318,9 +318,67 @@ class App {
             loadingToast.style.opacity = '0';
             setTimeout(() => loadingToast.remove(), 500);
         }, 2000);
+
+        // Start Background Sync Loop
+        this.startBackgroundSync();
     }
 
-    async fetchProducts() {
+    startBackgroundSync() {
+        // Run every 60 seconds
+        setInterval(async () => {
+            // Only sync if tab is visible (Browser optimization)
+            if (document.hidden) return;
+
+            console.log('Background Sync...');
+            await this.fetchProducts({ isBackground: true });
+            await this.fetchRequests({ isBackground: true });
+
+            // Trigger Smart View Update
+            this.updateCurrentView();
+        }, 60000);
+    }
+
+    updateCurrentView() {
+        // Only valid for Dispatch for now
+        if (this.state.currentModule !== 'dispatch') return;
+
+        // Check if user is interacting with an input
+        const activeTag = document.activeElement ? document.activeElement.tagName : '';
+        if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') {
+            console.log('Skipping view update due to user interaction.');
+            return;
+        }
+
+        const workspace = document.getElementById('zone-workspace');
+        if (!workspace) return;
+
+        // DETECT CURRENT VIEW STATE
+        const activeBtn = document.querySelector('.client-buttons-group .btn-zone.active');
+
+        // CASE A: MASTER LIST (No Zone Selected)
+        if (!activeBtn) {
+            // Find the scrollable grid
+            const grid = workspace.querySelector('div[style*="overflow-y: auto"]');
+            const scrollTop = grid ? grid.scrollTop : 0;
+
+            workspace.innerHTML = this.renderProductMasterList();
+
+            // Restore Scroll
+            const newGrid = workspace.querySelector('div[style*="overflow-y: auto"]');
+            if (newGrid) newGrid.scrollTop = scrollTop;
+        }
+        // CASE B: ZONE VIEW
+        else {
+            const zone = activeBtn.dataset.client;
+            // We can re-render zone content safely if no input is focused
+            const zoneContent = document.getElementById('zone-content');
+            if (zoneContent) {
+                this.renderZonePickup(zone, zoneContent);
+            }
+        }
+    }
+
+    async fetchProducts(options = { isBackground: false }) {
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
@@ -339,53 +397,47 @@ class App {
                 });
 
                 // DATA DEBUG
-                console.log('Products Loaded:', Object.keys(this.data.products).length);
-                const sampleProduct = Object.values(this.data.products).find(p => p.img);
-                if (sampleProduct) {
-                    console.log('Sample Image URL (Original):', sampleProduct.img); // transformed already
-                } else {
-                    console.warn('No images found in product data.');
+                if (!options.isBackground) {
+                    console.log('Products Loaded:', Object.keys(this.data.products).length);
+                    if (Object.keys(this.data.products).length === 0) {
+                        alert('Alerta: Se descargaron 0 productos. Revise la hoja de Google.');
+                    }
                 }
 
-                if (Object.keys(this.data.products).length === 0) {
-                    alert('Alerta: Se descargaron 0 productos. Revise la hoja de Google.');
-                }
-
-                // Auto-refresh view if on Dispatch
-                if (this.state.currentModule === 'dispatch' || document.querySelector('#view-dispatch.active')) {
-                    // ... same logic
+                // Initial Load ONLY: Auto-refresh view if empty
+                if (!options.isBackground && (this.state.currentModule === 'dispatch')) {
                     const workspace = document.getElementById('zone-workspace');
                     if (workspace && (!workspace.querySelector('.pickup-layout') || workspace.innerText.includes('Cargando'))) {
-                        if (workspace && (!workspace.querySelector('.pickup-layout') || workspace.innerText.includes('Cargando'))) {
-                            const activeBtn = document.querySelector('.client-buttons-group .btn-zone.active');
-                            if (!activeBtn) {
-                                workspace.innerHTML = this.renderProductMasterList();
-                            }
+                        const activeBtn = document.querySelector('.client-buttons-group .btn-zone.active');
+                        if (!activeBtn) {
+                            workspace.innerHTML = this.renderProductMasterList();
                         }
                     }
                 }
             } else {
                 console.error('API Error:', result);
-                alert('Error del servidor: ' + (result.message || 'Desconocido'));
+                if (!options.isBackground) alert('Error del servidor: ' + (result.message || 'Desconocido'));
             }
         } catch (e) {
             console.error('Error fetching products', e);
-            const container = document.getElementById('zone-workspace');
-            if (container) {
-                container.innerHTML = `
-                    <div style="text-align:center; padding:2rem; color:red;">
-                        <i class="fa-solid fa-triangle-exclamation"></i> Error al cargar inventario.
-                        <br><br>
-                        <button class="btn-sm" onclick="app.fetchProducts()">
-                            <i class="fa-solid fa-rotate-right"></i> Reintentar
-                        </button>
-                    </div>
-                `;
+            if (!options.isBackground) {
+                const container = document.getElementById('zone-workspace');
+                if (container) {
+                    container.innerHTML = `
+                        <div style="text-align:center; padding:2rem; color:red;">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Error al cargar inventario.
+                            <br><br>
+                            <button class="btn-sm" onclick="app.fetchProducts()">
+                                <i class="fa-solid fa-rotate-right"></i> Reintentar
+                            </button>
+                        </div>
+                    `;
+                }
             }
         }
     }
 
-    async fetchRequests() {
+    async fetchRequests(options = { isBackground: false }) {
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
@@ -397,10 +449,7 @@ class App {
             if (result.status === 'success') {
                 this.data.requests = result.data;
                 this.data.lastFetch = Date.now();
-                console.log('Requests loaded:', this.data.requests.length);
-
-                // If currently in a view that needs update, re-render? 
-                // For now user interactions triggers render
+                if (!options.isBackground) console.log('Requests loaded:', this.data.requests.length);
             }
         } catch (e) {
             console.error('Error fetching requests', e);
@@ -1107,4 +1156,3 @@ try {
     console.error('Critical Init Error:', err);
     alert('Error crítico al iniciar la aplicación: ' + err.message);
 }
-
