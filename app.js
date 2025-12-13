@@ -22,6 +22,7 @@ class App {
     }
 
     init() {
+        console.log("🚀 APP VERSION 9 - LAYOUT FIX LOADED");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
