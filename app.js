@@ -357,15 +357,13 @@ class App {
 
         // CASE A: MASTER LIST (No Zone Selected)
         if (!activeBtn) {
-            // Find the scrollable grid
-            const grid = workspace.querySelector('div[style*="overflow-y: auto"]');
-            const scrollTop = grid ? grid.scrollTop : 0;
+            // Restore Scroll for Window (Main Scrollbar)
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
 
             workspace.innerHTML = this.renderProductMasterList();
 
             // Restore Scroll
-            const newGrid = workspace.querySelector('div[style*="overflow-y: auto"]');
-            if (newGrid) newGrid.scrollTop = scrollTop;
+            window.scrollTo(0, scrollTop);
         }
         // CASE B: ZONE VIEW
         else {
@@ -754,20 +752,15 @@ class App {
         const uniqueCodes = new Set(Object.keys(this.data.products));
         console.log(`Rendering ${uniqueCodes.size} unique products.`);
 
+        // Removed Header and Nested Scroll as requested
         return `
-            <div style="margin-top:2rem; height: calc(100vh - 160px); display: flex; flex-direction: column;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-shrink: 0;">
-                    <h4 style="color:#666; margin:0;">Inventario General (${Object.keys(this.data.products).length})</h4>
-                </div>
-                <!-- Independent Scrolling Grid for Master List -->
+            <div style="margin-top:1rem; padding-bottom: 3rem;">
+                <!-- Full Page Grid -->
                 <div style="
                     display: grid;
                     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
                     gap: 1rem;
-                    overflow-y: auto;
-                    padding: 0.5rem;
-                    padding-bottom: 3rem; /* Space for FAB or bottom */
-                    flex: 1; 
+                    /* No fixed height or overflow-y here, letting the page scroll */
                 ">
                     ${productCards}
                 </div>
