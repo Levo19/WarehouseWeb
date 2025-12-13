@@ -973,3 +973,4 @@ try {
     console.error('Critical Init Error:', err);
     alert('Error crítico al iniciar la aplicación: ' + err.message);
 }
+
