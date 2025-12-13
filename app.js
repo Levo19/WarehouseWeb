@@ -504,8 +504,9 @@ class App {
             headerActions.innerHTML = `
                 <div class="header-dispatch-toolbar">
                     <div class="search-bar-header">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" placeholder="Buscar producto..." onkeyup="app.filterDispatchView(this.value)">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="dispatch-search-input" placeholder="Buscar producto o código..." onkeyup="app.filterDispatchView(this.value)">
+                        <i class="fa-solid fa-barcode barcode-icon" title="Escanear Código"></i>
                     </div>
                     <div class="client-buttons-group">
                         ${buttonsHtml}
@@ -514,6 +515,12 @@ class App {
                 <!-- Bell Only, No Gear -->
                 <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
             `;
+
+            // Auto-Focus Search Bar
+            setTimeout(() => {
+                const searchInput = document.getElementById('dispatch-search-input');
+                if (searchInput) searchInput.focus();
+            }, 100);
         }
     }
 
@@ -534,17 +541,33 @@ class App {
     }
 
     filterDispatchView(query) {
-        const term = query.toLowerCase();
-        // Determine context: Master List or Zone View?
-        // We can just filter .product-card elements in the DOM for simplicity and performance
+        // Debounce or basic optimization? 
+        // For 1800 items, direct DOM manipulation can be slow if done on every keypress.
+        // However, simple display:none is usually okay.
+        // Let's improve the matching logic to be stricter and safer.
+
+        if (!query) {
+            // If empty, show all (remove hidden attribute/style)
+            document.querySelectorAll('.product-card').forEach(c => c.style.display = 'flex');
+            return;
+        }
+
+        const term = query.toLowerCase().trim();
         const cards = document.querySelectorAll('.product-card');
-        cards.forEach(card => {
-            const text = card.innerText.toLowerCase();
-            if (text.includes(term)) {
-                card.style.display = 'flex'; // Restore
-            } else {
-                card.style.display = 'none';
-            }
+
+        // Batch updates to avoid reflow thrashing?
+        requestAnimationFrame(() => {
+            cards.forEach(card => {
+                // Search in the entire card text content (includes Code, Desc, Stock)
+                const text = card.innerText.toLowerCase();
+                // Also check explicit data attributes if we had them, but innerText covers visible code.
+
+                if (text.includes(term)) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
         });
     }
 
@@ -1062,5 +1085,3 @@ try {
     console.error('Critical Init Error:', err);
     alert('Error crítico al iniciar la aplicación: ' + err.message);
 }
-
-
