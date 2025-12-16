@@ -234,6 +234,9 @@ class App {
         } else if (viewName === 'prepedidos') {
             this.state.currentModule = 'prepedidos';
             this.loadPrepedidos();
+        } else if (viewName === 'movements') {
+            this.state.currentModule = 'movements';
+            this.loadMovimientosData();
         } else {
             this.state.currentModule = null;
         }
@@ -822,44 +825,15 @@ class App {
     /* --- GUIAS LIST REDESIGN --- */
 
     renderGuiasList() {
-        const container = document.getElementById('guias-list-container');
+        // Wrapper is now STATIC in index.html, no need to inject it.
+        // Just trigger filter/render which populates the list.
+        this.filterGuiasList();
+    }
 
-        // 1. Setup Main Layout (Filter Bar + List + SidePanel)
-        // Only setup layout if not already set up to preserve state during re-renders?
-        // For simplicity, we re-render list content but keep value of filters if inputs exist.
-
-        // Check if structure exists
-        if (!document.getElementById('guias-layout-wrapper')) {
-            container.innerHTML = `
-                <div id="guias-layout-wrapper" style="display:flex; height: calc(100vh - 180px); gap: 1rem; position: relative; overflow: hidden;">
-                    
-                    <!-- LEFT COLUMN: LIST -->
-                    <div id="guias-left-col" style="flex:1; display:flex; flex-direction:column; min-width: 0; transition: all 0.3s ease;">
-                        <!-- Filters -->
-                        <div class="filter-bar" style="display:flex; gap:1rem; padding-bottom:1rem; border-bottom:1px solid #eee; margin-bottom:1rem;">
-                            <div class="search-neon-wrapper" style="flex:1;">
-                                <i class="fa-solid fa-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#999;"></i>
-                                <input type="text" id="guia-filter-text" placeholder="Buscar por Proveedor o ID..." 
-                                       style="width:100%; padding-left:35px; height:40px;" onkeyup="app.filterGuiasList()">
-                            </div>
-                            <input type="date" id="guia-filter-date" style="border:1px solid #ddd; border-radius:8px; padding:0 1rem;" onchange="app.filterGuiasList()">
-                        </div>
-
-                        <!-- Scrollable List -->
-                        <div id="guias-list-scroll" style="flex:1; overflow-y:auto; padding-right:0.5rem;">
-                            <!-- Content goes here -->
-                        </div>
-                    </div>
-
-                    <!-- RIGHT COLUMN: DETAIL PANEL (Hidden by default) -->
-                    <div id="guia-detail-panel" class="detail-panel" style="width:0; overflow:hidden; border-left:1px solid #eee; background:white; display:flex; flex-direction:column; transition: width 0.3s ease;">
-                        <!-- Detail Content -->
-                    </div>
-                </div>
-            `;
-        }
-
-        this.filterGuiasList(); // This will trigger the initial list render based on current filter values
+    clearGuiaFilters() {
+        if (document.getElementById('guia-filter-text')) document.getElementById('guia-filter-text').value = '';
+        if (document.getElementById('guia-filter-date')) document.getElementById('guia-filter-date').value = '';
+        this.filterGuiasList();
     }
 
     filterGuiasList() {
@@ -923,7 +897,10 @@ class App {
             html += `<h4 style="margin: 1rem 0 0.5rem 0; color:var(--primary-color); border-bottom:2px solid #f3f4f6; padding-bottom:0.25rem;">${date}</h4>`;
             html += `<div class="guias-group-list">`;
 
+            console.log('Rendering Grouped Guias:', list);
+
             groups[date].forEach(g => {
+                const shortId = g.id ? g.id.slice(-6) : '???';
                 html += `
                     <div id="guia-row-${g.id}" class="guia-row-card" onclick="app.toggleGuiaDetail('${g.id}')">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -935,7 +912,7 @@ class App {
                         </div>
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem;">
                             <div style="font-size:0.85rem; color:#555;">Author: ${g.usuario}</div>
-                            <div style="font-size:0.85rem; color:#999;">ID: ...${g.id.slice(-6)}</div>
+                            <div style="font-size:0.85rem; color:#999;">ID: ...${shortId}</div>
                         </div>
                         ${g.comentario ? `<div style="font-size:0.8rem; color:#888; font-style:italic; margin-top:0.25rem;">"${g.comentario}"</div>` : ''}
                     </div>
