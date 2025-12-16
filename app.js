@@ -1098,18 +1098,24 @@ class App {
         // Clone for editing state
         this.editingDetails = details.map(d => ({ ...d })); // Deep copy enough? Yes flat structure.
 
-        // Enrich for display
+        // Enrich for display (FIXED Lookup)
         this.editingDetails = this.editingDetails.map(d => {
-            const product = this.data.products.find(p => String(p.codigo).trim() === String(d.codigo).trim());
+            const pCode = String(d.codigo).trim();
+            const product = this.data.products[pCode] || Object.values(this.data.products).find(p => String(p.codigo).trim() === pCode);
             return { ...d, descripcion: product ? product.descripcion : 'Producto Desconocido' };
         });
 
-        const productsOptions = this.data.products.map(p => `<option value="${p.codigo}">${p.codigo} - ${p.descripcion}</option>`).join('');
+        const productsOptions = Object.values(this.data.products).map(p => `<option value="${p.codigo}">${p.descripcion} - ${p.codigo}</option>`).join('');
 
         panel.innerHTML = `
             <div style="padding:1.5rem; border-bottom:1px solid #eee; background:#f9fafb; display:flex; flex-direction:column; height:100%;">
                 <h3 style="color:var(--primary-color); margin-bottom:1rem;">Editar Guía</h3>
                 
+                <div style="margin-bottom:0.5rem;">
+                    <label style="font-size:0.8rem; font-weight:bold;">Proveedor / Destino</label>
+                    <input type="text" id="edit-guia-provider" value="${guiaInfo.proveedor || ''}" style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
+                </div>
+
                 <div style="margin-bottom:1rem;">
                     <label style="font-size:0.8rem; font-weight:bold;">Comentario</label>
                     <textarea id="edit-guia-comment" style="width:100%; height:60px; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">${guiaInfo.comentario || ''}</textarea>
@@ -1156,8 +1162,8 @@ class App {
         tbody.innerHTML = this.editingDetails.map((d, index) => `
             <tr style="border-bottom:1px solid #f9f9f9;">
                 <td style="padding:0.5rem;">
-                    <div style="font-weight:bold;">${d.codigo}</div>
-                    <div style="font-size:0.8rem; color:#666;">${d.descripcion}</div>
+                    <div style="font-weight:bold; color:#333;">${d.descripcion}</div>
+                    <div style="font-size:0.8rem; color:#666;">Code: ${d.codigo}</div>
                 </td>
                 <td style="padding:0.5rem;">
                     <input type="number" value="${d.cantidad}" min="1" 
@@ -1165,7 +1171,7 @@ class App {
                            style="width:60px; padding:0.25rem; border:1px solid #ddd; border-radius:4px; text-align:center;">
                 </td>
                 <td style="padding:0.5rem;">
-                    <button onclick="app.removeProductFromEdit(${index})" style="color:red; background:none; border:none; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                    <button onclick="app.removeProductFromEdit(${index})" style="color:#ef4444; background:none; border:none; cursor:pointer; font-size:1rem;"><i class="fa-solid fa-trash"></i></button>
                 </td>
             </tr>
         `).join('');
@@ -1206,12 +1212,13 @@ class App {
 
     async saveGuiaUpdate(id) {
         const comment = document.getElementById('edit-guia-comment').value;
+        const provider = document.getElementById('edit-guia-provider').value;
         const btn = document.getElementById('btn-save-guia');
 
-        if (this.editingDetails.length === 0) {
-            alert("Debe haber al menos un producto.");
-            return;
-        }
+        // Allow empty? previous user request said "Allow empty".
+        // But here line 1217 checks length.
+        // I will remove the check to align with "Guia Vacia" feature.
+        // if (this.editingDetails.length === 0) { ... }
 
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
@@ -1220,7 +1227,8 @@ class App {
             const payload = {
                 idGuia: id,
                 comentario: comment,
-                productos: this.editingDetails.map(d => ({ kode: d.codigo, cantidad: d.cantidad, codigo: d.codigo })) // Ensure codigo is passed
+                proveedor: provider,
+                productos: this.editingDetails.map(d => ({ kode: d.codigo, cantidad: d.cantidad, codigo: d.codigo }))
             };
 
             const response = await fetch(API_URL, {
