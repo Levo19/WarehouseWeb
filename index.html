@@ -135,13 +135,40 @@
                 </div>
 
                 <!-- MOVEMENTS VIEW (Placeholder) -->
+                <!-- MOVEMENTS VIEW -->
                 <div id="view-movements" class="sub-view">
-                    <div class="module-header">
-                        <h3>Movimientos de Almacén</h3>
-                        <div class="tabs">
-                            <div class="content-panel">
-                                <p>Módulo de Movimientos en construcción...</p>
-                            </div>
+                    <div class="module-header-actions">
+                        <h3>Movimientos</h3>
+                        <div class="mov-tabs">
+                            <button class="mov-tab active" onclick="app.switchMovTab('guias')">Guías</button>
+                            <button class="mov-tab" onclick="app.switchMovTab('preingresos')">Preingresos</button>
+                        </div>
+                    </div>
+
+                    <!-- TAB: GUIAS -->
+                    <div id="tab-guias" class="mov-tab-content active">
+                        <div class="action-bar">
+                            <button class="btn-primary" onclick="app.openNewGuiaModal('INGRESO')">
+                                <i class="fa-solid fa-arrow-down"></i> Ingreso
+                            </button>
+                            <button class="btn-secondary" onclick="app.openNewGuiaModal('SALIDA')">
+                                <i class="fa-solid fa-arrow-up"></i> Salida
+                            </button>
+                        </div>
+                        <div id="guias-list-container" class="table-container">
+                            <!-- Dynamic Guias List -->
+                        </div>
+                    </div>
+
+                    <!-- TAB: PREINGRESOS -->
+                    <div id="tab-preingresos" class="mov-tab-content">
+                        <div class="action-bar">
+                            <button class="btn-primary" onclick="app.openNewPreingresoModal()">
+                                <i class="fa-solid fa-plus"></i> Nuevo Preingreso
+                            </button>
+                        </div>
+                        <div id="preingresos-list-container" class="cards-grid">
+                            <!-- Dynamic Preingresos Grid -->
                         </div>
                     </div>
                 </div>
@@ -172,8 +199,8 @@
     </section>
 
     <!-- Load Scripts -->
-    <script src="code_gs_partial.js?v=30"></script>
-    <script src="app.js?v=30"></script>
+    <script src="code_gs_partial.js?v=31"></script>
+    <script src="app.js?v=31"></script>
 </body>
 
 </html>
