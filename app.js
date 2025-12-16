@@ -986,7 +986,12 @@ class App {
 
         // Enrich details with description from Products list
         const enrichedDetails = details.map(d => {
-            const product = this.data.products.find(p => String(p.codigo).trim() === String(d.codigo).trim());
+            // Fix: products is an Object (Map), not Array. Use Object.values or direct lookup.
+            // Direct lookup is faster: this.data.products[d.codigo]
+            // But to match loose logic:
+            const pCode = String(d.codigo).trim();
+            const product = this.data.products[pCode] || Object.values(this.data.products).find(p => String(p.codigo).trim() === pCode);
+
             return {
                 ...d,
                 descripcion: product ? product.descripcion : 'Producto Desconocido'
