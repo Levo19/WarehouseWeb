@@ -156,6 +156,18 @@ class App {
 
         // Show App
         this.showApp();
+
+        // PRELOAD DATA (Background)
+        this.loadInitialData(); // Products & Dispatch
+        this.loadMovimientosData(true); // Guias (Silent)
+
+        // AUTO-REFRESH (Every 60s)
+        if (this.refreshInterval) clearInterval(this.refreshInterval);
+        this.refreshInterval = setInterval(() => {
+            console.log('Background Refresh...');
+            this.loadMovimientosData(true);
+        }, 60000);
+
         this.navigateTo('dashboard');
 
         // Start Pre-load with visual feedback
@@ -798,15 +810,18 @@ class App {
     }
 
     // Load Data
-    async loadMovimientosData() {
-        // Show Loading
-        document.getElementById('guias-list-container').innerHTML = '<div style="text-align:center; padding:2rem;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</div>';
+    async loadMovimientosData(isBackground = false) {
+        const container = document.getElementById('guias-list-scroll');
+
+        // Show Loading only if not background refresh
+        if (!isBackground && container) {
+            container.innerHTML = '<div style="text-align:center; padding:2rem; color:#999;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando datos...</div>';
+        }
 
         try {
-            // Mock call for now if API not ready, but we implemented it.
             const response = await fetch(API_URL, {
                 method: 'POST',
-                redirect: 'follow', // FIXED
+                redirect: 'follow',
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({ action: 'getMovimientosData' })
             });
@@ -819,6 +834,9 @@ class App {
             }
         } catch (e) {
             console.error(e);
+            if (!isBackground && container) {
+                container.innerHTML = `<div style="text-align:center; padding:1rem; color:red;">Error de conexión: ${e.message}</div>`;
+            }
         }
     }
 
