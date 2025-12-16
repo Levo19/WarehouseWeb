@@ -828,9 +828,16 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                this.data.movimientos = result.data; // { guias, preingresos }
+                this.data.movimientos = result.data; // { guias, preingresos, detalles }
                 this.renderGuiasList();
                 this.renderPreingresos();
+
+                // Refresh open panel if exists
+                const activeRow = document.querySelector('.guia-row-card.active');
+                if (activeRow) {
+                    const id = activeRow.id.replace('guia-row-', '');
+                    this.toggleGuiaDetail(id); // Re-open to update
+                }
             }
         } catch (e) {
             console.error(e);
@@ -956,6 +963,9 @@ class App {
             panel.style.width = '0';
             panel.style.opacity = '0';
             panel.innerHTML = '';
+            // Close Image Modal if open
+            const modal = document.getElementById('image-modal-overlay');
+            if (modal) modal.remove();
             return;
         }
 
@@ -965,36 +975,37 @@ class App {
 
         panel.style.width = '400px'; // Fixed width for detail
         panel.style.opacity = '1';
-        panel.innerHTML = '<div style="text-align:center; padding:2rem;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando detalles...</div>';
 
-        // Fetch Details
-        try {
-            // Find basic info locally first
-            const guiaInfo = this.data.movimientos.guias.find(g => g.id === id);
+        // Use Preloaded Data
+        const guiaInfo = this.data.movimientos.guias.find(g => g.id === id);
 
-            // Call API for products
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                redirect: 'follow',
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ action: 'getGuiaDetails', payload: { idGuia: id } })
-            });
-            const result = await response.json();
+        // Filter details locally
+        const details = this.data.movimientos.detalles
+            ? this.data.movimientos.detalles.filter(d => d.idGuia === id)
+            : [];
 
-            if (result.status === 'success') {
-                this.renderGuiaDetailContent(guiaInfo, result.data);
-            } else {
-                panel.innerHTML = `<div style="padding:1rem; color:red;">Error: ${result.message}</div>`;
-            }
+        // Enrich details with description from Products list
+        const enrichedDetails = details.map(d => {
+            const product = this.data.products.find(p => String(p.codigo).trim() === String(d.codigo).trim());
+            return {
+                ...d,
+                descripcion: product ? product.descripcion : 'Producto Desconocido'
+            };
+        });
 
-        } catch (e) {
-            console.error(e);
-            panel.innerHTML = `<div style="padding:1rem; color:red;">${e.message}</div>`;
-        }
+        this.renderGuiaDetailContent(guiaInfo, enrichedDetails);
     }
 
     renderGuiaDetailContent(info, products) {
         const panel = document.getElementById('guia-detail-panel');
+
+        // CHECK DATE FOR EDITING
+        // info.fecha is "dd/MM/yyyy HH:mm:ss"
+        // Get Today "dd/MM/yyyy"
+        const now = new Date();
+        const todayStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+        const guideDateStr = info.fecha.split(' ')[0];
+        const canEdit = (todayStr === guideDateStr);
 
         const productsHtml = products.length > 0 ? products.map(p => `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #f9f9f9;">
@@ -1006,16 +1017,30 @@ class App {
             </div>
         `).join('') : '<div style="padding:1rem; text-align:center; color:#999;">Sin productos registrados</div>';
 
+        // Photo Logic
+        let photoHtml = '';
+        if (info.foto) {
+            photoHtml = `
+                <div style="margin-top:1rem; cursor:pointer;" onclick="app.openImageModal('${info.foto}')">
+                    <img src="${info.foto}" style="width:100%; height:150px; object-fit:cover; border-radius:8px; border:1px solid #ddd;" title="Click para ampliar">
+                    <div style="text-align:center; font-size:0.8rem; color:var(--primary-color); margin-top:0.25rem;"><i class="fa-solid fa-magnifying-glass"></i> Ampliar</div>
+                </div>
+             `;
+        }
+
         panel.innerHTML = `
             <div style="padding:1.5rem; border-bottom:1px solid #eee; background:#f9fafb;">
-                <h3 style="margin:0 0 0.5rem 0; color:var(--primary-color);">Detalle de Guía</h3>
+                <div style="display:flex; justify-content:space-between; align-items:start;">
+                    <h3 style="margin:0 0 0.5rem 0; color:var(--primary-color);">Detalle de Guía</h3>
+                    ${canEdit ? `<button onclick="app.showGuiaEditMode('${info.id}')" class="btn-sm primary"><i class="fa-solid fa-pen-to-square"></i> Editar</button>` : ''}
+                </div>
                 <div style="font-size:0.9rem; color:#555;"><strong>${info.tipo}</strong> | ${info.fecha}</div>
                 <div style="margin-top:0.5rem; font-size:0.95rem;"><strong>Proveedor:</strong> ${info.proveedor}</div>
                 <div style="margin-top:0.25rem; font-size:0.95rem;"><strong>Usuario:</strong> ${info.usuario}</div>
                 
                 ${info.comentario ? `<div style="margin-top:1rem; background:#fff; padding:0.5rem; border-radius:4px; border:1px solid #eee; font-style:italic;">"${info.comentario}"</div>` : ''}
                 
-                ${info.foto ? `<div style="margin-top:1rem;"><a href="${info.foto}" target="_blank" class="btn-sm"><i class="fa-solid fa-image"></i> Ver Evidencia</a></div>` : ''}
+                ${photoHtml}
             </div>
             
             <div style="flex:1; overflow-y:auto; padding:1.5rem;">
@@ -1027,10 +1052,196 @@ class App {
         `;
     }
 
+    openImageModal(url) {
+        const modal = document.createElement('div');
+        modal.id = 'image-modal-overlay';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100vw';
+        modal.style.height = '100vh';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.85)';
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.zIndex = '9999';
+        modal.style.cursor = 'zoom-out';
+
+        modal.innerHTML = `<img src="${url}" style="max-width:90%; max-height:90vh; border-radius:8px; box-shadow:0 0 20px rgba(0,0,0,0.5);">`;
+
+        modal.onclick = () => modal.remove();
+        document.body.appendChild(modal);
+    }
+
     closeGuiaDetails() {
         const panel = document.getElementById('guia-detail-panel');
         panel.style.width = '0';
         document.querySelectorAll('.guia-row-card').forEach(d => d.classList.remove('active'));
+    }
+
+    /* --- EDITING LOGIC --- */
+
+    showGuiaEditMode(id) {
+        const panel = document.getElementById('guia-detail-panel');
+        const guiaInfo = this.data.movimientos.guias.find(g => g.id === id);
+
+        // Find existing details
+        let details = this.data.movimientos.detalles
+            ? this.data.movimientos.detalles.filter(d => d.idGuia === id)
+            : [];
+
+        // Clone for editing state
+        this.editingDetails = details.map(d => ({ ...d })); // Deep copy enough? Yes flat structure.
+
+        // Enrich for display
+        this.editingDetails = this.editingDetails.map(d => {
+            const product = this.data.products.find(p => String(p.codigo).trim() === String(d.codigo).trim());
+            return { ...d, descripcion: product ? product.descripcion : 'Producto Desconocido' };
+        });
+
+        const productsOptions = this.data.products.map(p => `<option value="${p.codigo}">${p.codigo} - ${p.descripcion}</option>`).join('');
+
+        panel.innerHTML = `
+            <div style="padding:1.5rem; border-bottom:1px solid #eee; background:#f9fafb; display:flex; flex-direction:column; height:100%;">
+                <h3 style="color:var(--primary-color); margin-bottom:1rem;">Editar Guía</h3>
+                
+                <div style="margin-bottom:1rem;">
+                    <label style="font-size:0.8rem; font-weight:bold;">Comentario</label>
+                    <textarea id="edit-guia-comment" style="width:100%; height:60px; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">${guiaInfo.comentario || ''}</textarea>
+                </div>
+
+                <div style="flex:1; overflow-y:auto; margin-bottom:1rem; border:1px solid #eee; border-radius:4px; background:white;">
+                    <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                        <thead style="background:#f3f4f6; position:sticky; top:0;">
+                            <tr>
+                                <th style="padding:0.5rem; text-align:left;">Producto</th>
+                                <th style="padding:0.5rem; width:80px;">Cant.</th>
+                                <th style="padding:0.5rem; width:40px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="edit-guia-products-body">
+                            <!-- Rendered by function -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Add Product -->
+                <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+                    <select id="edit-guia-add-select" style="flex:1; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
+                        <option value="">Seleccionar Producto...</option>
+                        ${productsOptions}
+                    </select>
+                    <button onclick="app.addProductToEdit()" class="btn-sm primary"><i class="fa-solid fa-plus"></i></button>
+                </div>
+
+                <div style="display:flex; gap:1rem; justify-content:end;">
+                    <button onclick="app.toggleGuiaDetail('${id}')" style="padding:0.75rem 1.5rem; background:#eee; border:none; border-radius:8px; cursor:pointer;">Cancelar</button>
+                    <button id="btn-save-guia" onclick="app.saveGuiaUpdate('${id}')" style="padding:0.75rem 1.5rem; background:var(--primary-color); color:white; border:none; border-radius:8px; cursor:pointer;">Guardar Cambios</button>
+                </div>
+            </div>
+        `;
+
+        this.renderEditProductsTable();
+    }
+
+    renderEditProductsTable() {
+        const tbody = document.getElementById('edit-guia-products-body');
+        if (!tbody) return;
+
+        tbody.innerHTML = this.editingDetails.map((d, index) => `
+            <tr style="border-bottom:1px solid #f9f9f9;">
+                <td style="padding:0.5rem;">
+                    <div style="font-weight:bold;">${d.codigo}</div>
+                    <div style="font-size:0.8rem; color:#666;">${d.descripcion}</div>
+                </td>
+                <td style="padding:0.5rem;">
+                    <input type="number" value="${d.cantidad}" min="1" 
+                           onchange="app.updateEditQuantity(${index}, this.value)"
+                           style="width:60px; padding:0.25rem; border:1px solid #ddd; border-radius:4px; text-align:center;">
+                </td>
+                <td style="padding:0.5rem;">
+                    <button onclick="app.removeProductFromEdit(${index})" style="color:red; background:none; border:none; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    updateEditQuantity(index, val) {
+        this.editingDetails[index].cantidad = Number(val);
+    }
+
+    removeProductFromEdit(index) {
+        this.editingDetails.splice(index, 1);
+        this.renderEditProductsTable();
+    }
+
+    addProductToEdit() {
+        const select = document.getElementById('edit-guia-add-select');
+        const code = select.value;
+        if (!code) return;
+
+        const product = this.data.products.find(p => p.codigo === code);
+
+        // Check if already exists
+        const exists = this.editingDetails.find(d => String(d.codigo) === String(code));
+        if (exists) {
+            alert('El producto ya está en la lista.');
+            return;
+        }
+
+        this.editingDetails.push({
+            codigo: code,
+            descripcion: product ? product.descripcion : '',
+            cantidad: 1
+        });
+
+        select.value = '';
+        this.renderEditProductsTable();
+    }
+
+    async saveGuiaUpdate(id) {
+        const comment = document.getElementById('edit-guia-comment').value;
+        const btn = document.getElementById('btn-save-guia');
+
+        if (this.editingDetails.length === 0) {
+            alert("Debe haber al menos un producto.");
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+
+        try {
+            const payload = {
+                idGuia: id,
+                comentario: comment,
+                productos: this.editingDetails.map(d => ({ kode: d.codigo, cantidad: d.cantidad, codigo: d.codigo })) // Ensure codigo is passed
+            };
+
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: 'updateGuia', payload: payload })
+            });
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                alert('Guía actualizada correctamente');
+                // Reload Data
+                await this.loadMovimientosData();
+            } else {
+                alert('Error: ' + result.message);
+                btn.disabled = false;
+                btn.innerText = 'Guardar Cambios';
+            }
+
+        } catch (e) {
+            console.error(e);
+            alert('Error de red: ' + e.message);
+            btn.disabled = false;
+            btn.innerText = 'Guardar Cambios';
+        }
     }
 
     renderPreingresos() {
