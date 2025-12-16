@@ -1098,14 +1098,15 @@ class App {
         // Clone for editing state
         this.editingDetails = details.map(d => ({ ...d })); // Deep copy enough? Yes flat structure.
 
-        // Enrich for display (FIXED Lookup)
+        // Enrich for display (FIXED Lookup & Property)
         this.editingDetails = this.editingDetails.map(d => {
             const pCode = String(d.codigo).trim();
             const product = this.data.products[pCode] || Object.values(this.data.products).find(p => String(p.codigo).trim() === pCode);
-            return { ...d, descripcion: product ? product.descripcion : 'Producto Desconocido' };
+            // Fix: Use .desc based on data, and default if missing
+            return { ...d, descripcion: product ? product.desc : 'Producto Desconocido' };
         });
 
-        const productsOptions = Object.values(this.data.products).map(p => `<option value="${p.codigo}">${p.descripcion} - ${p.codigo}</option>`).join('');
+        // Removed options logic, using search input now
 
         panel.innerHTML = `
             <div style="padding:1.5rem; border-bottom:1px solid #eee; background:#f9fafb; display:flex; flex-direction:column; height:100%;">
@@ -1136,13 +1137,16 @@ class App {
                     </table>
                 </div>
 
-                <!-- Add Product -->
-                <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
-                    <select id="edit-guia-add-select" style="flex:1; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
-                        <option value="">Seleccionar Producto...</option>
-                        ${productsOptions}
-                    </select>
-                    <button onclick="app.addProductToEdit()" class="btn-sm primary"><i class="fa-solid fa-plus"></i></button>
+
+                <!-- Add Product (Search Style) -->
+                <div style="margin-bottom:1rem; position:relative;">
+                     <div class="search-neon-wrapper" style="position:relative;">
+                         <i class="fa-solid fa-barcode" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--primary-color);"></i>
+                         <input type="text" id="edit-prod-search" placeholder="Buscar producto para agregar..." 
+                                style="width:100%; padding-left:35px; height:45px;" 
+                                onkeyup="app.searchProductForEdit(this, event)">
+                    </div>
+                    <div id="edit-prod-search-results" style="background:white; border:1px solid #eee; position:absolute; z-index:10; width:100%; display:none; max-height:200px; overflow-y:auto; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></div>
                 </div>
 
                 <div style="display:flex; gap:1rem; justify-content:end;">
@@ -1153,6 +1157,53 @@ class App {
         `;
 
         this.renderEditProductsTable();
+    }
+
+    /* --- EDIT SEARCH LOGIC --- */
+    searchProductForEdit(input, event) {
+        const term = input.value.toLowerCase().trim();
+        const resultsDiv = document.getElementById('edit-prod-search-results');
+
+        if (term.length < 2) {
+            resultsDiv.style.display = 'none';
+            return;
+        }
+
+        const matches = Object.entries(this.data.products)
+            .filter(([code, p]) => code.toLowerCase().includes(term) || p.desc.toLowerCase().includes(term))
+            .slice(0, 15);
+
+        if (matches.length > 0) {
+            resultsDiv.innerHTML = matches.map(([code, p]) => `
+                <div style="padding:0.5rem; border-bottom:1px solid #eee; cursor:pointer; font-size:0.9rem;" 
+                     onmouseover="this.style.background='#f3f4f6'" 
+                     onmouseout="this.style.background='white'"
+                     onclick="app.selectProductForEdit('${code}', '${p.desc.replace(/'/g, "")}')">
+                    <strong>${p.desc}</strong> <span style="color:#888; font-size:0.8rem;">(${code})</span>
+                </div>
+             `).join('');
+            resultsDiv.style.display = 'block';
+        } else {
+            resultsDiv.style.display = 'none';
+        }
+    }
+
+    selectProductForEdit(code, desc) {
+        // Add to editingDetails
+        const existingIndex = this.editingDetails.findIndex(p => String(p.codigo).trim() === String(code).trim());
+        if (existingIndex >= 0) {
+            this.editingDetails[existingIndex].cantidad = Number(this.editingDetails[existingIndex].cantidad) + 1;
+        } else {
+            this.editingDetails.push({ codigo: code, descripcion: desc, cantidad: 1 });
+        }
+
+        this.renderEditProductsTable();
+
+        // Clear Search
+        const input = document.getElementById('edit-prod-search');
+        input.value = '';
+        input.focus();
+        document.getElementById('edit-prod-search-results').style.display = 'none';
     }
 
     renderEditProductsTable() {
