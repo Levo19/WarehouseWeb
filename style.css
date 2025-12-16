@@ -1423,3 +1423,55 @@ h3 {
 .temp-item button:active {
     transform: scale(0.95);
 }
+
+/* GUIAS MASTER-DETAIL LAYOUT */
+#guias-layout-wrapper {
+    width: 100%;
+}
+
+#guias-left-col {
+    transition: flex 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* DETAIL PANEL */
+.detail-panel {
+    background: white;
+    height: 100%;
+    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.05);
+}
+
+/* LIST ITEMS */
+.guia-row-card {
+    background: white;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 4px solid transparent;
+}
+
+.guia-row-card:hover {
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border-color: var(--primary-color);
+}
+
+.guia-row-card.active {
+    background: #f0f7ff;
+    border-color: var(--primary-color);
+    border-left-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+}
+
+/* GROUP HEADERS */
+.guias-group-list {
+    margin-bottom: 1.5rem;
+}
+
+/* SIDE PANEL CONTENT */
+.detail-panel h3 {
+    font-size: 1.2rem;
+    color: var(--text-main);
+}
