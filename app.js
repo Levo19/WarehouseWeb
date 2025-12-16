@@ -1335,7 +1335,8 @@ class App {
                                     style="width:100%; padding-left:35px; height:45px;" 
                                     onkeyup="app.searchProductForGuia(this, event)">
                         </div>
-                        <button type="button" class="btn-primary" style="height:45px; width:45px; font-size:1.2rem; border-radius: 8px;" onclick="app.addProductToGuia()"><i class="fa-solid fa-plus"></i></button>
+                        <!-- Button removed as requested (Auto-add enabled) -->
+                        <button type="button" class="btn-primary" style="height:45px; width:45px; font-size:1.2rem; border-radius: 8px; display:none;" onclick="app.addProductToGuia()"><i class="fa-solid fa-plus"></i></button>
                     </div>
                     <div id="prod-search-results" style="background:white; border:1px solid #eee; position:absolute; z-index:10; width:60%; display:none;"></div>
                     
@@ -1461,7 +1462,7 @@ class App {
                 // If I typed "666" and only "666a" exists, finding exactKey for "666" will fail.
 
                 this.selectProductForGuia(exactKey, this.data.products[exactKey].desc);
-                this.addProductToGuia(); // Auto Add immediately
+                // this.addProductToGuia(); // Handled inside selectProductForGuia now
                 return;
             }
 
@@ -1493,10 +1494,24 @@ class App {
     }
 
     selectProductForGuia(code, desc) {
-        document.getElementById('prod-search').value = `${code} - ${desc}`;
-        document.getElementById('prod-search').dataset.code = code;
+        // Auto-Add Logic
+        const qty = 1;
+
+        // Add to temp list
+        const existingIndex = this.tempGuiaProducts.findIndex(p => p.codigo === code);
+        if (existingIndex >= 0) {
+            this.tempGuiaProducts[existingIndex].cantidad += 1;
+        } else {
+            this.tempGuiaProducts.push({ codigo: code, descripcion: desc, cantidad: qty });
+        }
+
+        this.renderTempProducts();
+
+        // Clear UI & Keep Focus
+        document.getElementById('prod-search').value = '';
+        delete document.getElementById('prod-search').dataset.code;
         document.getElementById('prod-search-results').style.display = 'none';
-        document.getElementById('prod-qty').focus();
+        document.getElementById('prod-search').focus();
     }
 
     addProductToGuia() {
@@ -1618,7 +1633,7 @@ class App {
     }
 
     async saveGuia(type) {
-        if (this.tempGuiaProducts.length === 0) return alert('Agregue al menos un producto');
+        // if (this.tempGuiaProducts.length === 0) return alert('Agregue al menos un producto');
 
         const provider = document.getElementById('guia-proveedor').value;
         const comment = document.getElementById('guia-comentario').value;
