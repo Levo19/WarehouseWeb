@@ -1387,8 +1387,39 @@ h3 {
 
 /* Ensure Search Results Dropdown is visible and styled properly */
 #prod-search-results {
-    max-height: 250px;
-    overflow-y: auto;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     border-radius: 0 0 6px 6px;
+}
+
+/* --- NEW STYLES FOR NEON SEARCH & ITEM CONTROLS --- */
+
+@keyframes neon-pulse {
+    0% {
+        box-shadow: 0 0 5px rgba(67, 56, 202, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 15px rgba(67, 56, 202, 0.7);
+    }
+
+    100% {
+        box-shadow: 0 0 5px rgba(67, 56, 202, 0.4);
+    }
+}
+
+.search-neon-wrapper input {
+    border: 2px solid transparent !important;
+    background: #f9fafb;
+    transition: all 0.3s ease;
+}
+
+.search-neon-wrapper input:focus {
+    background: #fff;
+    border-color: var(--primary-color) !important;
+    animation: neon-pulse 2s infinite;
+    outline: none;
+}
+
+/* Ensure controls in temp list look clicky */
+.temp-item button:active {
+    transform: scale(0.95);
 }
