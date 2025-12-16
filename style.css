@@ -1351,7 +1351,44 @@ h3 {
 
 /* Preingresos Grid */
 #preingresos-list-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 1rem;
+}
+
+/* Scrollbar Styles for Search Results */
+#prod-search-results,
+.temp-product-list {
+    scrollbar-width: thin;
+    /* Firefox */
+    scrollbar-color: var(--primary-color) #f1f1f1;
+}
+
+/* Webkit Scrollbar */
+#prod-search-results::-webkit-scrollbar,
+.temp-product-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+#prod-search-results::-webkit-scrollbar-track,
+.temp-product-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+#prod-search-results::-webkit-scrollbar-thumb,
+.temp-product-list::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+}
+
+#prod-search-results::-webkit-scrollbar-thumb:hover,
+.temp-product-list::-webkit-scrollbar-thumb:hover {
+    background: #4338ca;
+    /* Darker Indigo */
+}
+
+/* Ensure Search Results Dropdown is visible and styled properly */
+#prod-search-results {
+    max-height: 250px;
+    overflow-y: auto;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border-radius: 0 0 6px 6px;
 }
