@@ -943,7 +943,7 @@ class App {
                     <!-- Product Adder -->
                     <h4 style="margin-bottom:0.5rem;">Detalle de Productos</h4>
                     <div class="product-add-row">
-                        <input type="text" id="prod-search" placeholder="Buscar producto..." onkeyup="app.searchProductForGuia(this)">
+                        <input type="text" id="prod-search" placeholder="Buscar producto (Scan/Texto)..." onkeyup="app.searchProductForGuia(this, event)">
                         <input type="number" id="prod-qty" placeholder="Cant." min="1" value="1">
                         <button type="button" class="btn-primary" onclick="app.addProductToGuia()"><i class="fa-solid fa-plus"></i></button>
                     </div>
@@ -1044,9 +1044,39 @@ class App {
     }
 
     // PRODUCT ADDER LOGIC
-    searchProductForGuia(input) {
+    searchProductForGuia(input, event) {
         const term = input.value.toLowerCase().trim();
         const resultsDiv = document.getElementById('prod-search-results');
+
+        // Handle "Enter" Key (Scanner behavior)
+        if (event && event.key === 'Enter') {
+            event.preventDefault(); // Stop form submit or other actions
+
+            // 1. Try EXACT MATCH
+            const exactProduct = this.data.products[term.toUpperCase()]; // Try upper (keys are usually upper) or exact key
+            // Note: keys in this.data.products are the codes. 
+            // If "666" matches a key exactly:
+
+            // Actually, keys might be varying case. Let's find distinct key.
+            const exactKey = Object.keys(this.data.products).find(k => k.toLowerCase() === term);
+
+            if (exactKey) {
+                // Exact code found.
+                // Logic: "si tengo un unico producto cuyo codigo es igual '666' entonces se debe agregar automaticamente"
+                // The key IS unique in the map. So if we found it, it's the one.
+
+                // However, user said: "si tuviera dos productos 666a y 6667... mostrar lista"
+                // This implies if I type "666", I shouldn't auto-pick "666a".
+                // My logic matches: if I typed "666" and "666" exists, take it. 
+                // If I typed "666" and only "666a" exists, finding exactKey for "666" will fail.
+
+                this.selectProductForGuia(exactKey, this.data.products[exactKey].desc);
+                this.addProductToGuia(); // Auto Add immediately
+                return;
+            }
+
+            // If not exact match, fall through to search results to show user "Hey, 666 doesn't exist, here is 666a, 666b..."
+        }
 
         if (term.length < 2) {
             resultsDiv.style.display = 'none';
@@ -1055,7 +1085,7 @@ class App {
 
         const matches = Object.entries(this.data.products)
             .filter(([code, p]) => code.toLowerCase().includes(term) || p.desc.toLowerCase().includes(term))
-            .slice(0, 8); // Limit 8
+            .slice(0, 15); // Extended limit for visibility
 
         if (matches.length > 0) {
             resultsDiv.innerHTML = matches.map(([code, p]) => `
@@ -1132,7 +1162,7 @@ class App {
     }
 
     // SAVE LOGIC
-    async savePreingresoInteraction() {
+    async savePreingreso() {
         const provider = document.getElementById('pre-proveedor').value;
         const comment = document.getElementById('pre-comentario').value;
         const images = Array.from(document.querySelectorAll('#pre-preview img')).map(img => img.dataset.base64);
@@ -1172,7 +1202,7 @@ class App {
         }
     }
 
-    async saveGuiaInteraction(type) {
+    async saveGuia(type) {
         if (this.tempGuiaProducts.length === 0) return alert('Agregue al menos un producto');
 
         const provider = document.getElementById('guia-proveedor').value;
