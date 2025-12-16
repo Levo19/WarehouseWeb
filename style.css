@@ -1049,21 +1049,24 @@ h3 {
     opacity: 0;
     pointer-events: none;
 }
+
 /* PREPEDIDOS MODULE */
 .provider-card {
     background: white;
     border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
     overflow: hidden;
     display: flex;
     flex-direction: column;
     transition: transform 0.2s;
     border: 1px solid #f0f0f0;
 }
+
 .provider-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
+
 .provider-card-header {
     height: 160px;
     overflow: hidden;
@@ -1071,12 +1074,14 @@ h3 {
     background: #fff;
     border-bottom: 1px solid #eee;
 }
+
 .provider-img {
     width: 100%;
     height: 100%;
     object-fit: contain;
     padding: 5px;
 }
+
 .provider-body {
     padding: 1.2rem;
     flex: 1;
@@ -1084,17 +1089,20 @@ h3 {
     flex-direction: column;
     gap: 0.8rem;
 }
+
 .provider-name-container {
     text-align: center;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid #f0f0f0;
 }
+
 .provider-name {
     margin: 0;
     font-size: 1.1rem;
     font-weight: 700;
     color: #333;
 }
+
 .provider-info-row {
     display: flex;
     justify-content: space-between;
@@ -1102,33 +1110,248 @@ h3 {
     border-bottom: 1px solid #f5f5f5;
     padding-bottom: 0.5rem;
 }
+
 .provider-label {
     font-size: 0.85rem;
     color: #888;
 }
+
 .provider-pill {
     font-weight: 600;
     padding: 4px 10px;
     border-radius: 20px;
     font-size: 0.8rem;
 }
+
 .pill-default {
     background: #f3f4f6;
     color: #444;
 }
+
 .pill-today-order {
     background: #ffebee;
     color: #d32f2f;
     border: 1px solid #ffcdd2;
 }
+
 .pill-today-delivery {
     background: #e8f5e9;
     color: #2e7d32;
     border: 1px solid #c8e6c9;
 }
+
 .provider-footer {
     padding: 1rem;
     background: #fafafa;
     border-top: 1px solid #eee;
     text-align: center;
+}
+
+/* =========================================
+   MOVIMIENTOS MODULE
+   ========================================= */
+
+/* Header & Tabs */
+.module-header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.mov-tabs {
+    display: flex;
+    background: #eef2f6;
+    padding: 4px;
+    border-radius: 8px;
+    gap: 4px;
+}
+
+.mov-tab {
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.mov-tab:hover {
+    color: var(--primary-color);
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.mov-tab.active {
+    background: white;
+    color: var(--primary-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    font-weight: 600;
+}
+
+.mov-tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.mov-tab-content.active {
+    display: block;
+}
+
+/* Actions Bar */
+.mov-actions {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.btn-ingreso {
+    background: #4f46e5;
+    /* Indigo */
+    color: white;
+}
+
+.btn-salida {
+    background: white;
+    color: #333;
+    border: 1px solid #ddd;
+}
+
+.btn-salida:hover {
+    background: #f9fafb;
+    border-color: #bbb;
+}
+
+/* Tables */
+.guias-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.guias-table th,
+.guias-table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+    font-size: 0.9rem;
+}
+
+.guias-table th {
+    background: #f8fafc;
+    font-weight: 600;
+    color: #475569;
+}
+
+.guias-table tr:hover {
+    background: #f8fafc;
+}
+
+/* Badges */
+.badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge.ingreso {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge.salida {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.badge.pendiente {
+    background: #ffedd5;
+    color: #9a3412;
+}
+
+.badge.procesado {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+/* Product Adder */
+.product-add-row {
+    display: grid;
+    grid-template-columns: 3fr 1fr auto;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    align-items: center;
+}
+
+.temp-product-list {
+    background: #f9fafb;
+    border: 1px solid #eee;
+    border-radius: 6px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.temp-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    border-bottom: 1px solid #eee;
+    background: white;
+}
+
+.temp-item:last-child {
+    border-bottom: none;
+}
+
+/* Photo Widget */
+.photo-widget {
+    margin-top: 1rem;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    background: #fafafa;
+    transition: all 0.2s;
+}
+
+.photo-widget:hover {
+    border-color: var(--primary-color);
+    background: #f0f7ff;
+}
+
+.photo-preview-grid {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+}
+
+.photo-thumb {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.file-input-hidden {
+    display: none;
+}
+
+/* Preingresos Grid */
+#preingresos-list-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
 }
