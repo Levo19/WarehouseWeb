@@ -819,43 +819,223 @@ class App {
         }
     }
 
+    /* --- GUIAS LIST REDESIGN --- */
+
     renderGuiasList() {
         const container = document.getElementById('guias-list-container');
-        const guias = this.data.movimientos?.guias || [];
 
-        if (guias.length === 0) {
-            container.innerHTML = '<div class="empty-state" style="height:200px;"><p>No hay guías registradas</p></div>';
+        // 1. Setup Main Layout (Filter Bar + List + SidePanel)
+        // Only setup layout if not already set up to preserve state during re-renders?
+        // For simplicity, we re-render list content but keep value of filters if inputs exist.
+
+        // Check if structure exists
+        if (!document.getElementById('guias-layout-wrapper')) {
+            container.innerHTML = `
+                <div id="guias-layout-wrapper" style="display:flex; height: calc(100vh - 180px); gap: 1rem; position: relative; overflow: hidden;">
+                    
+                    <!-- LEFT COLUMN: LIST -->
+                    <div id="guias-left-col" style="flex:1; display:flex; flex-direction:column; min-width: 0; transition: all 0.3s ease;">
+                        <!-- Filters -->
+                        <div class="filter-bar" style="display:flex; gap:1rem; padding-bottom:1rem; border-bottom:1px solid #eee; margin-bottom:1rem;">
+                            <div class="search-neon-wrapper" style="flex:1;">
+                                <i class="fa-solid fa-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#999;"></i>
+                                <input type="text" id="guia-filter-text" placeholder="Buscar por Proveedor o ID..." 
+                                       style="width:100%; padding-left:35px; height:40px;" onkeyup="app.filterGuiasList()">
+                            </div>
+                            <input type="date" id="guia-filter-date" style="border:1px solid #ddd; border-radius:8px; padding:0 1rem;" onchange="app.filterGuiasList()">
+                        </div>
+
+                        <!-- Scrollable List -->
+                        <div id="guias-list-scroll" style="flex:1; overflow-y:auto; padding-right:0.5rem;">
+                            <!-- Content goes here -->
+                        </div>
+                    </div>
+
+                    <!-- RIGHT COLUMN: DETAIL PANEL (Hidden by default) -->
+                    <div id="guia-detail-panel" class="detail-panel" style="width:0; overflow:hidden; border-left:1px solid #eee; background:white; display:flex; flex-direction:column; transition: width 0.3s ease;">
+                        <!-- Detail Content -->
+                    </div>
+                </div>
+            `;
+        }
+
+        this.filterGuiasList(); // This will trigger the initial list render based on current filter values
+    }
+
+    filterGuiasList() {
+        const text = document.getElementById('guia-filter-text')?.value.toLowerCase() || '';
+        const dateInput = document.getElementById('guia-filter-date')?.value; // YYYY-MM-DD
+
+        let filtered = this.data.movimientos?.guias || [];
+
+        // Filter Text
+        if (text) {
+            filtered = filtered.filter(g =>
+                (g.proveedor && g.proveedor.toLowerCase().includes(text)) ||
+                (g.id && g.id.toLowerCase().includes(text)) ||
+                (g.usuario && g.usuario.toLowerCase().includes(text))
+            );
+        }
+
+        // Filter Date
+        if (dateInput) {
+            // g.fecha is usually "DD/MM/YYYY HH:mm:ss"
+            // Let's normalize. 
+            filtered = filtered.filter(g => {
+                const parts = g.fecha.split(' ')[0].split('/'); // ["16", "12", "2025"]
+                // Date input is YYYY-MM-DD
+                const gDateISO = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                return gDateISO === dateInput;
+            });
+        }
+
+        this.renderGuiasGrouped(filtered);
+    }
+
+    renderGuiasGrouped(list) {
+        const container = document.getElementById('guias-list-scroll');
+        if (list.length === 0) {
+            container.innerHTML = '<div style="text-align:center; color:#999; padding:2rem;">No se encontraron guías</div>';
             return;
         }
 
-        const rows = guias.map(g => `
-            <tr>
-                <td><span class="badge ${g.tipo.toLowerCase()}">${g.tipo}</span></td>
-                <td>${g.fecha}</td>
-                <td>${g.proveedor || '-'}</td>
-                <td>${g.usuario}</td>
-                <td>${g.comentario || ''}</td>
-                <td>
-                    ${g.foto ? `<a href="${g.foto}" target="_blank"><i class="fa-solid fa-image"></i></a>` : ''}
-                </td>
-            </tr>
-        `).join('');
+        // Group by Date
+        // Helper to extract date part
+        const getDate = (str) => str.split(' ')[0]; // "16/12/2025"
 
-        container.innerHTML = `
-            <table class="guias-table">
-                <thead>
-                    <tr>
-                        <th>Tipo</th>
-                        <th>Fecha</th>
-                        <th>Proveedor</th>
-                        <th>Usuario</th>
-                        <th>Comentario</th>
-                        <th>Evidencia</th>
-                    </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-            </table>
+        const groups = {};
+        list.forEach(g => {
+            const d = getDate(g.fecha);
+            if (!groups[d]) groups[d] = [];
+            groups[d].push(g);
+        });
+
+        // Sort Dates Descending (assuming DD/MM/YYYY format)
+        // We convert to timestamp for sorting
+        const sortedDates = Object.keys(groups).sort((a, b) => {
+            const da = a.split('/').reverse().join('');
+            const db = b.split('/').reverse().join('');
+            return db.localeCompare(da);
+        });
+
+        let html = '';
+        sortedDates.forEach(date => {
+            html += `<h4 style="margin: 1rem 0 0.5rem 0; color:var(--primary-color); border-bottom:2px solid #f3f4f6; padding-bottom:0.25rem;">${date}</h4>`;
+            html += `<div class="guias-group-list">`;
+
+            groups[date].forEach(g => {
+                html += `
+                    <div id="guia-row-${g.id}" class="guia-row-card" onclick="app.toggleGuiaDetail('${g.id}')">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <span class="badge ${g.tipo.toLowerCase()}">${g.tipo}</span>
+                                <span style="font-weight:bold; color:#333; margin-left:0.5rem;">${g.proveedor || 'Sin Nombre'}</span>
+                            </div>
+                            <div style="font-size:0.8rem; color:#666;">${g.fecha.split(' ')[1] || ''}</div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem;">
+                            <div style="font-size:0.85rem; color:#555;">Author: ${g.usuario}</div>
+                            <div style="font-size:0.85rem; color:#999;">ID: ...${g.id.slice(-6)}</div>
+                        </div>
+                        ${g.comentario ? `<div style="font-size:0.8rem; color:#888; font-style:italic; margin-top:0.25rem;">"${g.comentario}"</div>` : ''}
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+        });
+
+        container.innerHTML = html;
+    }
+
+    async toggleGuiaDetail(id) {
+        const panel = document.getElementById('guia-detail-panel');
+        const listContainer = document.getElementById('guias-left-col');
+        const currentActiveInfo = document.querySelector('.guia-row-card.active');
+
+        // Remove active class from all
+        document.querySelectorAll('.guia-row-card').forEach(d => d.classList.remove('active'));
+
+        // If clicking same, CLOSE
+        if (currentActiveInfo && currentActiveInfo.id === `guia-row-${id}`) {
+            panel.style.width = '0';
+            panel.style.opacity = '0';
+            panel.innerHTML = '';
+            return;
+        }
+
+        // OPEN logic
+        const row = document.getElementById(`guia-row-${id}`);
+        if (row) row.classList.add('active'); // Highlight
+
+        panel.style.width = '400px'; // Fixed width for detail
+        panel.style.opacity = '1';
+        panel.innerHTML = '<div style="text-align:center; padding:2rem;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando detalles...</div>';
+
+        // Fetch Details
+        try {
+            // Find basic info locally first
+            const guiaInfo = this.data.movimientos.guias.find(g => g.id === id);
+
+            // Call API for products
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: 'getGuiaDetails', payload: { idGuia: id } })
+            });
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                this.renderGuiaDetailContent(guiaInfo, result.data);
+            } else {
+                panel.innerHTML = `<div style="padding:1rem; color:red;">Error: ${result.message}</div>`;
+            }
+
+        } catch (e) {
+            console.error(e);
+            panel.innerHTML = `<div style="padding:1rem; color:red;">${e.message}</div>`;
+        }
+    }
+
+    renderGuiaDetailContent(info, products) {
+        const panel = document.getElementById('guia-detail-panel');
+
+        const productsHtml = products.length > 0 ? products.map(p => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #f9f9f9;">
+                <div style="flex:1;">
+                    <div style="font-weight:bold; font-size:0.9rem;">${p.codigo}</div>
+                    <div style="font-size:0.8rem; color:#666;">${p.descripcion}</div>
+                </div>
+                <div style="font-weight:bold;">x${p.cantidad}</div>
+            </div>
+        `).join('') : '<div style="padding:1rem; text-align:center; color:#999;">Sin productos registrados</div>';
+
+        panel.innerHTML = `
+            <div style="padding:1.5rem; border-bottom:1px solid #eee; background:#f9fafb;">
+                <h3 style="margin:0 0 0.5rem 0; color:var(--primary-color);">Detalle de Guía</h3>
+                <div style="font-size:0.9rem; color:#555;"><strong>${info.tipo}</strong> | ${info.fecha}</div>
+                <div style="margin-top:0.5rem; font-size:0.95rem;"><strong>Proveedor:</strong> ${info.proveedor}</div>
+                <div style="margin-top:0.25rem; font-size:0.95rem;"><strong>Usuario:</strong> ${info.usuario}</div>
+                
+                ${info.comentario ? `<div style="margin-top:1rem; background:#fff; padding:0.5rem; border-radius:4px; border:1px solid #eee; font-style:italic;">"${info.comentario}"</div>` : ''}
+                
+                ${info.foto ? `<div style="margin-top:1rem;"><a href="${info.foto}" target="_blank" class="btn-sm"><i class="fa-solid fa-image"></i> Ver Evidencia</a></div>` : ''}
+            </div>
+            
+            <div style="flex:1; overflow-y:auto; padding:1.5rem;">
+                <h4 style="margin-bottom:1rem;">Productos (${products.length})</h4>
+                ${productsHtml}
+            </div>
+            
+            <button onclick="app.closeGuiaDetails()" style="margin:1rem; padding:0.75rem; background:#eee; border:none; border-radius:8px; cursor:pointer;">Cerrar Panel</button>
         `;
+    }
+
+    closeGuiaDetails() {
+        const panel = document.getElementById('guia-detail-panel');
+        panel.style.width = '0';
+        document.querySelectorAll('.guia-row-card').forEach(d => d.classList.remove('active'));
     }
 
     renderPreingresos() {
