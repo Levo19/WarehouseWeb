@@ -155,8 +155,52 @@
                                 <i class="fa-solid fa-arrow-up"></i> Salida
                             </button>
                         </div>
-                        <div id="guias-list-container" class="table-container">
-                            <!-- Dynamic Guias List -->
+                        <!-- STATIC GUIAS LAYOUT -->
+                        <div id="guias-layout-wrapper"
+                            style="display:flex; height: calc(100vh - 180px); gap: 1rem; position: relative; overflow: hidden; margin-top: 1rem;">
+
+                            <!-- LEFT COLUMN: LIST -->
+                            <div id="guias-left-col"
+                                style="flex:1; display:flex; flex-direction:column; min-width: 0; transition: all 0.3s ease;">
+                                <!-- Filters -->
+                                <div class="filter-bar"
+                                    style="display:flex; gap:1rem; padding-bottom:1rem; border-bottom:1px solid #eee; margin-bottom:1rem; align-items: center;">
+                                    <div class="search-neon-wrapper" style="flex:1; position: relative;">
+                                        <i class="fa-solid fa-magnifying-glass"
+                                            style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#999;"></i>
+                                        <input type="text" id="guia-filter-text"
+                                            placeholder="Buscar por Proveedor o ID..."
+                                            style="width:100%; padding-left:35px; height:40px; border-radius: 8px; border: 1px solid #ddd;"
+                                            onkeyup="app.filterGuiasList()">
+                                    </div>
+
+                                    <!-- Compact Date Filter -->
+                                    <div class="date-filter-wrapper" title="Filtrar por fecha">
+                                        <i class="fa-regular fa-calendar" style="font-size: 1.2rem;"></i>
+                                        <input type="date" id="guia-filter-date" onchange="app.filterGuiasList()">
+                                    </div>
+
+                                    <!-- Clear Filter Button -->
+                                    <button class="icon-btn" onclick="app.clearGuiaFilters()" title="Limpiar filtros"
+                                        style="font-size: 1rem;">
+                                        <i class="fa-solid fa-filter-circle-xmark"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Scrollable List -->
+                                <div id="guias-list-scroll" style="flex:1; overflow-y:auto; padding-right:0.5rem;">
+                                    <!-- Content goes here -->
+                                    <div style="text-align:center; padding:2rem; color:#999;">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Inicializando...
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- RIGHT COLUMN: DETAIL PANEL (Hidden by default) -->
+                            <div id="guia-detail-panel" class="detail-panel"
+                                style="width:0; overflow:hidden; border-left:1px solid #eee; background:white; display:flex; flex-direction:column; transition: width 0.3s ease;">
+                                <!-- Detail Content -->
+                            </div>
                         </div>
                     </div>
 
