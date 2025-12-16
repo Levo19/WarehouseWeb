@@ -942,10 +942,14 @@ class App {
                     
                     <!-- Product Adder -->
                     <h4 style="margin-bottom:0.5rem;">Detalle de Productos</h4>
-                    <div class="product-add-row">
-                        <input type="text" id="prod-search" placeholder="Buscar producto (Scan/Texto)..." onkeyup="app.searchProductForGuia(this, event)">
-                        <input type="number" id="prod-qty" placeholder="Cant." min="1" value="1">
-                        <button type="button" class="btn-primary" onclick="app.addProductToGuia()"><i class="fa-solid fa-plus"></i></button>
+                    <div class="product-add-row" style="align-items: center;">
+                        <div class="search-neon-wrapper" style="flex:1; position:relative;">
+                             <i class="fa-solid fa-barcode" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--primary-color);"></i>
+                             <input type="text" id="prod-search" placeholder="Buscar producto (Scan/Texto)..." 
+                                    style="width:100%; padding-left:35px; height:45px;" 
+                                    onkeyup="app.searchProductForGuia(this, event)">
+                        </div>
+                        <button type="button" class="btn-primary" style="height:45px; width:45px; font-size:1.2rem; border-radius: 8px;" onclick="app.addProductToGuia()"><i class="fa-solid fa-plus"></i></button>
                     </div>
                     <div id="prod-search-results" style="background:white; border:1px solid #eee; position:absolute; z-index:10; width:60%; display:none;"></div>
                     
@@ -1111,12 +1115,12 @@ class App {
 
     addProductToGuia() {
         const input = document.getElementById('prod-search');
-        const code = input.dataset.code; // Prefer dataset code
-        const val = input.value; // Fallback
+        const code = input.dataset.code;
+        const val = input.value;
 
         // Extract code if manually typed "CODE - DESC"
         const finalCode = code || (val.includes('-') ? val.split('-')[0].trim() : val.trim());
-        const qty = parseInt(document.getElementById('prod-qty').value) || 1;
+        const qty = 1; // Default to 1
 
         if (!finalCode) return alert('Seleccione un producto');
         // Validate existence?
@@ -1126,34 +1130,59 @@ class App {
 
         const desc = this.data.products[finalCode] ? this.data.products[finalCode].desc : 'Producto Manual';
 
-        this.tempGuiaProducts.push({ codigo: finalCode, descripcion: desc, cantidad: qty });
+        // Check if already exists to just add qty?
+        const existingIndex = this.tempGuiaProducts.findIndex(p => p.codigo === finalCode);
+        if (existingIndex >= 0) {
+            this.tempGuiaProducts[existingIndex].cantidad += 1;
+        } else {
+            this.tempGuiaProducts.push({ codigo: finalCode, descripcion: desc, cantidad: qty });
+        }
 
         this.renderTempProducts();
 
         // Reset inputs
         input.value = '';
         delete input.dataset.code;
-        document.getElementById('prod-qty').value = 1;
         input.focus();
     }
 
     renderTempProducts() {
         const container = document.getElementById('temp-prods-list');
         if (this.tempGuiaProducts.length === 0) {
-            container.innerHTML = '<div style="text-align:center; padding:1rem; color:#999; font-size:0.85rem;">Ningún producto agregado</div>';
+            container.innerHTML = '<div style="text-align:center; padding:1.5rem; color:#999; font-size:0.9rem;">Ningún producto agregado</div>';
             return;
         }
 
         container.innerHTML = this.tempGuiaProducts.map((p, index) => `
-            <div class="temp-item">
+            <div class="temp-item" style="padding: 0.75rem; align-items: center;">
                 <div style="flex:1;">
-                    <div style="font-weight:bold; font-size:0.9rem;">${p.codigo}</div>
-                    <div style="font-size:0.8rem; color:#666;">${p.descripcion}</div>
+                    <div style="font-weight:bold; font-size:1rem; color: #333;">${p.codigo}</div>
+                    <div style="font-size:0.85rem; color:#666;">${p.descripcion}</div>
                 </div>
-                <div style="font-weight:bold; margin:0 1rem;">x${p.cantidad}</div>
-                <button onclick="app.removeTempProduct(${index})" style="background:none; border:none; color:red; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                
+                <div style="display:flex; align-items:center; gap:0.5rem; margin:0 1rem; background: #f3f4f6; padding: 4px; border-radius: 6px;">
+                    <button type="button" onclick="app.updateTempProductQty(${index}, -1)" style="width:30px; height:30px; border:none; background:white; border-radius:4px; font-weight:bold; cursor:pointer; color:#666;">-</button>
+                    <span style="font-weight:bold; min-width:30px; text-align:center; font-size:1rem;">${p.cantidad}</span>
+                    <button type="button" onclick="app.updateTempProductQty(${index}, 1)" style="width:30px; height:30px; border:none; background:white; border-radius:4px; font-weight:bold; cursor:pointer; color:var(--primary-color);">+</button>
+                </div>
+
+                <button onclick="app.removeTempProduct(${index})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1.1rem; padding: 0.5rem;"><i class="fa-solid fa-trash"></i></button>
             </div>
         `).join('');
+    }
+
+    updateTempProductQty(index, change) {
+        const item = this.tempGuiaProducts[index];
+        const newQty = item.cantidad + change;
+
+        if (newQty < 1) {
+            if (confirm('¿Desea eliminar este producto?')) {
+                this.removeTempProduct(index);
+            }
+        } else {
+            item.cantidad = newQty;
+            this.renderTempProducts();
+        }
     }
 
     removeTempProduct(index) {
