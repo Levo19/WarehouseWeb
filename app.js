@@ -1026,9 +1026,10 @@ class App {
         // Photo Logic
         let photoHtml = '';
         if (info.foto) {
+            const displayUrl = this.getOptimizedImageUrl(info.foto);
             photoHtml = `
-                <div style="margin-top:1rem; cursor:pointer;" onclick="app.openImageModal('${info.foto}')">
-                    <img src="${info.foto}" style="width:100%; height:150px; object-fit:cover; border-radius:8px; border:1px solid #ddd;" title="Click para ampliar">
+                <div style="margin-top:1rem; cursor:pointer;" onclick="app.openImageModal('${displayUrl}')">
+                    <img src="${displayUrl}" style="width:100%; height:150px; object-fit:cover; border-radius:8px; border:1px solid #ddd;" title="Click para ampliar">
                     <div style="text-align:center; font-size:0.8rem; color:var(--primary-color); margin-top:0.25rem;"><i class="fa-solid fa-magnifying-glass"></i> Ampliar</div>
                 </div>
              `;
