@@ -1426,6 +1426,18 @@ class App {
         }
     }
 
+    // Helper for Drive Images
+    getOptimizedImageUrl(url) {
+        if (!url) return '';
+        if (url.includes('drive.google.com') && (url.includes('export=view') || url.includes('uc?'))) {
+            const idMatch = url.match(/id=([^&]+)/);
+            if (idMatch && idMatch[1]) {
+                return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w1000`;
+            }
+        }
+        return url;
+    }
+
     renderPreingresos() {
         const container = document.getElementById('preingresos-list-container');
         const pre = this.data.movimientos?.preingresos || [];
@@ -1445,11 +1457,20 @@ class App {
                 <p style="font-size:0.9rem; color:#666; margin-bottom:1rem;">${p.comentario}</p>
                 
                 <div style="display:flex; gap:0.5rem; overflow-x:auto; padding-bottom:0.5rem;">
-                    ${p.fotos.map(url => `
+                    ${p.fotos.map(url => {
+            const optUrl = this.getOptimizedImageUrl(url);
+            return `
                         <a href="${url}" target="_blank">
-                             <img src="${url}" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #eee;">
+                             <img src="${optUrl}" referrerpolicy="no-referrer" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #eee;">
                         </a>
-                    `).join('')}
+                        `;
+        }).join('')}
+                </div>
+                
+                 <div style="margin-top:0.5rem; font-size: 0.85rem; color:#444;">
+                    ${p.etiqueta ? `<strong>${p.etiqueta}</strong>` : ''}
+                    ${p.monto ? ` - S/ ${p.monto}` : ''}
+                    ${p.comprobante ? ` (${p.comprobante})` : ''}
                 </div>
             </div>
         `).join('');
