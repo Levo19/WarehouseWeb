@@ -1060,6 +1060,81 @@ class App {
         `;
     }
 
+    printGuiaTicket(id) {
+        const guiaInfo = this.data.movimientos.guias.find(g => g.id === id);
+        if (!guiaInfo) return alert('Guía no encontrada');
+
+        // Get Details with names
+        const details = this.data.movimientos.detalles
+            ? this.data.movimientos.detalles.filter(d => d.idGuia === id)
+            : [];
+
+        const enriched = details.map(d => {
+            const pCode = String(d.codigo).trim();
+            const product = this.data.products[pCode] || Object.values(this.data.products).find(p => String(p.codigo).trim() === pCode);
+            return { ...d, descripcion: product ? product.desc : 'Desconocido' };
+        });
+
+        const printWindow = window.open('', '_blank', 'width=400,height=600');
+        if (!printWindow) return alert('Bloqueo de ventanas emergentes activado.');
+
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Ticket Guía ${id}</title>
+                <style>
+                    body { font-family: 'Courier New', monospace; padding: 20px; max-width: 320px; margin: 0 auto; color: #000; }
+                    .header { text-align: center; margin-bottom: 20px; border-bottom: 1px dashed black; padding-bottom: 10px; }
+                    h1 { margin: 0; font-size: 1.2rem; text-transform: uppercase; }
+                    h2 { margin: 5px 0; font-size: 0.9rem; font-weight: normal; }
+                    .meta { font-size: 0.8rem; margin-bottom: 10px; }
+                    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+                    th { text-align: left; border-bottom: 1px solid black; padding: 5px 0; }
+                    td { padding: 5px 0; border-bottom: 1px dashed #ccc; vertical-align: top; }
+                    .qty { text-align: right; width: 40px; font-weight: bold; }
+                    .footer { margin-top: 20px; border-top: 1px dashed black; padding-top: 10px; text-align: center; font-size: 0.8rem; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>${guiaInfo.proveedor || 'SIN PROVEEDOR'}</h1>
+                    <h2>ID: ${id.replace('undefined', '').slice(0, 8)}...</h2>
+                    <div class="meta">${guiaInfo.fecha}<br>Usuario: ${guiaInfo.usuario}</div>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Producto / Código</th>
+                            <th class="qty">Cant.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${enriched.map(p => `
+                            <tr>
+                                <td>
+                                    <div>${p.descripcion}</div>
+                                    <div style="font-size:0.75rem;">${p.codigo}</div>
+                                </td>
+                                <td class="qty">${p.cantidad}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+
+                <div class="footer">
+                    <p>LEVO ERP<br>Control de Inventario</p>
+                </div>
+                
+                <script>
+                    window.onload = function() { window.print(); window.close(); }
+                </script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    }
+
     openImageModal(url) {
         const modal = document.createElement('div');
         modal.id = 'image-modal-overlay';
