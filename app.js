@@ -994,7 +994,7 @@ class App {
 
             return {
                 ...d,
-                descripcion: product ? product.descripcion : 'Producto Desconocido'
+                descripcion: product ? product.desc : 'Producto Desconocido'
             };
         });
 
@@ -1015,8 +1015,8 @@ class App {
         const productsHtml = products.length > 0 ? products.map(p => `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #f9f9f9;">
                 <div style="flex:1;">
-                    <div style="font-weight:bold; font-size:0.9rem;">${p.codigo}</div>
-                    <div style="font-size:0.8rem; color:#666;">${p.descripcion}</div>
+                    <div style="font-weight:bold; font-size:0.9rem;">${p.descripcion}</div>
+                    <div style="font-size:0.8rem; color:#666;">Code: ${p.codigo}</div>
                 </div>
                 <div style="font-weight:bold;">x${p.cantidad}</div>
             </div>
@@ -1294,6 +1294,8 @@ class App {
                 alert('Guía actualizada correctamente');
                 // Reload Data
                 await this.loadMovimientosData();
+                // Return to view mode (Refresh detail panel with new data)
+                this.toggleGuiaDetail(id);
             } else {
                 alert('Error: ' + result.message);
                 btn.disabled = false;
