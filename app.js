@@ -811,12 +811,30 @@ class App {
     }
 
     // Load Data
+    // Load Data
     async loadMovimientosData(isBackground = false) {
         const container = document.getElementById('guias-list-scroll');
+        const CACHE_KEY = 'warehouse_movimientos_data';
 
-        // Show Loading only if not background refresh
-        if (!isBackground && container) {
-            container.innerHTML = '<div style="text-align:center; padding:2rem; color:#999;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando datos...</div>';
+        // 1. Try Cache First (Fast Load)
+        if (!isBackground) {
+            const cached = localStorage.getItem(CACHE_KEY);
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached);
+                    this.data.movimientos = parsed;
+                    this.renderGuiasList();
+                    this.renderPreingresos();
+                    console.log('Loaded from Cache');
+                } catch (e) { console.error('Cache error', e); }
+            }
+
+            if (container) {
+                // Show spinner only if no cache or empty
+                if (!this.data.movimientos || !this.data.movimientos.guias) {
+                    container.innerHTML = '<div style="text-align:center; padding:2rem; color:#999;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando datos...</div>';
+                }
+            }
         }
 
         try {
@@ -829,6 +847,9 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
+                // Update Cache
+                localStorage.setItem(CACHE_KEY, JSON.stringify(result.data));
+
                 this.data.movimientos = result.data; // { guias, preingresos, detalles }
                 this.renderGuiasList();
                 this.renderPreingresos();
@@ -842,7 +863,7 @@ class App {
             }
         } catch (e) {
             console.error(e);
-            if (!isBackground && container) {
+            if (!isBackground && container && (!this.data.movimientos || !this.data.movimientos.guias)) {
                 container.innerHTML = `<div style="text-align:center; padding:1rem; color:red;">Error de conexión: ${e.message}</div>`;
             }
         }
@@ -1803,7 +1824,6 @@ class App {
 
         // DEBUG: Verify Photo
         if (!photo && document.querySelector('#guia-preview img')) {
-            // Image exists in DOM but failed to grab?
             alert('Error: La imagen no se ha procesado correctamente. Intente adjuntar de nuevo.');
             return;
         }
@@ -1811,6 +1831,7 @@ class App {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
         btn.disabled = true;
 
+        // 1. SEND DATA ONLY (Fast)
         const payload = {
             tipo: type,
             usuario: this.currentUser.username,
@@ -1818,7 +1839,7 @@ class App {
             comentario: comment,
             productos: this.tempGuiaProducts,
             idPreingreso: preingresoId,
-            foto: photo
+            foto: null // We send this LATER
         };
 
         try {
@@ -1834,9 +1855,18 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                alert(result.message);
+                // OPTIMISTIC UI: Close immediately
                 this.closeModal();
-                this.loadMovimientosData();
+                this.showToast("Guía guardada. Subiendo foto en segundo plano...", "info");
+                this.loadMovimientosData(true); // Refresh list for the text entry
+
+                // 2. UPLOAD PHOTO BACKGROUND
+                if (photo && result.data && result.data.idGuia) {
+                    this.uploadGuiaPhotoBackground(result.data.idGuia, photo);
+                } else {
+                    this.showToast("Guía completada exitosamente.", "success");
+                }
+
             } else {
                 alert('Error: ' + result.message);
                 btn.disabled = false;
@@ -1848,6 +1878,48 @@ class App {
             btn.disabled = false;
             btn.innerHTML = 'Guardar Guía';
         }
+    }
+
+    async uploadGuiaPhotoBackground(idGuia, base64) {
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: 'uploadGuiaPhoto',
+                    payload: { idGuia: idGuia, foto: base64 }
+                })
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+                this.showToast("Foto subida correctamente.", "success");
+                this.loadMovimientosData(true);
+            } else {
+                this.showToast("Error subiendo foto: " + result.message, "error");
+            }
+        } catch (e) {
+            console.error("Background Upload Error", e);
+            this.showToast("Error de red subiendo foto.", "error");
+        }
+    }
+
+    showToast(msg, type = 'info') {
+        let toast = document.getElementById('app-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'app-toast';
+            toast.style.cssText = 'position:fixed; bottom:20px; right:20px; padding:12px 24px; background:#333; color:white; border-radius:8px; z-index:9999; box-shadow:0 4px 6px rgba(0,0,0,0.1); font-size:0.9rem; transition: opacity 0.3s; opacity:0;';
+            document.body.appendChild(toast);
+        }
+
+        toast.textContent = msg;
+        toast.style.background = type === 'error' ? '#e74c3c' : (type === 'success' ? '#2ecc71' : '#333');
+        toast.style.opacity = '1';
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+        }, 4000);
     }
 
     renderZonePickup(zone, container) {
