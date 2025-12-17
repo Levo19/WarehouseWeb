@@ -1800,6 +1800,14 @@ class App {
         if (!provider) return alert('Proveedor/Destino requerido');
 
         const btn = document.querySelector('.modal-footer .btn-primary');
+
+        // DEBUG: Verify Photo
+        if (!photo && document.querySelector('#guia-preview img')) {
+            // Image exists in DOM but failed to grab?
+            alert('Error: La imagen no se ha procesado correctamente. Intente adjuntar de nuevo.');
+            return;
+        }
+
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
         btn.disabled = true;
 
