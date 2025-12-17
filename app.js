@@ -858,7 +858,12 @@ class App {
                 // Update Cache
                 localStorage.setItem(CACHE_KEY, JSON.stringify(result.data));
 
-                this.data.movimientos = result.data; // { guias, preingresos, detalles }
+                this.data.movimientos = result.data; // { guias, preingresos, detalles, proveedores }
+                // !! CRITICAL FIX: Update global providers list !!
+                if (result.data.proveedores) {
+                    this.data.providers = result.data.proveedores;
+                }
+
                 this.renderGuiasList();
                 this.renderPreingresos();
 
