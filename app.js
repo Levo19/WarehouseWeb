@@ -1480,7 +1480,7 @@ class App {
                     
                     <!-- Product Adder -->
                     <h4 style="margin-bottom:0.5rem;">Detalle de Productos</h4>
-                    <div class="product-add-row" style="align-items: center;">
+                    <div style="margin-bottom:1rem; position:relative; width:100%;">
                         <div class="search-neon-wrapper" style="flex:1; position:relative; width:100%;">
                              <i class="fa-solid fa-barcode" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--primary-color);"></i>
                              <input type="text" id="prod-search" placeholder="Buscar producto (Scan/Texto)..." 
