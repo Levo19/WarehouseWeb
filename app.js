@@ -1484,7 +1484,7 @@ class App {
                         <div class="search-neon-wrapper" style="flex:1; position:relative; width:100%;">
                              <i class="fa-solid fa-barcode" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--primary-color);"></i>
                              <input type="text" id="prod-search" placeholder="Buscar producto (Scan/Texto)..." 
-                                    style="width:100%; padding-left:35px; height:45px; box-sizing:border-box;" 
+                                    style="width:100% !important; padding-left:35px; height:45px; box-sizing:border-box;" 
                                     onkeyup="app.searchProductForGuia(this, event)">
                         </div>
                         <!-- Button removed as requested (Auto-add enabled) -->
