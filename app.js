@@ -248,6 +248,7 @@ class App {
             this.loadPrepedidos();
         } else if (viewName === 'movements') {
             this.state.currentModule = 'movements';
+            if (this.closeGuiaDetails) this.closeGuiaDetails(); // Reset Panel
             this.loadMovimientosData();
         } else {
             this.state.currentModule = null;
