@@ -1422,14 +1422,17 @@ class App {
     // MODALS & FORMS
     openNewGuiaModal(type) {
         const title = type === 'INGRESO' ? 'Nueva Guía de Ingreso' : 'Nueva Guía de Salida';
-        // Generate Providers Options
-        // We need providers loaded? We have getProviders API. 
-        // For now text input or quick select if we have list.
+
+        // Providers Options
+        const providers = this.data.movimientos?.proveedores || [];
+        const providerOptions = providers.map(p => `<option value="${p}"></option>`).join('');
 
         // Link Preingreso Options (Only for Ingreso)
+        // ... (Keep existing logic or regenerate if easier) ...
         let preingresoSelect = '';
         if (type === 'INGRESO') {
             const pending = (this.data.movimientos?.preingresos || []).filter(p => p.estado === 'PENDIENTE');
+            // ... logic continues ...
             const options = pending.map(p => `<option value="${p.id}">${p.proveedor} - ${p.fecha}</option>`).join('');
             preingresoSelect = `
                 <div class="input-group">
@@ -1452,11 +1455,14 @@ class App {
                     ${preingresoSelect}
                     
                     <div class="input-group">
-                         <input type="text" id="guia-proveedor" placeholder="Proveedor / Destino" required style="width:100%; padding:0.5rem;">
+                         <input type="text" id="guia-proveedor" list="provider-list" placeholder="${type === 'INGRESO' ? 'Proveedor' : 'Destino'}" required style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
+                         <datalist id="provider-list">
+                            ${providerOptions}
+                         </datalist>
                     </div>
                     
                     <div class="input-group">
-                        <textarea id="guia-comentario" placeholder="Comentarios..." rows="2" style="width:100%; padding:0.5rem;"></textarea>
+                        <textarea id="guia-comentario" placeholder="Comentarios..." rows="2" style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:4px;"></textarea>
                     </div>
 
                     <!-- Photo Widget (One only for Guia main) -->
@@ -1475,10 +1481,10 @@ class App {
                     <!-- Product Adder -->
                     <h4 style="margin-bottom:0.5rem;">Detalle de Productos</h4>
                     <div class="product-add-row" style="align-items: center;">
-                        <div class="search-neon-wrapper" style="flex:1; position:relative;">
+                        <div class="search-neon-wrapper" style="flex:1; position:relative; width:100%;">
                              <i class="fa-solid fa-barcode" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--primary-color);"></i>
                              <input type="text" id="prod-search" placeholder="Buscar producto (Scan/Texto)..." 
-                                    style="width:100%; padding-left:35px; height:45px;" 
+                                    style="width:100%; padding-left:35px; height:45px; box-sizing:border-box;" 
                                     onkeyup="app.searchProductForGuia(this, event)">
                         </div>
                         <!-- Button removed as requested (Auto-add enabled) -->
