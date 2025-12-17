@@ -1053,7 +1053,10 @@ class App {
                 ${productsHtml}
             </div>
             
-            <button onclick="app.closeGuiaDetails()" style="margin:1rem; padding:0.75rem; background:#eee; border:none; border-radius:8px; cursor:pointer;">Cerrar Panel</button>
+            <div style="padding:1rem; display:flex; gap:1rem; justify-content:center;">
+                 <button onclick="app.printGuiaTicket('${info.id}')" style="padding:0.75rem 1.5rem; background:#333; color:white; border:none; border-radius:8px; cursor:pointer;"><i class="fa-solid fa-print"></i> Imprimir</button>
+                 <button onclick="app.closeGuiaDetails()" style="padding:0.75rem 1.5rem; background:#eee; border:none; border-radius:8px; cursor:pointer;">Cerrar Panel</button>
+            </div>
         `;
     }
 
