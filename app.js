@@ -250,6 +250,14 @@ class App {
             this.state.currentModule = 'movements';
             if (this.closeGuiaDetails) this.closeGuiaDetails(); // Reset Panel
             this.loadMovimientosData();
+
+            // Auto-refresh every 60s
+            setInterval(() => {
+                if (this.state.currentModule === 'movements') {
+                    this.loadMovimientosData(true); // background = true
+                }
+            }, 60000);
+
         } else {
             this.state.currentModule = null;
         }
