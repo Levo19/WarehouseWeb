@@ -1539,22 +1539,55 @@ class App {
     }
 
     openNewPreingresoModal() {
+        const providers = this.data.providers || [];
+        const datalistOpts = providers.map(p => `<option value="${p.nombre}">`).join('');
+
         const modalHtml = `
              <div class="modal-header">
                 <h3>Nuevo Preingreso</h3>
                 <button class="modal-close" onclick="app.closeModal()">&times;</button>
             </div>
             <div class="modal-body">
+                 <!-- Proveedor -->
                  <div class="input-group">
-                     <input type="text" id="pre-proveedor" placeholder="Proveedor" required style="width:100%; padding:0.5rem;">
+                     <label>Proveedor</label>
+                     <input type="text" id="pre-proveedor" placeholder="Buscar Proveedor..." list="pre-prov-list" style="width:100%; padding:0.5rem;" autocomplete="off">
+                     <datalist id="pre-prov-list">${datalistOpts}</datalist>
                 </div>
+
+                <!-- Etiquetas & Comprobante -->
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                    <div class="input-group">
+                        <label>Etiqueta</label>
+                        <select id="pre-etiqueta" style="width:100%; padding:0.5rem;" onchange="app.togglePreingresoMonto()">
+                            <option value="Pedido Incompleto">Pedido Incompleto</option>
+                            <option value="Pedido Completo">Pedido Completo</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Comprobante</label>
+                        <select id="pre-comprobante" style="width:100%; padding:0.5rem;">
+                            <option value="Sin Comprobante">Sin Comprobante</option>
+                            <option value="Con Comprobante">Con Comprobante</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Monto (Condicional) -->
+                <div class="input-group" id="pre-monto-group" style="display:none;">
+                    <label>Monto (S/)</label>
+                    <input type="number" id="pre-monto" placeholder="0.00" step="0.01" style="width:100%; padding:0.5rem;">
+                </div>
+
                  <div class="input-group">
-                    <textarea id="pre-comentario" placeholder="Observaciones..." rows="3" style="width:100%; padding:0.5rem;"></textarea>
+                    <label>Observaciones</label>
+                    <textarea id="pre-comentario" placeholder="Observaciones..." rows="2" style="width:100%; padding:0.5rem;"></textarea>
                 </div>
                 
                  <!-- Multi Photo Widget -->
                 <div class="photo-widget">
-                    <input type="file" id="pre-file-input" accept="image/*" multiple class="file-input-hidden" onchange="app.handlePhotoSelect(this, 'pre-preview', true)">
+                    <label>Fotos (Máx 4)</label>
+                    <input type="file" id="pre-file-input" accept="image/*" multiple class="file-input-hidden" onchange="app.handlePreingresoPhotos(this)">
                     <div id="pre-preview" class="photo-preview-grid"></div>
                     <div class="photo-controls">
                          <button type="button" class="btn-secondary" onclick="document.getElementById('pre-file-input').click()">
@@ -1569,6 +1602,25 @@ class App {
             </div>
         `;
         this.openModal(modalHtml);
+    }
+
+    togglePreingresoMonto() {
+        const etiqueta = document.getElementById('pre-etiqueta').value;
+        const montoGroup = document.getElementById('pre-monto-group');
+        montoGroup.style.display = (etiqueta === 'Pedido Completo') ? 'block' : 'none';
+        if (etiqueta !== 'Pedido Completo') document.getElementById('pre-monto').value = '';
+    }
+
+    handlePreingresoPhotos(input) {
+        const files = Array.from(input.files);
+        const currentImgs = document.querySelectorAll('#pre-preview img');
+
+        if (files.length + currentImgs.length > 4) {
+            alert("Máximo 4 fotos permitidas.");
+            input.value = ''; // Reset
+            return;
+        }
+        this.handlePhotoSelect(input, 'pre-preview', true);
     }
 
     // PHOTO LOGIC
@@ -1778,9 +1830,18 @@ class App {
     async savePreingreso() {
         const provider = document.getElementById('pre-proveedor').value;
         const comment = document.getElementById('pre-comentario').value;
+        const etiqueta = document.getElementById('pre-etiqueta').value;
+        const comprobante = document.getElementById('pre-comprobante').value;
+        const monto = document.getElementById('pre-monto').value;
+
         const images = Array.from(document.querySelectorAll('#pre-preview img')).map(img => img.dataset.base64);
 
         if (!provider) return alert('Proveedor requerido');
+
+        // Validation for Monto
+        if (etiqueta === 'Pedido Completo' && !monto) {
+            return alert('Debe ingresar el Monto para Pedido Completo');
+        }
 
         const btn = document.querySelector('.modal-footer .btn-primary');
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
@@ -1793,7 +1854,14 @@ class App {
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({
                     action: 'savePreingreso',
-                    payload: { proveedor: provider, comentario: comment, fotos: images }
+                    payload: {
+                        proveedor: provider,
+                        comentario: comment,
+                        fotos: images,
+                        etiqueta: etiqueta,
+                        comprobante: comprobante,
+                        monto: monto
+                    }
                 })
             });
             const result = await response.json();
