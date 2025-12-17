@@ -1834,7 +1834,7 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                alert('Guía registrada con éxito');
+                alert(result.message);
                 this.closeModal();
                 this.loadMovimientosData();
             } else {
