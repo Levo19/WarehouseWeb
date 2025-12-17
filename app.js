@@ -1083,16 +1083,18 @@ class App {
             <head>
                 <title>Ticket Guía ${id}</title>
                 <style>
-                    body { font-family: 'Courier New', monospace; padding: 20px; max-width: 320px; margin: 0 auto; color: #000; }
-                    .header { text-align: center; margin-bottom: 20px; border-bottom: 1px dashed black; padding-bottom: 10px; }
-                    h1 { margin: 0; font-size: 1.2rem; text-transform: uppercase; }
-                    h2 { margin: 5px 0; font-size: 0.9rem; font-weight: normal; }
-                    .meta { font-size: 0.8rem; margin-bottom: 10px; }
-                    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-                    th { text-align: left; border-bottom: 1px solid black; padding: 5px 0; }
-                    td { padding: 5px 0; border-bottom: 1px dashed #ccc; vertical-align: top; }
-                    .qty { text-align: right; width: 40px; font-weight: bold; }
-                    .footer { margin-top: 20px; border-top: 1px dashed black; padding-top: 10px; text-align: center; font-size: 0.8rem; }
+                    body { font-family: 'Arial', sans-serif; padding: 2px; max-width: 300px; margin: 0 auto; color: #000; }
+                    .header { text-align: center; margin-bottom: 10px; border-bottom: 2px solid black; padding-bottom: 5px; }
+                    h1 { margin: 0; font-size: 1.4rem; font-weight: 900; text-transform: uppercase; }
+                    h2 { margin: 2px 0; font-size: 1rem; font-weight: bold; }
+                    .meta { font-size: 0.9rem; margin-bottom: 5px; font-weight: bold; }
+                    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+                    th { text-align: left; border-bottom: 2px solid black; padding: 5px 0; font-weight: 900; }
+                    td { padding: 8px 0; border-bottom: 1px dashed #000; vertical-align: top; }
+                    .qty { text-align: right; width: 40px; font-weight: 900; font-size: 1.1rem; }
+                    .footer { margin-top: 15px; border-top: 2px solid black; padding-top: 5px; text-align: center; font-size: 0.8rem; font-weight: bold; }
+                    .p-name { font-weight: 900; font-size: 1rem; margin-bottom: 2px; display:block; }
+                    .p-code { font-weight: bold; font-size: 0.85rem; color: #000; }
                 </style>
             </head>
             <body>
@@ -1113,8 +1115,8 @@ class App {
                         ${enriched.map(p => `
                             <tr>
                                 <td>
-                                    <div>${p.descripcion}</div>
-                                    <div style="font-size:0.75rem;">${p.codigo}</div>
+                                    <span class="p-name">${p.descripcion}</span>
+                                    <span class="p-code">${p.codigo}</span>
                                 </td>
                                 <td class="qty">${p.cantidad}</td>
                             </tr>
