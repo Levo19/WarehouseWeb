@@ -2748,6 +2748,10 @@ class App {
 
     // --- PREPEDIDOS LOGIC ---
     async loadPrepedidos() {
+        // Change Header Title to 'Prepedidos'
+        const titleEl = document.querySelector('.header-title');
+        if (titleEl) titleEl.textContent = 'Prepedidos';
+
         const container = document.getElementById('prepedidos-container');
 
         // 1. Mostrar caché si existe (Instantáneo)
@@ -2808,21 +2812,72 @@ class App {
     }
 
     renderProviders(providers) {
-        const container = document.getElementById('prepedidos-container');
-        if (!container) return; // Safety check
+        // 1. Setup Container and Search Bar
+        const mainContainer = document.getElementById('prepedidos-container'); // This is the GRID container
+        if (!mainContainer) return;
+
+        // Verify if we have our Search Wrapper. If not, create it.
+        // We need to insert the Search Bar BEFOFE the grid. 
+        // Ideally, 'prepedidos-container' should be wrapped or we insert before it. 
+        // Let's assume 'prepedidos-container' is the grid itself. We need to inject controls above it.
+
+        let controlsContainer = document.getElementById('provider-controls-wrapper');
+        if (!controlsContainer) {
+            controlsContainer = document.createElement('div');
+            controlsContainer.id = 'provider-controls-wrapper';
+            controlsContainer.className = 'provider-controls';
+            controlsContainer.innerHTML = `
+                <div class="provider-search-container">
+                    <i class="fa-solid fa-search search-icon"></i>
+                    <input type="text" id="provider-search-input" class="provider-search-input" placeholder="Buscar proveedor...">
+                </div>
+            `;
+            // Insert before the grid
+            mainContainer.parentNode.insertBefore(controlsContainer, mainContainer);
+
+            // Add Event Listener
+            document.getElementById('provider-search-input').addEventListener('input', (e) => {
+                this.filterProviders(e.target.value);
+            });
+        }
+
+        // Ensure Grid Layout
+        mainContainer.style.display = 'grid';
+        mainContainer.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
+        mainContainer.style.gap = '20px';
 
         const daysMap = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
         const todayName = daysMap[new Date().getDay()];
 
-        container.innerHTML = providers.map(p => {
+        // 2. SORTING: Today's Orders First
+        // Clone array to avoid mutating original cache
+        const sortedProviders = [...providers].sort((a, b) => {
+            const aDay = a.diaPedido ? a.diaPedido.toUpperCase().trim() : '';
+            const bDay = b.diaPedido ? b.diaPedido.toUpperCase().trim() : '';
+
+            const aIsToday = (aDay === todayName);
+            const bIsToday = (bDay === todayName);
+
+            if (aIsToday && !bIsToday) return -1;
+            if (!aIsToday && bIsToday) return 1;
+            return a.nombre.localeCompare(b.nombre);
+        });
+
+        // 3. RENDER
+        mainContainer.innerHTML = sortedProviders.map(p => {
             const imgUrl = (p.imagen && p.imagen.trim() !== '') ? p.imagen : 'recursos/supplierDefault.png';
             const diaPedido = p.diaPedido ? p.diaPedido.toUpperCase() : '-';
             const diaEntrega = p.diaEntrega ? p.diaEntrega.toUpperCase() : '-';
-            const orderClass = (diaPedido === todayName) ? 'pill-today-order' : 'pill-default';
+
+            const isToday = (diaPedido === todayName);
+
+            const orderClass = isToday ? 'pill-today-order' : 'pill-default';
             const deliveryClass = (diaEntrega === todayName) ? 'pill-today-delivery' : 'pill-default';
+            const cardClass = isToday ? 'provider-card provider-card-today' : 'provider-card';
 
             return `
-        <div class="provider-card">
+        <div class="${cardClass}" data-name="${p.nombre.toLowerCase()}">
+            ${isToday ? '<i class="fa-solid fa-paperclip provider-clip-icon"></i>' : ''}
             <div class="provider-card-header">
                 <img src="${imgUrl}" alt="${p.nombre}" class="provider-img" onerror="this.onerror=null; this.src='recursos/supplierDefault.png'">
             </div>
@@ -2850,6 +2905,20 @@ class App {
     }
 
     // --- NEW: PROVIDER HISTORY MODAL ---
+    filterProviders(searchTerm) {
+        const term = searchTerm.toLowerCase().trim();
+        const cards = document.querySelectorAll('.provider-card');
+
+        cards.forEach(card => {
+            const name = card.getAttribute('data-name');
+            if (name && name.includes(term)) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
     async openProviderOrderModal(providerName) {
         // 1. Show Loading Modal
         const loadingHtml = `
