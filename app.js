@@ -1619,7 +1619,7 @@ class App {
             const slides = info.fotos.map(url => {
                 const optUrl = this.getOptimizedImageUrl(url);
                 return `
-                    < div style = "flex:0 0 auto; width:120px; height:120px; border-radius:8px; overflow:hidden; border:1px solid #ddd; position:relative; cursor:zoom-in;"
+                    <div style="flex:0 0 auto; width:120px; height:120px; border-radius:8px; overflow:hidden; border:1px solid #ddd; position:relative; cursor:zoom-in;"
                 onclick = "app.openImageModal('${optUrl}')" >
                     <img src="${optUrl}" style="width:100%; height:100%; object-fit:cover;">
                         <div style="position:absolute; bottom:0; left:0; width:100%; height:25px; background:rgba(0,0,0,0.5); display:flex; 
@@ -1631,7 +1631,7 @@ class App {
             }).join('');
 
             carouselHtml = `
-                    < div style = "margin-top:1.5rem;" >
+                    <div style="margin-top:1.5rem;">
                     <h5 style="margin-bottom:0.5rem; color:#555;">Evidencias / Fotos</h5>
                     <div style="display:flex; overflow-x:auto; gap:0.75rem; padding-bottom:0.5rem; scrollbar-width:thin;">
                         ${slides}
@@ -1639,17 +1639,17 @@ class App {
                 </div >
                     `;
         } else {
-            carouselHtml = `< div style = "margin-top:1.5rem; color:#999; font-style:italic;" > No hay imagenes adjuntas.</div > `;
+            carouselHtml = `<div style="margin-top:1.5rem; color:#999; font-style:italic;">No hay imagenes adjuntas.</div>`;
         }
 
         panel.innerHTML = `
-                    < div style = "padding:1.5rem; border-bottom:1px solid #eee; background:#f9fafb;" >
+                    <div style="padding:1.5rem; border-bottom:1px solid #eee; background:#f9fafb;">
                 <div style="display:flex; justify-content:space-between; align-items:start;">
                     <h3 style="margin:0 0 0.5rem 0; color:var(--primary-color);">Detalle Preingreso</h3>
                     <button onclick="app.closePreingresoDetails()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#666;">&times;</button>
                 </div>
                 <div style="font-size:0.9rem; color:#555;">${info.fecha}</div>
-            </div >
+            </div>
             
             <div style="flex:1; overflow-y:auto; padding:1.5rem;">
                 <!-- Main Info -->
@@ -2854,3 +2854,4 @@ try {
     console.error('Critical Init Error:', err);
     alert('Error crítico al iniciar la aplicación: ' + err.message);
 }
+
