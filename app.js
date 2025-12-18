@@ -844,6 +844,10 @@ class App {
         const target = document.getElementById(`tab-${tab}`);
         if (target) target.classList.add('active');
 
+        // Close Detail Panels for Fresh Start
+        this.closeGuiaDetails();
+        this.closePreingresoDetails();
+
         // Refresh Data on Switch
         if (tab === 'guias') this.renderGuiasList();
         if (tab === 'preingresos') this.renderPreingresos();
@@ -1585,12 +1589,12 @@ class App {
         document.querySelectorAll('.guia-row-card').forEach(d => d.classList.remove('active'));
 
         // If clicking same, Close
-        if (currentActive && currentActive.id === `pre - row - ${id} `) {
+        if (currentActive && currentActive.id === `pre-row-${id}`) {
             this.closePreingresoDetails();
             return;
         }
 
-        const row = document.getElementById(`pre - row - ${id} `);
+        const row = document.getElementById(`pre-row-${id}`);
         if (row) row.classList.add('active');
 
         // Open Panel
@@ -2854,4 +2858,3 @@ try {
     console.error('Critical Init Error:', err);
     alert('Error crítico al iniciar la aplicación: ' + err.message);
 }
-
