@@ -1750,13 +1750,35 @@ h3 {
 
 /* HISTORICAL PRODUCTS TABLE */
 .history-table-wrapper {
-    max-height: 60vh;
-    /* Limit height to 60% of viewport */
+    max-height: 55vh;
+    /* Slightly reduced to ensure footer fits */
     overflow-y: auto;
-    /* Enable vertical scrolling */
     border: 1px solid #eee;
     margin-bottom: 1rem;
     border-radius: 8px;
+
+    /* Scrollbar Styling */
+    scrollbar-width: thin;
+    scrollbar-color: #ccc #f0f0f0;
+}
+
+.history-table-wrapper::-webkit-scrollbar {
+    width: 10px;
+}
+
+.history-table-wrapper::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 8px;
+}
+
+.history-table-wrapper::-webkit-scrollbar-thumb {
+    background-color: #bbb;
+    border-radius: 8px;
+    border: 2px solid #f0f0f0;
+}
+
+.history-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background-color: #999;
 }
 
 .history-table {
@@ -1831,4 +1853,64 @@ h3 {
 
 .row-substitute:hover {
     background-color: #fff4e0 !important;
+}
+
+/* --- Provider Search & Refining --- */
+.provider-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 0 10px;
+}
+
+.provider-search-container {
+    flex: 1;
+    max-width: 500px;
+    position: relative;
+}
+
+.provider-search-input {
+    width: 100%;
+    padding: 12px 20px;
+    padding-left: 45px;
+    border: 1px solid #ddd;
+    border-radius: 25px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.provider-search-input:focus {
+    outline: none;
+    border-color: #4361ee;
+    box-shadow: 0 4px 10px rgba(67, 97, 238, 0.15);
+}
+
+.search-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #888;
+}
+
+/* Highlight 'Today' Providers */
+.provider-card-today {
+    border: 2px solid #ffd700 !important;
+    /* Gold border */
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.3) !important;
+    position: relative;
+}
+
+.provider-clip-icon {
+    position: absolute;
+    top: -10px;
+    right: 10px;
+    font-size: 24px;
+    color: #d35400;
+    /* Bronze/Gold-ish */
+    z-index: 10;
+    transform: rotate(45deg);
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
 }
