@@ -1129,6 +1129,11 @@ h3 {
     text-align: center;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid #f0f0f0;
+    /* Enforce consistent height for alignment */
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .provider-name {
@@ -1136,6 +1141,12 @@ h3 {
     font-size: 1.1rem;
     font-weight: 700;
     color: #333;
+    /* Limit to 2 lines */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.3;
 }
 
 .provider-info-row {
