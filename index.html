@@ -211,8 +211,55 @@
                                 <i class="fa-solid fa-plus"></i> Nuevo Preingreso
                             </button>
                         </div>
-                        <div id="preingresos-list-container" class="cards-grid">
-                            <!-- Dynamic Preingresos Grid -->
+
+                        <!-- PREINGRESOS LAYOUT WRAPPER (Mirroring Guias) -->
+                        <div id="preingresos-layout-wrapper"
+                            style="display:flex; height: calc(100vh - 180px); gap: 1rem; position: relative; overflow: hidden; margin-top: 1rem;">
+
+                            <!-- LEFT COLUMN: LIST -->
+                            <div id="preingresos-left-col"
+                                style="flex:1; display:flex; flex-direction:column; min-width: 0; transition: all 0.3s ease;">
+
+                                <!-- Filters -->
+                                <div class="filter-bar"
+                                    style="display:flex; gap:1rem; padding-bottom:1rem; border-bottom:1px solid #eee; margin-bottom:1rem; align-items: center;">
+                                    <div class="search-neon-wrapper" style="flex:1; position: relative;">
+                                        <i class="fa-solid fa-magnifying-glass"
+                                            style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#999;"></i>
+                                        <input type="text" id="preingreso-filter-text"
+                                            placeholder="Buscar por Proveedor..."
+                                            style="width:100%; padding-left:35px; height:40px; border-radius: 8px; border: 1px solid #ddd;"
+                                            onkeyup="app.filterPreingresosList()">
+                                    </div>
+
+                                    <!-- Compact Date Filter -->
+                                    <div class="date-filter-wrapper" title="Filtrar por fecha">
+                                        <i class="fa-regular fa-calendar" style="font-size: 1.2rem;"></i>
+                                        <input type="date" id="preingreso-filter-date"
+                                            onchange="app.filterPreingresosList()">
+                                    </div>
+
+                                    <!-- Clear Filter Button -->
+                                    <button class="icon-btn" onclick="app.clearPreingresoFilters()"
+                                        title="Limpiar filtros" style="font-size: 1rem;">
+                                        <i class="fa-solid fa-filter-circle-xmark"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Scrollable List -->
+                                <div id="preingresos-list-scroll"
+                                    style="flex:1; overflow-y:auto; padding-right:0.5rem;">
+                                    <div style="text-align:center; padding:2rem; color:#999;">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Cargando preingresos...
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- RIGHT COLUMN: DETAIL PANEL -->
+                            <div id="preingreso-detail-panel" class="detail-panel"
+                                style="width:0; overflow:hidden; border-left:1px solid #eee; background:white; display:flex; flex-direction:column; transition: width 0.3s ease;">
+                                <!-- Detail Content -->
+                            </div>
                         </div>
                     </div>
                 </div>
