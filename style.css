@@ -1552,3 +1552,39 @@ h3 {
 .date-filter-wrapper:hover i {
     color: var(--primary-color);
 }
+/* GUIA / PREINGRESO CARD */
+.guia-row-card {
+    background: white;
+    border: 1px solid #eee;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 4px solid transparent;
+}
+
+.guia-row-card:hover {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    background: #f9fafb;
+}
+
+.guia-row-card.active {
+    border-left-color: var(--primary-color);
+    background: #eef2ff; /* Light Indigo */
+    border-color: #c7d2fe;
+}
+
+.guia-row-card .badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.guia-row-card .badge.ingreso { background: #dcfce7; color: #166534; }
+.guia-row-card .badge.salida { background: #fee2e2; color: #991b1b; }
+.guia-row-card .badge.pendiente { background: #fef3c7; color: #92400e; }
+.guia-row-card .badge.procesado { background: #d1fae5; color: #065f46; }
+
