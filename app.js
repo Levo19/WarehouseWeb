@@ -1564,8 +1564,8 @@ class App {
                          ${!hasGuide ? `
                             <button onclick="event.stopPropagation(); app.generateGuiaFromPreingreso('${p.id}')" 
                                     class="btn-sm" 
-                                    style="margin-top:0.75rem; width:100%; background:var(--primary-color); color:white; border:none; border-radius:6px; padding:0.5rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; font-size:0.8rem;">
-                                <i class="fa-solid fa-file-import"></i> Generar Guía
+                                    style="margin-top:0.75rem; width:100%; background:var(--primary-color); color:white; border:none; border-radius:15px; padding:4px 0; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.4rem; font-size:0.75rem; font-weight:500; height: 28px;">
+                                <i class="fa-solid fa-file-import" style="font-size:0.7rem;"></i> Generar Guía
                             </button>
                          ` : ''}
                     </div>
