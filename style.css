@@ -1088,7 +1088,7 @@ h3 {
     background: white;
     border-radius: 12px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
+    /* overflow: hidden; REMOVED to allow pin */
     display: flex;
     flex-direction: column;
     transition: transform 0.2s;
@@ -1106,6 +1106,8 @@ h3 {
     position: relative;
     background: #fff;
     border-bottom: 1px solid #eee;
+    border-radius: 12px 12px 0 0;
+    /* Updated for top corners */
 }
 
 .provider-img {
@@ -1178,6 +1180,8 @@ h3 {
     background: #fafafa;
     border-top: 1px solid #eee;
     text-align: center;
+    border-radius: 0 0 12px 12px;
+    /* Updated for bottom corners */
 }
 
 /* =========================================
@@ -1837,12 +1841,12 @@ h3 {
 
 /* Resaltar filas donde falta stock */
 .row-needed {
-    background-color: #fff5f5;
-    /* Light red bg */
+    /* Background removed to avoid confusion */
+    font-weight: bold;
 }
 
 .row-needed:hover {
-    background-color: #ffecec !important;
+    /* No bg change */
 }
 
 /* Resaltar filas sustitutas (relacionadas por nombre) */
@@ -1901,16 +1905,18 @@ h3 {
     /* Gold border */
     box-shadow: 0 0 15px rgba(255, 215, 0, 0.3) !important;
     position: relative;
+    overflow: visible !important;
+    /* Allow pin to stick out */
 }
 
 .provider-clip-icon {
     position: absolute;
-    top: -10px;
+    top: -15px;
     right: 10px;
-    font-size: 24px;
-    color: #d35400;
-    /* Bronze/Gold-ish */
-    z-index: 10;
-    transform: rotate(45deg);
-    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
+    font-size: 28px;
+    color: #e74c3c;
+    /* Red Pin */
+    z-index: 20;
+    transform: rotate(0deg);
+    filter: drop-shadow(2px 3px 2px rgba(0, 0, 0, 0.3));
 }
