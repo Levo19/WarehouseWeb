@@ -1534,14 +1534,16 @@ class App {
         let html = '';
         sortedDates.forEach(date => {
             html += `<h4 style="margin: 1rem 0 0.5rem 0; color:var(--primary-color); border-bottom:2px solid #f3f4f6; padding-bottom:0.25rem;">${date}</h4>`;
-            html += `<div class="guias-group-list">`; // Reusing guias class for same styling
+            html += `<div class="guias-group-list">`;
 
             groups[date].forEach(p => {
-                // Determine ID or unique key. Preingresos from `code.gs` usually have an ID or row index?
-                // Assuming `p.id` exists (it should from the backend).
                 // Status Badge Color
-                const statusClass = p.estado === 'PENDIENTE' ? 'pendiente' : 'procesado'; // Using CSS classes if available
-                const badgeColor = p.estado === 'PENDIENTE' ? '#f59e0b' : '#10b981'; // Fallback style color
+                const statusClass = p.estado === 'PENDIENTE' ? 'pendiente' : 'procesado';
+                const badgeColor = p.estado === 'PENDIENTE' ? '#f59e0b' : '#10b981';
+
+                // CHECK IF GUIA ALREADY EXISTS
+                // We check if any guide has this preingreso ID linked
+                const hasGuide = (this.data.movimientos.guias || []).some(g => String(g.idPreingreso) === String(p.id));
 
                 html += `
                     <div id="pre-row-${p.id}" class="guia-row-card" onclick="app.togglePreingresoDetail('${p.id}')">
@@ -1558,6 +1560,14 @@ class App {
                          ${p.fotos && p.fotos.length > 0 ?
                         `<div style="margin-top:0.5rem; font-size:0.8rem; color:var(--primary-color);"><i class="fa-regular fa-images"></i> ${p.fotos.length} fotos adjuntas</div>`
                         : ''}
+                         
+                         ${!hasGuide ? `
+                            <button onclick="event.stopPropagation(); app.generateGuiaFromPreingreso('${p.id}')" 
+                                    class="btn-sm" 
+                                    style="margin-top:0.75rem; width:100%; background:var(--primary-color); color:white; border:none; border-radius:6px; padding:0.5rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem; font-size:0.8rem;">
+                                <i class="fa-solid fa-file-import"></i> Generar Guía
+                            </button>
+                         ` : ''}
                     </div>
                 `;
             });
@@ -1575,12 +1585,12 @@ class App {
         document.querySelectorAll('.guia-row-card').forEach(d => d.classList.remove('active'));
 
         // If clicking same, Close
-        if (currentActive && currentActive.id === `pre-row-${id}`) {
+        if (currentActive && currentActive.id === `pre - row - ${id} `) {
             this.closePreingresoDetails();
             return;
         }
 
-        const row = document.getElementById(`pre-row-${id}`);
+        const row = document.getElementById(`pre - row - ${id} `);
         if (row) row.classList.add('active');
 
         // Open Panel
@@ -1609,37 +1619,37 @@ class App {
             const slides = info.fotos.map(url => {
                 const optUrl = this.getOptimizedImageUrl(url);
                 return `
-                    <div style="flex:0 0 auto; width:120px; height:120px; border-radius:8px; overflow:hidden; border:1px solid #ddd; position:relative; cursor:zoom-in;"
-                         onclick="app.openImageModal('${optUrl}')">
-                        <img src="${optUrl}" style="width:100%; height:100%; object-fit:cover;">
+                    < div style = "flex:0 0 auto; width:120px; height:120px; border-radius:8px; overflow:hidden; border:1px solid #ddd; position:relative; cursor:zoom-in;"
+                onclick = "app.openImageModal('${optUrl}')" >
+                    <img src="${optUrl}" style="width:100%; height:100%; object-fit:cover;">
                         <div style="position:absolute; bottom:0; left:0; width:100%; height:25px; background:rgba(0,0,0,0.5); display:flex; 
                                     justify-content:center; align-items:center;">
-                             <i class="fa-solid fa-expand" style="color:white; font-size:0.8rem;"></i>
+                            <i class="fa-solid fa-expand" style="color:white; font-size:0.8rem;"></i>
                         </div>
                     </div>
                 `;
             }).join('');
 
             carouselHtml = `
-                <div style="margin-top:1.5rem;">
+                    < div style = "margin-top:1.5rem;" >
                     <h5 style="margin-bottom:0.5rem; color:#555;">Evidencias / Fotos</h5>
                     <div style="display:flex; overflow-x:auto; gap:0.75rem; padding-bottom:0.5rem; scrollbar-width:thin;">
                         ${slides}
                     </div>
-                </div>
-            `;
+                </div >
+                    `;
         } else {
-            carouselHtml = `<div style="margin-top:1.5rem; color:#999; font-style:italic;">No hay imagenes adjuntas.</div>`;
+            carouselHtml = `< div style = "margin-top:1.5rem; color:#999; font-style:italic;" > No hay imagenes adjuntas.</div > `;
         }
 
         panel.innerHTML = `
-            <div style="padding:1.5rem; border-bottom:1px solid #eee; background:#f9fafb;">
+                    < div style = "padding:1.5rem; border-bottom:1px solid #eee; background:#f9fafb;" >
                 <div style="display:flex; justify-content:space-between; align-items:start;">
                     <h3 style="margin:0 0 0.5rem 0; color:var(--primary-color);">Detalle Preingreso</h3>
                     <button onclick="app.closePreingresoDetails()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#666;">&times;</button>
                 </div>
                 <div style="font-size:0.9rem; color:#555;">${info.fecha}</div>
-            </div>
+            </div >
             
             <div style="flex:1; overflow-y:auto; padding:1.5rem;">
                 <!-- Main Info -->
@@ -1684,7 +1694,53 @@ class App {
             <div style="padding:1rem; border-top:1px solid #eee; text-align:center;">
                  <button class="btn-primary" style="width:100%; justify-content:center;" onclick="app.closePreingresoDetails()">Cerrar</button>
             </div>
-        `;
+                `;
+    }
+
+    async generateGuiaFromPreingreso(id) {
+        const pre = this.data.movimientos.preingresos.find(p => p.id === id);
+        if (!pre) return;
+
+        if (!confirm(`¿Generar Guía de Ingreso para ${pre.proveedor}?`)) return;
+
+        // Optimistic UI could go here, but let's wait for server
+        const payload = {
+            tipo: 'INGRESO',
+            usuario: this.currentUser.username,
+            proveedor: pre.proveedor,
+            comentario: pre.comentario || '',
+            productos: [],
+            idPreingreso: id,
+            estado: 'EN PROGRESO',
+            foto: null
+        };
+
+        try {
+            this.showToast('Generando guía...', 'info');
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: 'saveGuia',
+                    payload: payload
+                })
+            });
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                this.showToast('Guía generada exitosamente', 'success');
+                // Reload to update lists (hide button in preingreso, show in guias)
+                await this.loadMovimientosData(false);
+                // Switch key tabs
+                this.switchMovTab('guias');
+            } else {
+                alert('Error al generar guía: ' + result.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error de conexión al generar guía');
+        }
     }
 
     // MODALS & FORMS
@@ -1693,7 +1749,7 @@ class App {
 
         // Providers Options
         const providers = this.data.movimientos?.proveedores || [];
-        const providerOptions = providers.map(p => `<option value="${p}"></option>`).join('');
+        const providerOptions = providers.map(p => `< option value = "${p}" ></option > `).join('');
 
         // Link Preingreso Options (Only for Ingreso)
         // ... (Keep existing logic or regenerate if easier) ...
@@ -1701,23 +1757,23 @@ class App {
         if (type === 'INGRESO') {
             const pending = (this.data.movimientos?.preingresos || []).filter(p => p.estado === 'PENDIENTE');
             // ... logic continues ...
-            const options = pending.map(p => `<option value="${p.id}">${p.proveedor} - ${p.fecha}</option>`).join('');
+            const options = pending.map(p => `< option value = "${p.id}" > ${p.proveedor} - ${p.fecha}</option > `).join('');
             preingresoSelect = `
-                <div class="input-group">
+                    < div class="input-group" >
                     <label style="font-size:0.8rem; font-weight:bold; display:block; margin-bottom:0.3rem;">Vincular Preingreso (Opcional)</label>
                     <select id="guia-preingreso" style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
                         <option value="">-- Seleccionar --</option>
                         ${options}
                     </select>
-                </div>
-            `;
+                </div >
+                    `;
         }
 
         const modalHtml = `
-            <div class="modal-header">
+                    < div class="modal-header" >
                 <h3>${title}</h3>
                 <button class="modal-close" onclick="app.closeModal()">&times;</button>
-            </div>
+            </div >
             <div class="modal-body">
                 <form id="new-guia-form">
                     ${preingresoSelect}
@@ -1769,7 +1825,7 @@ class App {
                 <button class="btn-secondary" onclick="app.closeModal()">Cancelar</button>
                 <button class="btn-primary" onclick="app.saveGuia('${type}')">Guardar Guía</button>
             </div>
-        `;
+                `;
 
         this.openModal(modalHtml);
         this.tempGuiaProducts = []; // Reset temp list
@@ -1777,13 +1833,13 @@ class App {
 
     openNewPreingresoModal() {
         const providers = this.data.providers || [];
-        const datalistOpts = providers.map(p => `<option value="${p.nombre}">`).join('');
+        const datalistOpts = providers.map(p => `< option value = "${p.nombre}" > `).join('');
 
         const modalHtml = `
-             <div class="modal-header">
+                    < div class="modal-header" >
                 <h3>Nuevo Preingreso</h3>
                 <button class="modal-close" onclick="app.closeModal()">&times;</button>
-            </div>
+            </div >
             <div class="modal-body">
                  <!-- Proveedor -->
                  <div class="input-group">
@@ -1837,7 +1893,7 @@ class App {
                 <button class="btn-secondary" onclick="app.closeModal()">Cancelar</button>
                 <button class="btn-primary" onclick="app.savePreingreso()">Guardar</button>
             </div>
-        `;
+                `;
         this.openModal(modalHtml);
     }
 
@@ -1952,13 +2008,13 @@ class App {
 
         if (matches.length > 0) {
             resultsDiv.innerHTML = matches.map(([code, p]) => `
-                <div style="padding:0.5rem; border-bottom:1px solid #eee; cursor:pointer; font-size:0.9rem;" 
-                     onmouseover="this.style.background='#f3f4f6'" 
-                     onmouseout="this.style.background='white'"
-                     onclick="app.selectProductForGuia('${code}', '${p.desc.replace(/'/g, "")}')">
+                    < div style = "padding:0.5rem; border-bottom:1px solid #eee; cursor:pointer; font-size:0.9rem;"
+                onmouseover = "this.style.background='#f3f4f6'"
+                onmouseout = "this.style.background='white'"
+                onclick = "app.selectProductForGuia('${code}', '${p.desc.replace(/'/g, "")}')" >
                     <strong>${code}</strong> - ${p.desc}
-                </div>
-             `).join('');
+                </div >
+                    `).join('');
             resultsDiv.style.display = 'block';
         } else {
             resultsDiv.style.display = 'none';
@@ -2027,7 +2083,7 @@ class App {
         }
 
         container.innerHTML = this.tempGuiaProducts.map((p, index) => `
-            <div class="temp-item" style="padding: 0.75rem; align-items: center;">
+                    < div class="temp-item" style = "padding: 0.75rem; align-items: center;" >
                 <div style="flex:1;">
                     <div style="font-weight:bold; font-size:1rem; color: #333;">${p.codigo}</div>
                     <div style="font-size:0.85rem; color:#666;">${p.descripcion}</div>
@@ -2040,8 +2096,8 @@ class App {
                 </div>
 
                 <button onclick="app.removeTempProduct(${index})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1.1rem; padding: 0.5rem;"><i class="fa-solid fa-trash"></i></button>
-            </div>
-        `).join('');
+            </div >
+                    `).join('');
     }
 
     updateTempProductQty(index, change) {
@@ -2360,30 +2416,30 @@ class App {
         const renderCard = (item, isPending) => {
             // Image Logic for Requests
             const imgSrc = item.img ? item.img : 'recursos/defaultImageProduct.png';
-            const imgHtml = `<img src="${imgSrc}" class="card-img" alt="${item.desc}" referrerpolicy="no-referrer" loading="lazy" onerror="app.handleImageError(this)">`;
+            const imgHtml = `< img src = "${imgSrc}" class="card-img" alt = "${item.desc}" referrerpolicy = "no-referrer" loading = "lazy" onerror = "app.handleImageError(this)" > `;
 
             // Combine code and desc for search, normalized
-            const searchTerms = `${item.code} ${item.desc}`.toLowerCase();
+            const searchTerms = `${item.code} ${item.desc} `.toLowerCase();
 
             return `
-            <div class="product-card request-card" data-search="${searchTerms}" onclick="this.classList.toggle('flipped')">
-                <div class="product-card-inner" style="border-left: 4px solid ${isPending ? 'var(--primary-color)' : '#2e7d32'};">
-                     <!-- FRONT -->
-                    <div class="card-front">
-                         <div class="card-img-container" style="height:140px;">
-                            ${imgHtml}
-                        </div>
-                        <div class="card-content">
-                             <div class="card-header">
-                                <div>
-                                    <div class="card-desc" style="font-weight:700; color:#000;">${item.desc}</div>
-                                    <div class="card-code" style="color:#666; font-size:0.85rem;">${item.code}</div>
+                    < div class="product-card request-card" data - search="${searchTerms}" onclick = "this.classList.toggle('flipped')" >
+                        <div class="product-card-inner" style="border-left: 4px solid ${isPending ? 'var(--primary-color)' : '#2e7d32'};">
+                            <!-- FRONT -->
+                            <div class="card-front">
+                                <div class="card-img-container" style="height:140px;">
+                                    ${imgHtml}
                                 </div>
-                                <div style="text-align:right;">
-                                    <div style="font-weight:bold; font-size:1.2rem;">${item.qtyToShow} <span style="font-size:0.8rem;">un</span></div>
-                                </div>
-                            </div>
-                            ${isPending ? `
+                                <div class="card-content">
+                                    <div class="card-header">
+                                        <div>
+                                            <div class="card-desc" style="font-weight:700; color:#000;">${item.desc}</div>
+                                            <div class="card-code" style="color:#666; font-size:0.85rem;">${item.code}</div>
+                                        </div>
+                                        <div style="text-align:right;">
+                                            <div style="font-weight:bold; font-size:1.2rem;">${item.qtyToShow} <span style="font-size:0.8rem;">un</span></div>
+                                        </div>
+                                    </div>
+                                    ${isPending ? `
                              <div class="card-inputs" style="margin-top:auto; padding-top:1rem; border-top:1px solid #eee; display:flex; gap:0.5rem; justify-content:flex-end;" onclick="event.stopPropagation()">
                                  <div style="display:flex; align-items:center; gap:0.5rem;">
                                     <label style="font-size:0.8rem;">Cant:</label>
@@ -2396,19 +2452,19 @@ class App {
                                     <span style="color:#2e7d32; font-weight:600; font-size:0.85rem;"><i class="fa-solid fa-check-circle"></i> Separado</span>
                                </div>
                             `}
-                        </div>
-                    </div>
+                                </div>
+                            </div>
 
-                    <!-- BACK -->
-                    <div class="card-back">
-                         <h5 style="margin-bottom:1rem; border-bottom:1px solid #eee; padding-bottom:0.5rem;">
-                            ${isPending ? 'Detalles de Solicitud' : 'Ítem Separado'}
-                         </h5>
-                        <div class="back-label">Descripción</div>
-                        <div class="back-value">${item.desc}</div>
+                            <!-- BACK -->
+                            <div class="card-back">
+                                <h5 style="margin-bottom:1rem; border-bottom:1px solid #eee; padding-bottom:0.5rem;">
+                                    ${isPending ? 'Detalles de Solicitud' : 'Ítem Separado'}
+                                </h5>
+                                <div class="back-label">Descripción</div>
+                                <div class="back-value">${item.desc}</div>
+                            </div>
                         </div>
-                    </div>
-                </div>`;
+                </div > `;
         };
 
         const hasSeparated = separatedList.length > 0;
@@ -2416,46 +2472,46 @@ class App {
         const isCollapsed = separatedList.length === 0;
 
         container.innerHTML = `
-            <!-- Flux Container -->
-            <div style="display: flex; flex-direction: row; flex-wrap: nowrap; gap: 2rem; align-items: start; height: 85vh; overflow: hidden;">
-                
-                <!-- COLUMN 1: PENDING -->
-                <div class="column-pending" style="flex: 1; min-width: 0; background: #f8f9fa; padding: 1rem; border-radius: 8px; display: flex; flex-direction: column; height: 100%; transition: all 0.3s ease;">
-                    <h5 style="color: var(--primary-color); border-bottom:1px solid #ddd; padding-bottom:0.5rem; flex-shrink: 0; margin-bottom: 0.5rem;">
-                        <i class="fa-solid fa-list-ul"></i> Pendientes (${pendingList.length})
-                    </h5>
-                    <!-- Search Input Pending -->
-                    <div style="margin-bottom: 1rem; position: relative; flex-shrink: 0;">
-                        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #999;"></i>
-                        <input type="text" placeholder="Filtrar pendientes..." onkeyup="app.filterColumnList(this, 'column-pending')" 
-                            style="width: 100%; padding: 8px 10px 8px 32px; border: 1px solid #ddd; border-radius: 20px; outline: none;">
-                    </div>
-                    <div style="flex: 1; overflow-y: auto; padding-right: 5px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); grid-auto-rows: max-content; gap: 1rem; align-content: start;">
-                        ${pendingList.length > 0
+                    < !--Flux Container-- >
+                        <div style="display: flex; flex-direction: row; flex-wrap: nowrap; gap: 2rem; align-items: start; height: 85vh; overflow: hidden;">
+
+                            <!-- COLUMN 1: PENDING -->
+                            <div class="column-pending" style="flex: 1; min-width: 0; background: #f8f9fa; padding: 1rem; border-radius: 8px; display: flex; flex-direction: column; height: 100%; transition: all 0.3s ease;">
+                                <h5 style="color: var(--primary-color); border-bottom:1px solid #ddd; padding-bottom:0.5rem; flex-shrink: 0; margin-bottom: 0.5rem;">
+                                    <i class="fa-solid fa-list-ul"></i> Pendientes (${pendingList.length})
+                                </h5>
+                                <!-- Search Input Pending -->
+                                <div style="margin-bottom: 1rem; position: relative; flex-shrink: 0;">
+                                    <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #999;"></i>
+                                    <input type="text" placeholder="Filtrar pendientes..." onkeyup="app.filterColumnList(this, 'column-pending')"
+                                        style="width: 100%; padding: 8px 10px 8px 32px; border: 1px solid #ddd; border-radius: 20px; outline: none;">
+                                </div>
+                                <div style="flex: 1; overflow-y: auto; padding-right: 5px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); grid-auto-rows: max-content; gap: 1rem; align-content: start;">
+                                    ${pendingList.length > 0
                 ? pendingList.map(i => renderCard(i, true)).join('')
                 : '<div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:#999;">Todo al día 🎉</div>'}
-                    </div>
-                </div>
+                                </div>
+                            </div>
 
-                <!-- COLUMN 2: SEPARATED -->
-                <div class="column-separated" style="${isCollapsed ? 'width: 320px; flex: 0 0 320px;' : 'flex: 1; min-width: 0;'} background: #e8f5e9; padding: 1rem; border-radius: 8px; display: flex; flex-direction: column; height: 100%; transition: all 0.3s ease;">
-                    <h5 style="color: #2e7d32; border-bottom:1px solid #a5d6a7; padding-bottom:0.5rem; flex-shrink: 0; margin-bottom: 0.5rem;">
-                        <i class="fa-solid fa-boxes-packing"></i> Separados (${separatedList.length})
-                    </h5>
-                    <!-- Search Input Separated -->
-                    <div style="margin-bottom: 1rem; position: relative; flex-shrink: 0;">
-                        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #66bb6a;"></i>
-                        <input type="text" placeholder="Filtrar separados..." onkeyup="app.filterColumnList(this, 'column-separated')" 
-                            style="width: 100%; padding: 8px 10px 8px 32px; border: 1px solid #a5d6a7; border-radius: 20px; outline: none; background: #fff;">
-                    </div>
-                     <div style="flex: 1; overflow-y: auto; padding-right: 5px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); grid-auto-rows: max-content; gap: 1rem; align-content: start;">
-                        ${separatedList.length > 0
+                            <!-- COLUMN 2: SEPARATED -->
+                            <div class="column-separated" style="${isCollapsed ? 'width: 320px; flex: 0 0 320px;' : 'flex: 1; min-width: 0;'} background: #e8f5e9; padding: 1rem; border-radius: 8px; display: flex; flex-direction: column; height: 100%; transition: all 0.3s ease;">
+                                <h5 style="color: #2e7d32; border-bottom:1px solid #a5d6a7; padding-bottom:0.5rem; flex-shrink: 0; margin-bottom: 0.5rem;">
+                                    <i class="fa-solid fa-boxes-packing"></i> Separados (${separatedList.length})
+                                </h5>
+                                <!-- Search Input Separated -->
+                                <div style="margin-bottom: 1rem; position: relative; flex-shrink: 0;">
+                                    <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #66bb6a;"></i>
+                                    <input type="text" placeholder="Filtrar separados..." onkeyup="app.filterColumnList(this, 'column-separated')"
+                                        style="width: 100%; padding: 8px 10px 8px 32px; border: 1px solid #a5d6a7; border-radius: 20px; outline: none; background: #fff;">
+                                </div>
+                                <div style="flex: 1; overflow-y: auto; padding-right: 5px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); grid-auto-rows: max-content; gap: 1rem; align-content: start;">
+                                    ${separatedList.length > 0
                 ? separatedList.map(i => renderCard(i, false)).join('')
                 : '<div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:#81c784; font-style:italic;">Nada separado aún</div>'}
-                    </div>
-                </div>
-            </div>
-        `;
+                                </div>
+                            </div>
+                        </div>
+                `;
     }
 
     // Scoped Column Filtering
@@ -2467,7 +2523,7 @@ class App {
 
         // Find the specific column container where this input lives would be even better to support multiple zones if ever needed
         // But scoping by class is fine for now as there's only one active zone view at a time.
-        const container = input.closest(`.${columnClass}`);
+        const container = input.closest(`.${columnClass} `);
 
         if (!container) return;
 
@@ -2488,7 +2544,7 @@ class App {
 
     async moveToSeparated(btnElement, id) {
         // Correct signature: btnElement first, then ID
-        const qtyInput = document.getElementById(`qty-${id}`);
+        const qtyInput = document.getElementById(`qty - ${id} `);
         // Safety check
         if (!qtyInput) {
             console.error('Input not found for ID:', id);
@@ -2579,7 +2635,7 @@ class App {
      */
     openNewRequestModal() {
         const modalHtml = `
-            < div class="modal-card" >
+                    < div class="modal-card" >
                 <div class="modal-header">
                     <h3>Nueva Solicitud</h3>
                     <button class="modal-close" onclick="app.closeModal()">&times;</button>
@@ -2602,7 +2658,7 @@ class App {
                     </div>
                 </form>
             </div >
-            `;
+                    `;
 
         this.openModal(modalHtml);
 
@@ -2718,11 +2774,11 @@ class App {
             if (result.status === 'success') {
                 this.renderProviders(result.data);
             } else {
-                container.innerHTML = `<div class="error-card" style="grid-column:1/-1; color:red; text-align:center;">Error: ${result.message}</div>`;
+                container.innerHTML = `< div class="error-card" style = "grid-column:1/-1; color:red; text-align:center;" > Error: ${result.message}</div > `;
             }
         } catch (e) {
             console.error(e);
-            container.innerHTML = `<div class="error-card" style="grid-column:1/-1; color:red; text-align:center;">Error de conexión. Intente nuevamente.</div>`;
+            container.innerHTML = `< div class="error-card" style = "grid-column:1/-1; color:red; text-align:center;" > Error de conexión.Intente nuevamente.</div > `;
         }
     }
 
@@ -2743,7 +2799,7 @@ class App {
             const deliveryClass = (diaEntrega === todayName) ? 'pill-today-delivery' : 'pill-default';
 
             return `
-            <div class="provider-card">
+                    < div class="provider-card" >
                 <div class="provider-card-header">
                     <img src="${imgUrl}" alt="${p.nombre}" class="provider-img" onerror="this.onerror=null; this.src='recursos/supplierDefault.png'">
                 </div>
@@ -2766,8 +2822,8 @@ class App {
                         <i class="fa-solid fa-cart-plus"></i> Generar Prepedido
                     </button>
                 </div>
-            </div>
-            `;
+            </div >
+                    `;
         }).join('');
     }
 
