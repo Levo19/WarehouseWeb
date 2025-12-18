@@ -1439,41 +1439,221 @@ class App {
     }
 
     renderPreingresos() {
-        const container = document.getElementById('preingresos-list-container');
-        const pre = this.data.movimientos?.preingresos || [];
+        // Initial Render - just trigger filter
+        this.filterPreingresosList();
+    }
 
-        if (pre.length === 0) {
-            container.innerHTML = '<div class="empty-state" style="height:200px;"><p>No hay preingresos</p></div>';
+    clearPreingresoFilters() {
+        document.getElementById('preingreso-filter-text').value = '';
+        document.getElementById('preingreso-filter-date').value = '';
+        this.filterPreingresosList();
+    }
+
+    filterPreingresosList() {
+        const text = document.getElementById('preingreso-filter-text').value.toLowerCase().trim();
+        const dateInput = document.getElementById('preingreso-filter-date').value; // YYYY-MM-DD
+
+        let list = this.data.movimientos?.preingresos || [];
+
+        // Filter Text (Proveedor or ID helper although ID is not explicitly stored as simplified string, check content)
+        if (text) {
+            list = list.filter(p =>
+                (p.proveedor || '').toLowerCase().includes(text) ||
+                (p.comentario || '').toLowerCase().includes(text) ||
+                (p.etiqueta || '').toLowerCase().includes(text)
+            );
+        }
+
+        // Filter Date
+        if (dateInput) {
+            // dateInput is YYYY-MM-DD. p.fecha is "DD/MM/YYYY HH:mm:ss"
+            const [y, m, d] = dateInput.split('-');
+            const searchDate = `${d}/${m}/${y}`;
+            list = list.filter(p => p.fecha.startsWith(searchDate));
+        }
+
+        this.renderPreingresosGrouped(list);
+    }
+
+    renderPreingresosGrouped(list) {
+        const container = document.getElementById('preingresos-list-scroll');
+        if (!container) return; // Guard if view not ready
+
+        if (list.length === 0) {
+            container.innerHTML = '<div style="text-align:center; color:#999; padding:2rem;">No se encontraron preingresos</div>';
             return;
         }
 
-        container.innerHTML = pre.map(p => `
-            <div class="product-card" style="height:auto; min-height:150px; background:white; padding:1rem; border:1px solid #eee;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
-                    <span class="badge ${p.estado === 'PENDIENTE' ? 'pendiente' : 'procesado'}">${p.estado}</span>
-                    <small style="color:#999;">${p.fecha}</small>
+        // Group by Date
+        const getDate = (str) => str.split(' ')[0]; // "16/12/2025"
+        const groups = {};
+        list.forEach(item => {
+            const d = getDate(item.fecha);
+            if (!groups[d]) groups[d] = [];
+            groups[d].push(item);
+        });
+
+        // Sort Dates Descending
+        const sortedDates = Object.keys(groups).sort((a, b) => {
+            const da = a.split('/').reverse().join('');
+            const db = b.split('/').reverse().join('');
+            return db.localeCompare(da);
+        });
+
+        let html = '';
+        sortedDates.forEach(date => {
+            html += `<h4 style="margin: 1rem 0 0.5rem 0; color:var(--primary-color); border-bottom:2px solid #f3f4f6; padding-bottom:0.25rem;">${date}</h4>`;
+            html += `<div class="guias-group-list">`; // Reusing guias class for same styling
+
+            groups[date].forEach(p => {
+                // Determine ID or unique key. Preingresos from `code.gs` usually have an ID or row index?
+                // Assuming `p.id` exists (it should from the backend).
+                // Status Badge Color
+                const statusClass = p.estado === 'PENDIENTE' ? 'pendiente' : 'procesado'; // Using CSS classes if available
+                const badgeColor = p.estado === 'PENDIENTE' ? '#f59e0b' : '#10b981'; // Fallback style color
+
+                html += `
+                    <div id="pre-row-${p.id}" class="guia-row-card" onclick="app.togglePreingresoDetail('${p.id}')">
+                         <div style="display:flex; justify-content:space-between; align-items:start;">
+                            <div>
+                                <span class="badge" style="background:${badgeColor}; color:white;">${p.estado}</span>
+                                <span style="font-weight:bold; color:#333; margin-left:0.5rem; display:block; margin-top:0.4rem;">${p.proveedor || 'Sin Nombre'}</span>
+                            </div>
+                            <div style="font-size:0.8rem; color:#666;">${p.fecha.split(' ')[1] || ''}</div>
+                        </div>
+                        <div style="margin-top:0.5rem; font-size:0.85rem; color:#666;">
+                            ${p.etiqueta ? `<span><i class="fa-solid fa-tag" style="margin-right:4px;"></i>${p.etiqueta}</span>` : ''}
+                        </div>
+                         ${p.fotos && p.fotos.length > 0 ?
+                        `<div style="margin-top:0.5rem; font-size:0.8rem; color:var(--primary-color);"><i class="fa-regular fa-images"></i> ${p.fotos.length} fotos adjuntas</div>`
+                        : ''}
+                    </div>
+                `;
+            });
+            html += `</div>`;
+        });
+
+        container.innerHTML = html;
+    }
+
+    async togglePreingresoDetail(id) {
+        const panel = document.getElementById('preingreso-detail-panel');
+
+        // Handle Active Selection Visuals
+        const currentActive = document.querySelector('.guia-row-card.active');
+        document.querySelectorAll('.guia-row-card').forEach(d => d.classList.remove('active'));
+
+        // If clicking same, Close
+        if (currentActive && currentActive.id === `pre-row-${id}`) {
+            this.closePreingresoDetails();
+            return;
+        }
+
+        const row = document.getElementById(`pre-row-${id}`);
+        if (row) row.classList.add('active');
+
+        // Open Panel
+        panel.style.width = '450px'; // Slightly wider for photos
+        panel.style.opacity = '1';
+
+        // Load Data
+        const info = this.data.movimientos.preingresos.find(p => p.id === id);
+        if (info) {
+            this.renderPreingresoDetailContent(info);
+        }
+    }
+
+    closePreingresoDetails() {
+        const panel = document.getElementById('preingreso-detail-panel');
+        panel.style.width = '0';
+        document.querySelectorAll('.guia-row-card').forEach(d => d.classList.remove('active'));
+    }
+
+    renderPreingresoDetailContent(info) {
+        const panel = document.getElementById('preingreso-detail-panel');
+
+        // Carousel Logic
+        let carouselHtml = '';
+        if (info.fotos && info.fotos.length > 0) {
+            const slides = info.fotos.map(url => {
+                const optUrl = this.getOptimizedImageUrl(url);
+                return `
+                    <div style="flex:0 0 auto; width:120px; height:120px; border-radius:8px; overflow:hidden; border:1px solid #ddd; position:relative; cursor:zoom-in;"
+                         onclick="app.openImageModal('${optUrl}')">
+                        <img src="${optUrl}" style="width:100%; height:100%; object-fit:cover;">
+                        <div style="position:absolute; bottom:0; left:0; width:100%; height:25px; background:rgba(0,0,0,0.5); display:flex; 
+                                    justify-content:center; align-items:center;">
+                             <i class="fa-solid fa-expand" style="color:white; font-size:0.8rem;"></i>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            carouselHtml = `
+                <div style="margin-top:1.5rem;">
+                    <h5 style="margin-bottom:0.5rem; color:#555;">Evidencias / Fotos</h5>
+                    <div style="display:flex; overflow-x:auto; gap:0.75rem; padding-bottom:0.5rem; scrollbar-width:thin;">
+                        ${slides}
+                    </div>
                 </div>
-                <h4 style="margin-bottom:0.5rem;">${p.proveedor}</h4>
-                <p style="font-size:0.9rem; color:#666; margin-bottom:1rem;">${p.comentario}</p>
-                
-                <div style="display:flex; gap:0.5rem; overflow-x:auto; padding-bottom:0.5rem;">
-                    ${p.fotos.map(url => {
-            const optUrl = this.getOptimizedImageUrl(url);
-            return `
-                        <a href="${url}" target="_blank">
-                             <img src="${optUrl}" referrerpolicy="no-referrer" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #eee;">
-                        </a>
-                        `;
-        }).join('')}
+            `;
+        } else {
+            carouselHtml = `<div style="margin-top:1.5rem; color:#999; font-style:italic;">No hay imagenes adjuntas.</div>`;
+        }
+
+        panel.innerHTML = `
+            <div style="padding:1.5rem; border-bottom:1px solid #eee; background:#f9fafb;">
+                <div style="display:flex; justify-content:space-between; align-items:start;">
+                    <h3 style="margin:0 0 0.5rem 0; color:var(--primary-color);">Detalle Preingreso</h3>
+                    <button onclick="app.closePreingresoDetails()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#666;">&times;</button>
                 </div>
-                
-                 <div style="margin-top:0.5rem; font-size: 0.85rem; color:#444;">
-                    ${p.etiqueta ? `<strong>${p.etiqueta}</strong>` : ''}
-                    ${p.monto ? ` - S/ ${p.monto}` : ''}
-                    ${p.comprobante ? ` (${p.comprobante})` : ''}
-                </div>
+                <div style="font-size:0.9rem; color:#555;">${info.fecha}</div>
             </div>
-        `).join('');
+            
+            <div style="flex:1; overflow-y:auto; padding:1.5rem;">
+                <!-- Main Info -->
+                 <div style="margin-bottom:1rem;">
+                    <label style="font-size:0.75rem; text-transform:uppercase; color:#888; letter-spacing:0.5px; font-weight:bold;">Proveedor</label>
+                    <div style="font-size:1.1rem; font-weight:bold; color:#333;">${info.proveedor}</div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                     <div>
+                        <label style="font-size:0.75rem; text-transform:uppercase; color:#888; font-weight:bold;">Estado</label>
+                        <div style="margin-top:0.25rem;">
+                            <span class="badge" style="background:${info.estado === 'PENDIENTE' ? '#f59e0b' : '#10b981'}; color:white;">${info.estado}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size:0.75rem; text-transform:uppercase; color:#888; font-weight:bold;">Monto</label>
+                        <div style="font-size:1rem; color:#333;">${info.monto ? 'S/ ' + info.monto : '-'}</div>
+                    </div>
+                </div>
+
+                 <div style="margin-bottom:1rem;">
+                    <label style="font-size:0.75rem; text-transform:uppercase; color:#888; font-weight:bold;">Etiqueta / Tipo</label>
+                    <div style="font-size:0.95rem; color:#333;">${info.etiqueta || 'N/A'}</div>
+                </div>
+
+                 <div style="margin-bottom:1rem;">
+                    <label style="font-size:0.75rem; text-transform:uppercase; color:#888; font-weight:bold;">Comprobante</label>
+                    <div style="font-size:0.95rem; color:#333;">${info.comprobante || 'N/A'}</div>
+                </div>
+
+                <div style="margin-bottom:1rem;">
+                    <label style="font-size:0.75rem; text-transform:uppercase; color:#888; font-weight:bold;">Observaciones</label>
+                    <div style="font-size:0.95rem; color:#333; background:#f9f9f9; padding:0.75rem; border-radius:6px; border:1px solid #eee; margin-top:0.25rem;">
+                        ${info.comentario ? `"${info.comentario}"` : '<span style="color:#aaa;">Sin comentarios</span>'}
+                    </div>
+                </div>
+
+                ${carouselHtml}
+            </div>
+            
+            <div style="padding:1rem; border-top:1px solid #eee; text-align:center;">
+                 <button class="btn-primary" style="width:100%; justify-content:center;" onclick="app.closePreingresoDetails()">Cerrar</button>
+            </div>
+        `;
     }
 
     // MODALS & FORMS
