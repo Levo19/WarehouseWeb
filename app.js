@@ -2992,7 +2992,7 @@ class App {
             <td style="text-align:center;">
                 <input type="checkbox" class="history-select-check" value="${p.codigo}" data-desc="${p.nombre}" data-cost="${p.costo}">
             </td>
-            <td style="font-family:monospace; color:${p.isRelated ? '#d35400' : '#666'};">
+            <td style="font-family:monospace; color:${p.isRelated ? '#d35400' : '#666'}; white-space: nowrap;">
                 ${p.codigo} ${p.isRelated ? '<i class="fa-solid fa-link" title="Producto Relacionado/Sustituto" style="font-size:0.7rem; margin-left:4px;"></i>' : ''}
             </td>
             <td style="font-weight:600;">${p.nombre}</td>
