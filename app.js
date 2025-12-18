@@ -2910,19 +2910,29 @@ class App {
         // Sort by Name
         products.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-        const rows = products.map(p => `
-        <tr class="${p.falta > 0 ? 'row-needed' : ''}">
+        const rows = products.map(p => {
+            let rowClass = '';
+            if (p.falta > 0) {
+                rowClass = 'row-needed';
+            } else if (p.isRelated) {
+                rowClass = 'row-substitute';
+            }
+
+            return `
+        <tr class="${rowClass}">
             <td style="text-align:center;">
                 <input type="checkbox" class="history-select-check" value="${p.codigo}" data-desc="${p.nombre}" data-cost="${p.costo}">
             </td>
-            <td style="font-family:monospace; color:#666;">${p.codigo}</td>
+            <td style="font-family:monospace; color:${p.isRelated ? '#d35400' : '#666'};">
+                ${p.codigo} ${p.isRelated ? '<i class="fa-solid fa-link" title="Producto Relacionado/Sustituto" style="font-size:0.7rem; margin-left:4px;"></i>' : ''}
+            </td>
             <td style="font-weight:600;">${p.nombre}</td>
              <td style="text-align:center; color:#555;">${p.min} - ${p.stock}</td>
             <td style="text-align:center; font-weight:bold; color:${p.falta > 0 ? '#d9534f' : '#28a745'};">${p.falta}</td>
             <td>${p.costo ? 'S/ ' + parseFloat(p.costo).toFixed(2) : '-'}</td>
             <td style="font-size:0.8rem; color:#888;">${p.fecha ? new Date(p.fecha).toLocaleDateString() : '-'}</td>
         </tr>
-    `).join('');
+    `}).join('');
 
         const modalHtml = `
         <div class="modal-card" style="max-width: 900px;">
