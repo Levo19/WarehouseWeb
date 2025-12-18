@@ -1747,3 +1747,88 @@ h3 {
 .date-filter-wrapper:hover i {
     color: var(--primary-color);
 }
+
+/* HISTORICAL PRODUCTS TABLE */
+.history-table-wrapper {
+    max-height: 60vh;
+    /* Limit height to 60% of viewport */
+    overflow-y: auto;
+    /* Enable vertical scrolling */
+    border: 1px solid #eee;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+}
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.history-table th {
+    background: #f8f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    /* Ensure header stays on top */
+    padding: 10px;
+    text-align: left;
+    color: #444;
+    border-bottom: 2px solid #ddd;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    /* Subtle shadow for header */
+}
+
+.history-table td {
+    padding: 14px 10px;
+    /* Increased padding for better spacing */
+    border-bottom: 1px solid #e0e0e0;
+    /* Slightly darker border for separation */
+    vertical-align: middle;
+}
+
+.history-table tr:hover {
+    background-color: #f1f8ff;
+}
+
+.history-table input[type="checkbox"] {
+    transform: scale(1.2);
+    cursor: pointer;
+}
+
+/* Modal Adjustments for heavy content */
+.modal-card {
+    max-height: 90vh;
+    /* Ensure modal fits in screen */
+    display: flex;
+    flex-direction: column;
+    margin: 20px;
+    /* Margins from screen edges */
+}
+
+.modal-body {
+    overflow-y: auto;
+    /* Allow body scroll if needed, though wrapper handles table */
+    flex: 1;
+    /* Take available space */
+}
+
+/* Resaltar filas donde falta stock */
+.row-needed {
+    background-color: #fff5f5;
+    /* Light red bg */
+}
+
+.row-needed:hover {
+    background-color: #ffecec !important;
+}
+
+/* Resaltar filas sustitutas (relacionadas por nombre) */
+.row-substitute {
+    background-color: #fffaf0;
+    /* Light orange/yellow bg */
+}
+
+.row-substitute:hover {
+    background-color: #fff4e0 !important;
+}
