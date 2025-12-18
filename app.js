@@ -2878,45 +2878,49 @@ class App {
         products.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
         const rows = products.map(p => `
-            <tr>
-                <td style="text-align:center;">
-                    <input type="checkbox" class="history-select-check" value="${p.codigo}" data-desc="${p.nombre}" data-cost="${p.costo}">
-                </td>
-                <td style="font-family:monospace; color:#666;">${p.codigo}</td>
-                <td style="font-weight:600;">${p.nombre}</td>
-                <td>${p.costo ? 'S/ ' + parseFloat(p.costo).toFixed(2) : '-'}</td>
-                <td style="font-size:0.8rem; color:#888;">${p.fecha ? new Date(p.fecha).toLocaleDateString() : '-'}</td>
-            </tr>
-        `).join('');
+        <tr class="${p.falta > 0 ? 'row-needed' : ''}">
+            <td style="text-align:center;">
+                <input type="checkbox" class="history-select-check" value="${p.codigo}" data-desc="${p.nombre}" data-cost="${p.costo}">
+            </td>
+            <td style="font-family:monospace; color:#666;">${p.codigo}</td>
+            <td style="font-weight:600;">${p.nombre}</td>
+             <td style="text-align:center; color:#555;">${p.min} - ${p.stock}</td>
+            <td style="text-align:center; font-weight:bold; color:${p.falta > 0 ? '#d9534f' : '#28a745'};">${p.falta}</td>
+            <td>${p.costo ? 'S/ ' + parseFloat(p.costo).toFixed(2) : '-'}</td>
+            <td style="font-size:0.8rem; color:#888;">${p.fecha ? new Date(p.fecha).toLocaleDateString() : '-'}</td>
+        </tr>
+    `).join('');
 
         const modalHtml = `
-            <div class="modal-card" style="max-width: 800px;">
-                <div class="modal-header">
-                    <h3>Historial: ${providerName}</h3>
-                    <button class="modal-close" onclick="app.closeModal()">&times;</button>
+        <div class="modal-card" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3>Historial: ${providerName}</h3>
+                <button class="modal-close" onclick="app.closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 1rem;">
+                <div class="alert-info" style="font-size:0.9rem; color:#666; margin-bottom:1rem;">
+                    <i class="fa-solid fa-info-circle"></i> Seleccione los productos. <span style="color:#d9534f; font-weight:bold;">A Comprar = Min - Stock</span>.
                 </div>
-                <div class="modal-body" style="padding: 1rem;">
-                    <div class="alert-info" style="font-size:0.9rem; color:#666; margin-bottom:1rem;">
-                        <i class="fa-solid fa-info-circle"></i> Seleccione los productos para generar el prepedido.
-                    </div>
-                    
-                    <div class="history-table-wrapper">
-                        <table class="history-table">
-                            <thead>
-                                <tr>
-                                    <th width="40" style="text-align:center;"><input type="checkbox" onclick="app.toggleHistoryAll(this)"></th>
-                                    <th>Código</th>
-                                    <th>Producto</th>
-                                    <th>Costo Ref.</th>
-                                    <th>Últ. Compra</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${rows}
-                            </tbody>
-                        </table>
-                    </div>
+                
+                <div class="history-table-wrapper">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th width="40" style="text-align:center;"><input type="checkbox" onclick="app.toggleHistoryAll(this)"></th>
+                                <th>Código</th>
+                                <th>Producto</th>
+                                <th style="text-align:center;">Min - Stock</th>
+                                <th style="text-align:center;">A Comprar</th>
+                                <th>Costo Ref.</th>
+                                <th>Últ. Compra</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows}
+                        </tbody>
+                    </table>
                 </div>
+            </div>
                 <div class="modal-footer">
                      <span id="history-selected-count" style="margin-right:auto; font-weight:bold; color:var(--primary-color);">0 seleccionados</span>
                      <button class="btn-secondary" onclick="app.closeModal()">Cancelar</button>
