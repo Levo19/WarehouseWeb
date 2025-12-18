@@ -239,6 +239,9 @@ class App {
         const targetView = document.getElementById(`view-${viewName}`);
         if (targetView) targetView.classList.add('active');
 
+        // Restore Default Header Layout (Clears Dynamic Actions)
+        this.restoreDefaultHeader();
+
         // Specific Module Init
         if (viewName === 'dispatch') {
             this.state.currentModule = 'dispatch';
@@ -250,6 +253,7 @@ class App {
             this.state.currentModule = 'movements';
             if (this.closeGuiaDetails) this.closeGuiaDetails(); // Reset Panel
             this.loadMovimientosData();
+            this.renderMovimientosHeader(); // Inject Header Buttons
 
             // Auto-refresh every 60s
             setInterval(() => {
@@ -805,13 +809,40 @@ class App {
      * MOVIMIENTOS MODULE
      */
 
+    // MOVIMIENTOS HEADER LOGIC
+    renderMovimientosHeader() {
+        const headerActions = document.getElementById('header-dynamic-actions');
+        if (!headerActions) return;
+
+        // Check if already rendered to avoid duplicates/flicker
+        if (document.getElementById('btn-mov-guias')) return;
+
+        headerActions.innerHTML = `
+            <div class="header-tab-group">
+                <button id="btn-mov-guias" class="btn-header-tab active" onclick="app.switchMovTab('guias')">Guías</button>
+                <button id="btn-mov-preingresos" class="btn-header-tab" onclick="app.switchMovTab('preingresos')">Preingresos</button>
+            </div>
+        `;
+    }
+
     // Switch Tabs (Guias vs Preingresos)
     switchMovTab(tab) {
-        document.querySelectorAll('.mov-tab').forEach(b => b.classList.remove('active'));
-        document.querySelector(`.mov-tab[onclick="app.switchMovTab('${tab}')"]`).classList.add('active');
+        // Toggle Active Class on Header Buttons
+        const guiasBtn = document.getElementById('btn-mov-guias');
+        const preBtn = document.getElementById('btn-mov-preingresos');
 
+        if (guiasBtn && preBtn) {
+            guiasBtn.classList.remove('active');
+            preBtn.classList.remove('active');
+
+            if (tab === 'guias') guiasBtn.classList.add('active');
+            else preBtn.classList.add('active');
+        }
+
+        // Toggle Content Views
         document.querySelectorAll('.mov-tab-content').forEach(c => c.classList.remove('active'));
-        document.getElementById(`tab-${tab}`).classList.add('active');
+        const target = document.getElementById(`tab-${tab}`);
+        if (target) target.classList.add('active');
 
         // Refresh Data on Switch
         if (tab === 'guias') this.renderGuiasList();
