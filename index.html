@@ -169,9 +169,11 @@
                                     </div>
 
                                     <!-- Compact Date Filter -->
-                                    <div class="date-filter-wrapper" title="Filtrar por fecha">
+                                    <div class="date-filter-wrapper" title="Filtrar por fecha"
+                                        onclick="this.querySelector('input').showPicker()">
                                         <i class="fa-regular fa-calendar" style="font-size: 1.2rem;"></i>
-                                        <input type="date" id="guia-filter-date" onchange="app.filterGuiasList()">
+                                        <input type="date" id="guia-filter-date" onchange="app.filterGuiasList()"
+                                            onclick="event.stopPropagation()">
                                     </div>
 
                                     <!-- Clear Filter Button -->
@@ -227,10 +229,11 @@
                                     </div>
 
                                     <!-- Compact Date Filter -->
-                                    <div class="date-filter-wrapper" title="Filtrar por fecha">
+                                    <div class="date-filter-wrapper" title="Filtrar por fecha"
+                                        onclick="this.querySelector('input').showPicker()">
                                         <i class="fa-regular fa-calendar" style="font-size: 1.2rem;"></i>
                                         <input type="date" id="preingreso-filter-date"
-                                            onchange="app.filterPreingresosList()">
+                                            onchange="app.filterPreingresosList()" onclick="event.stopPropagation()">
                                     </div>
 
                                     <!-- Clear Filter Button -->
