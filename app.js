@@ -3134,17 +3134,18 @@ class App {
                 }
             });
         });
-        // --- ENVASADOR MODULE LOGIC ---
+    }
+    // --- ENVASADOR MODULE LOGIC ---
 
-        loadPackingModule() {
-            // 1. Set Title
-            const title = document.getElementById('page-title');
-            if (title) title.innerText = 'Modulo Envasador';
+    loadPackingModule() {
+        // 1. Set Title
+        const title = document.getElementById('page-title');
+        if (title) title.innerText = 'Modulo Envasador';
 
-            // 2. Inject Search Bar (Neon Style)
-            const headerActions = document.getElementById('header-dynamic-actions');
-            if (headerActions) {
-                headerActions.innerHTML = `
+        // 2. Inject Search Bar (Neon Style)
+        const headerActions = document.getElementById('header-dynamic-actions');
+        if (headerActions) {
+            headerActions.innerHTML = `
                  <div class="search-neon-wrapper" style="position: relative; width: 300px;">
                     <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#999;"></i>
                     <input type="text" id="packing-search" 
@@ -3153,63 +3154,63 @@ class App {
                         onkeyup="app.filterPackingList(this.value)">
                 </div>
             `;
-            }
-
-            // 3. Initial Load
-            this.fetchPackingList();
-
-            // 4. Start Auto-Refresh (60s)
-            if (this.packingRefreshInterval) clearInterval(this.packingRefreshInterval);
-            this.packingRefreshInterval = setInterval(() => {
-                console.log('Auto-refreshing Packing List...');
-                this.fetchPackingList(true);
-            }, 60000);
         }
+
+        // 3. Initial Load
+        this.fetchPackingList();
+
+        // 4. Start Auto-Refresh (60s)
+        if (this.packingRefreshInterval) clearInterval(this.packingRefreshInterval);
+        this.packingRefreshInterval = setInterval(() => {
+            console.log('Auto-refreshing Packing List...');
+            this.fetchPackingList(true);
+        }, 60000);
+    }
 
     async fetchPackingList(isBackground = false) {
-            const container = document.getElementById('packing-list-container');
-            if (!container && !isBackground) return;
+        const container = document.getElementById('packing-list-container');
+        if (!container && !isBackground) return;
 
-            if (!isBackground) {
-                container.innerHTML = '<div style="text-align:center; padding:2rem; color:#999;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando lista...</div>';
-            }
-
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    redirect: 'follow',
-                    headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify({ action: 'getPackingList' })
-                });
-                const result = await response.json();
-
-                if (result.status === 'success') {
-                    this.packingList = result.data; // Store in memory
-                    if (this.state.currentModule === 'envasador') {
-                        this.renderPackingList(this.packingList);
-                    }
-                } else {
-                    console.error('Error fetching packing list:', result.message);
-                    if (!isBackground) container.innerHTML = `<div style="text-align:center; color:red;">Error: ${result.message}</div>`;
-                }
-
-            } catch (e) {
-                console.error('Network error fetching packing list:', e);
-                if (!isBackground) container.innerHTML = `<div style="text-align:center; color:red;">Error de conexión.</div>`;
-            }
+        if (!isBackground) {
+            container.innerHTML = '<div style="text-align:center; padding:2rem; color:#999;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando lista...</div>';
         }
 
-        renderPackingList(list) {
-            const container = document.getElementById('packing-list-container');
-            if (!container) return;
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: 'getPackingList' })
+            });
+            const result = await response.json();
 
-            if (list.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding:2rem; color:#666;">No se encontraron productos.</div>';
-                return;
+            if (result.status === 'success') {
+                this.packingList = result.data; // Store in memory
+                if (this.state.currentModule === 'envasador') {
+                    this.renderPackingList(this.packingList);
+                }
+            } else {
+                console.error('Error fetching packing list:', result.message);
+                if (!isBackground) container.innerHTML = `<div style="text-align:center; color:red;">Error: ${result.message}</div>`;
             }
 
-            // Build Table Structure
-            let html = `
+        } catch (e) {
+            console.error('Network error fetching packing list:', e);
+            if (!isBackground) container.innerHTML = `<div style="text-align:center; color:red;">Error de conexión.</div>`;
+        }
+    }
+
+    renderPackingList(list) {
+        const container = document.getElementById('packing-list-container');
+        if (!container) return;
+
+        if (list.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:2rem; color:#666;">No se encontraron productos.</div>';
+            return;
+        }
+
+        // Build Table Structure
+        let html = `
             <table class="packing-table">
                 <thead>
                     <tr>
@@ -3223,7 +3224,7 @@ class App {
                 <tbody>
         `;
 
-            html += list.map(item => `
+        html += list.map(item => `
             <tr class="packing-row" onclick="app.openPackingDrawer('${item.codigo}')">
                 <td style="font-weight:bold; color:#555;">${item.codigo}</td>
                 <td style="font-weight:600; color:#333;">${item.nombre}</td>
@@ -3235,31 +3236,31 @@ class App {
             </tr>
         `).join('');
 
-            html += '</tbody></table>';
-            container.innerHTML = html;
-        }
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
 
-        filterPackingList(term) {
-            if (!this.packingList) return;
-            const q = term.toLowerCase().trim();
+    filterPackingList(term) {
+        if (!this.packingList) return;
+        const q = term.toLowerCase().trim();
 
-            const filtered = this.packingList.filter(item =>
-                item.codigo.toLowerCase().includes(q) ||
-                item.nombre.toLowerCase().includes(q) ||
-                item.origen.toLowerCase().includes(q)
-            );
-            this.renderPackingList(filtered);
-        }
+        const filtered = this.packingList.filter(item =>
+            item.codigo.toLowerCase().includes(q) ||
+            item.nombre.toLowerCase().includes(q) ||
+            item.origen.toLowerCase().includes(q)
+        );
+        this.renderPackingList(filtered);
+    }
 
-        openPackingDrawer(code) {
-            const item = this.packingList.find(p => p.codigo === code);
-            if (!item) return;
+    openPackingDrawer(code) {
+        const item = this.packingList.find(p => p.codigo === code);
+        if (!item) return;
 
-            const drawer = document.getElementById('packing-drawer');
-            const backdrop = document.getElementById('packing-drawer-backdrop');
+        const drawer = document.getElementById('packing-drawer');
+        const backdrop = document.getElementById('packing-drawer-backdrop');
 
-            // Populate Drawer
-            drawer.innerHTML = `
+        // Populate Drawer
+        drawer.innerHTML = `
             <div class="drawer-header">
                 <h3>${item.nombre}</h3>
                 <button class="close-drawer-btn" onclick="app.closePackingDrawer()"><i class="fa-solid fa-xmark"></i></button>
@@ -3304,21 +3305,21 @@ class App {
             </div >
             `;
 
-            // Show
-            backdrop.classList.add('active');
-            drawer.classList.add('active');
+        // Show
+        backdrop.classList.add('active');
+        drawer.classList.add('active');
 
-            // Close on Backdrop Click
-            backdrop.onclick = () => this.closePackingDrawer();
-        }
-
-        closePackingDrawer() {
-            const drawer = document.getElementById('packing-drawer');
-            const backdrop = document.getElementById('packing-drawer-backdrop');
-            if (drawer) drawer.classList.remove('active');
-            if (backdrop) backdrop.classList.remove('active');
-        }
+        // Close on Backdrop Click
+        backdrop.onclick = () => this.closePackingDrawer();
     }
+
+    closePackingDrawer() {
+        const drawer = document.getElementById('packing-drawer');
+        const backdrop = document.getElementById('packing-drawer-backdrop');
+        if (drawer) drawer.classList.remove('active');
+        if (backdrop) backdrop.classList.remove('active');
+    }
+}
 
 // Initialize App
 
