@@ -2749,8 +2749,38 @@ class App {
     // --- PREPEDIDOS LOGIC ---
     async loadPrepedidos() {
         const container = document.getElementById('prepedidos-container');
-        container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 3rem; color:#666;"><i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><p style="margin-top:1rem;">Cargando lista de proveedores...</p></div>';
 
+        // 1. Mostrar caché si existe (Instantáneo)
+        if (this.providersData) {
+            this.renderProviders(this.providersData);
+        } else {
+            // Solo mostrar spinner si no hay datos previos
+            container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 3rem; color:#666;"><i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><p style="margin-top:1rem;">Cargando lista de proveedores...</p></div>';
+        }
+
+        // 2. Fetch actualizado siempre (Background refresh)
+        await this.fetchProvidersBackground();
+
+        // 3. Iniciar Auto-Refresh si no está activo
+        if (!this.providerRefreshInterval) {
+            this.startProviderAutoRefresh();
+        }
+    }
+
+    startProviderAutoRefresh() {
+        // Evitar múltiples intervalos
+        if (this.providerRefreshInterval) clearInterval(this.providerRefreshInterval);
+
+        console.log("Iniciando auto-refresh de proveedores (60s)...");
+        this.providerRefreshInterval = setInterval(() => {
+            // Solo refrescar si la pestaña está activa (opcional, pero buena práctica)
+            // O simplemente verificar si estamos en la vista de prepedidos (si tu app es SPA real)
+            // Aquí asumimos siempre refrescar.
+            this.fetchProvidersBackground();
+        }, 60000); // 60 segundos
+    }
+
+    async fetchProvidersBackground() {
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
@@ -2761,34 +2791,38 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                this.renderProviders(result.data);
+                this.providersData = result.data; // Guardar en caché
+
+                // Si estamos viendo la pantalla de prepedidos, actualizar UI silenciosamente
+                // (Verificamos si existe el contenedor en el DOM)
+                const container = document.getElementById('prepedidos-container');
+                if (container) {
+                    this.renderProviders(this.providersData);
+                }
             } else {
-                container.innerHTML = `<div class="error-card" style="grid-column:1/-1; color:red; text-align:center;">Error: ${result.message}</div>`;
+                console.error("Error refresh providers:", result.message);
             }
         } catch (e) {
-            console.error(e);
-            container.innerHTML = `<div class="error-card" style="grid-column:1/-1; color:red; text-align:center;">Error de conexión.Intente nuevamente.</div>`;
+            console.error("Error background fetch:", e);
         }
     }
 
     renderProviders(providers) {
         const container = document.getElementById('prepedidos-container');
+        if (!container) return; // Safety check
 
         const daysMap = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
-        const todayName = daysMap[new Date().getDay()]; // e.g., "SABADO"
+        const todayName = daysMap[new Date().getDay()];
 
         container.innerHTML = providers.map(p => {
             const imgUrl = (p.imagen && p.imagen.trim() !== '') ? p.imagen : 'recursos/supplierDefault.png';
-
             const diaPedido = p.diaPedido ? p.diaPedido.toUpperCase() : '-';
             const diaEntrega = p.diaEntrega ? p.diaEntrega.toUpperCase() : '-';
-
-            // Class logic
             const orderClass = (diaPedido === todayName) ? 'pill-today-order' : 'pill-default';
             const deliveryClass = (diaEntrega === todayName) ? 'pill-today-delivery' : 'pill-default';
 
             return `
-                <div class="provider-card">
+        <div class="provider-card">
             <div class="provider-card-header">
                 <img src="${imgUrl}" alt="${p.nombre}" class="provider-img" onerror="this.onerror=null; this.src='recursos/supplierDefault.png'">
             </div>
@@ -2811,8 +2845,7 @@ class App {
                     <i class="fa-solid fa-cart-plus"></i> Generar Prepedido
                 </button>
             </div>
-        </div>
-                `;
+        </div>`;
         }).join('');
     }
 
