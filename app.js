@@ -1756,23 +1756,7 @@ class App {
         const providers = this.data.movimientos?.proveedores || [];
         const providerOptions = providers.map(p => `<option value="${p}"></option>`).join('');
 
-        // Link Preingreso Options (Only for Ingreso)
-        // ... (Keep existing logic or regenerate if easier) ...
-        let preingresoSelect = '';
-        if (type === 'INGRESO') {
-            const pending = (this.data.movimientos?.preingresos || []).filter(p => p.estado === 'PENDIENTE');
-            // ... logic continues ...
-            const options = pending.map(p => `<option value="${p.id}">${p.proveedor} - ${p.fecha}</option>`).join('');
-            preingresoSelect = `
-                    <div class="input-group">
-                    <label style="font-size:0.8rem; font-weight:bold; display:block; margin-bottom:0.3rem;">Vincular Preingreso (Opcional)</label>
-                    <select id="guia-preingreso" style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
-                        <option value="">-- Seleccionar --</option>
-                        ${options}
-                    </select>
-                </div>
-                    `;
-        }
+
 
         const modalHtml = `
                 <div class="modal-header">
@@ -1781,7 +1765,7 @@ class App {
         </div>
             <div class="modal-body">
                 <form id="new-guia-form">
-                    ${preingresoSelect}
+
                     
                     <div class="input-group">
                          <input type="text" id="guia-proveedor" list="provider-list" placeholder="${type === 'INGRESO' ? 'Proveedor' : 'Destino'}" required style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
