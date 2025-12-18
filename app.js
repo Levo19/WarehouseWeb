@@ -1754,7 +1754,7 @@ class App {
 
         // Providers Options
         const providers = this.data.movimientos?.proveedores || [];
-        const providerOptions = providers.map(p => `< option value = "${p}" ></option > `).join('');
+        const providerOptions = providers.map(p => `<option value="${p}"></option>`).join('');
 
         // Link Preingreso Options (Only for Ingreso)
         // ... (Keep existing logic or regenerate if easier) ...
@@ -1762,23 +1762,23 @@ class App {
         if (type === 'INGRESO') {
             const pending = (this.data.movimientos?.preingresos || []).filter(p => p.estado === 'PENDIENTE');
             // ... logic continues ...
-            const options = pending.map(p => `< option value = "${p.id}" > ${p.proveedor} - ${p.fecha}</option > `).join('');
+            const options = pending.map(p => `<option value="${p.id}">${p.proveedor} - ${p.fecha}</option>`).join('');
             preingresoSelect = `
-                    < div class="input-group" >
+                    <div class="input-group">
                     <label style="font-size:0.8rem; font-weight:bold; display:block; margin-bottom:0.3rem;">Vincular Preingreso (Opcional)</label>
                     <select id="guia-preingreso" style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
                         <option value="">-- Seleccionar --</option>
                         ${options}
                     </select>
-                </div >
+                </div>
                     `;
         }
 
         const modalHtml = `
-                    < div class="modal-header" >
-                <h3>${title}</h3>
-                <button class="modal-close" onclick="app.closeModal()">&times;</button>
-            </div >
+                <div class="modal-header">
+            <h3>${title}</h3>
+            <button class="modal-close" onclick="app.closeModal()">&times;</button>
+        </div>
             <div class="modal-body">
                 <form id="new-guia-form">
                     ${preingresoSelect}
@@ -1838,13 +1838,13 @@ class App {
 
     openNewPreingresoModal() {
         const providers = this.data.providers || [];
-        const datalistOpts = providers.map(p => `< option value = "${p.nombre}" > `).join('');
+        const datalistOpts = providers.map(p => `<option value="${p.nombre}">`).join('');
 
         const modalHtml = `
-                    < div class="modal-header" >
+                    <div class="modal-header">
                 <h3>Nuevo Preingreso</h3>
                 <button class="modal-close" onclick="app.closeModal()">&times;</button>
-            </div >
+            </div>
             <div class="modal-body">
                  <!-- Proveedor -->
                  <div class="input-group">
