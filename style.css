@@ -1547,17 +1547,133 @@ h3 {
     pointer-events: none;
     color: #666;
     z-index: 1;
+    background: #fafafa;
+    transition: all 0.2s;
 }
 
-.date-filter-wrapper:hover i {
-    color: var(--primary-color);
+.photo-widget:hover {
+    border-color: var(--primary-color);
+    background: #f0f7ff;
 }
-/* GUIA / PREINGRESO CARD */
+
+.photo-preview-grid {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+}
+
+.photo-thumb {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.file-input-hidden {
+    display: none;
+}
+
+/* Preingresos Grid */
+#preingresos-list-container {
+    gap: 1rem;
+}
+
+/* Scrollbar Styles for Search Results */
+#prod-search-results,
+.temp-product-list {
+    scrollbar-width: thin;
+    /* Firefox */
+    scrollbar-color: var(--primary-color) #f1f1f1;
+}
+
+/* Webkit Scrollbar */
+#prod-search-results::-webkit-scrollbar,
+.temp-product-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+#prod-search-results::-webkit-scrollbar-track,
+.temp-product-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+#prod-search-results::-webkit-scrollbar-thumb,
+.temp-product-list::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+}
+
+#prod-search-results::-webkit-scrollbar-thumb:hover,
+.temp-product-list::-webkit-scrollbar-thumb:hover {
+    background: #4338ca;
+    /* Darker Indigo */
+}
+
+/* Ensure Search Results Dropdown is visible and styled properly */
+#prod-search-results {
+    border-radius: 0 0 6px 6px;
+}
+
+/* --- NEW STYLES FOR NEON SEARCH & ITEM CONTROLS --- */
+
+@keyframes neon-pulse {
+    0% {
+        box-shadow: 0 0 5px rgba(67, 56, 202, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 15px rgba(67, 56, 202, 0.7);
+    }
+
+    100% {
+        box-shadow: 0 0 5px rgba(67, 56, 202, 0.4);
+    }
+}
+
+.search-neon-wrapper input {
+    border: 2px solid transparent !important;
+    background: #f9fafb;
+    transition: all 0.3s ease;
+}
+
+.search-neon-wrapper input:focus {
+    background: #fff;
+    border-color: var(--primary-color) !important;
+    animation: neon-pulse 2s infinite;
+    outline: none;
+}
+
+/* Ensure controls in temp list look clicky */
+.temp-item button:active {
+    transform: scale(0.95);
+}
+
+/* GUIAS MASTER-DETAIL LAYOUT */
+#guias-layout-wrapper {
+    width: 100%;
+}
+
+#guias-left-col {
+    transition: flex 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* DETAIL PANEL */
+.detail-panel {
+    background: white;
+    height: 100%;
+    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.05);
+}
+
+/* LIST ITEMS */
 .guia-row-card {
     background: white;
     border: 1px solid #eee;
-    padding: 1rem;
     border-radius: 8px;
+    padding: 1rem;
     margin-bottom: 0.75rem;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -1565,26 +1681,69 @@ h3 {
 }
 
 .guia-row-card:hover {
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    background: #f9fafb;
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border-color: var(--primary-color);
 }
 
 .guia-row-card.active {
+    background: #f0f7ff;
+    border-color: var(--primary-color);
     border-left-color: var(--primary-color);
-    background: #eef2ff; /* Light Indigo */
-    border-color: #c7d2fe;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
 }
 
-.guia-row-card .badge {
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    font-weight: bold;
-    text-transform: uppercase;
+/* GROUP HEADERS */
+.guias-group-list {
+    margin-bottom: 1.5rem;
 }
 
-.guia-row-card .badge.ingreso { background: #dcfce7; color: #166534; }
-.guia-row-card .badge.salida { background: #fee2e2; color: #991b1b; }
-.guia-row-card .badge.pendiente { background: #fef3c7; color: #92400e; }
-.guia-row-card .badge.procesado { background: #d1fae5; color: #065f46; }
+/* SIDE PANEL CONTENT */
+.detail-panel h3 {
+    font-size: 1.2rem;
+    color: var(--text-main);
+}
 
+/* GUIAS COMPACT DATE FILTER */
+.date-filter-wrapper {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    overflow: hidden;
+    border-radius: 8px;
+    background: white;
+    border: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.date-filter-wrapper:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: #f0f7ff;
+}
+
+.date-filter-wrapper input[type="date"] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    /* Hides the native input but keeps it clickable */
+    cursor: pointer;
+    z-index: 2;
+}
+
+.date-filter-wrapper i {
+    pointer-events: none;
+    color: #666;
+    z-index: 1;
+}
+
+.date-filter-wrapper:hover i {
+    color: var(--primary-color);
+}
