@@ -2749,7 +2749,7 @@ class App {
     // --- PREPEDIDOS LOGIC ---
     async loadPrepedidos() {
         // Change Header Title to 'Prepedidos'
-        const titleEl = document.querySelector('.header-title');
+        const titleEl = document.getElementById('page-title');
         if (titleEl) titleEl.textContent = 'Prepedidos';
 
         const container = document.getElementById('prepedidos-container');
@@ -2821,6 +2821,29 @@ class App {
         // Ideally, 'prepedidos-container' should be wrapped or we insert before it. 
         // Let's assume 'prepedidos-container' is the grid itself. We need to inject controls above it.
 
+        // 1. Setup SEARCH BAR in HEADER (Moved from body)
+        const headerActions = document.getElementById('header-dynamic-actions');
+        if (headerActions) {
+            // Only inject if not already there (check by ID)
+            if (!document.getElementById('provider-search-input')) {
+                headerActions.innerHTML = `
+                    <div class="search-bar-header">
+                        <i class="fa-solid fa-search search-icon"></i>
+                        <input type="text" id="provider-search-input" placeholder="Buscar proveedor...">
+                    </div>
+                `;
+                // Add Event Listener
+                document.getElementById('provider-search-input').addEventListener('input', (e) => {
+                    this.filterProviders(e.target.value);
+                });
+            }
+        }
+
+        // Remove old controls if they exist in body (cleanup)
+        const oldControls = document.getElementById('provider-controls-wrapper');
+        if (oldControls) oldControls.remove();
+
+        /* REMOVED
         let controlsContainer = document.getElementById('provider-controls-wrapper');
         if (!controlsContainer) {
             controlsContainer = document.createElement('div');
@@ -2839,7 +2862,7 @@ class App {
             document.getElementById('provider-search-input').addEventListener('input', (e) => {
                 this.filterProviders(e.target.value);
             });
-        }
+        } */
 
         // Ensure Grid Layout
         mainContainer.style.display = 'grid';
@@ -2877,7 +2900,7 @@ class App {
 
             return `
         <div class="${cardClass}" data-name="${p.nombre.toLowerCase()}">
-            ${isToday ? '<i class="fa-solid fa-paperclip provider-clip-icon"></i>' : ''}
+            ${isToday ? '<i class="fa-solid fa-thumbtack provider-clip-icon"></i>' : ''}
             <div class="provider-card-header">
                 <img src="${imgUrl}" alt="${p.nombre}" class="provider-img" onerror="this.onerror=null; this.src='recursos/supplierDefault.png'">
             </div>
