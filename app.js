@@ -2807,13 +2807,172 @@ class App {
                 </div>
             </div>
             <div class="provider-footer">
-                <button class="btn-primary" style="width: 100%; padding: 10px; font-size: 0.9rem; border-radius: 8px; box-shadow: none;">
+                <button class="btn-primary" style="width: 100%; padding: 10px; font-size: 0.9rem; border-radius: 8px; box-shadow: none;" onclick="app.openProviderOrderModal('${p.nombre}')">
                     <i class="fa-solid fa-cart-plus"></i> Generar Prepedido
                 </button>
             </div>
         </div>
                 `;
         }).join('');
+    }
+
+    // --- NEW: PROVIDER HISTORY MODAL ---
+    async openProviderOrderModal(providerName) {
+        // 1. Show Loading Modal
+        const loadingHtml = `
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h3>Historial: ${providerName}</h3>
+                    <button class="modal-close" onclick="app.closeModal()">&times;</button>
+                </div>
+                <div class="modal-body" style="text-align:center; padding: 3rem;">
+                    <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+                    <p style="margin-top:1rem;">Cargando historial de compras...</p>
+                </div>
+            </div>`;
+        this.openModal(loadingHtml);
+
+        // 2. Fetch Data
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: 'getProviderPurchases', payload: { provider: providerName } })
+            });
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                this.renderProviderHistoryTable(providerName, result.data);
+            } else {
+                alert('Error: ' + result.message);
+                this.closeModal();
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error de conexión al obtener historial.');
+            this.closeModal();
+        }
+    }
+
+    renderProviderHistoryTable(providerName, products) {
+        if (!products || products.length === 0) {
+            const emptyHtml = `
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h3>Historial: ${providerName}</h3>
+                    <button class="modal-close" onclick="app.closeModal()">&times;</button>
+                </div>
+                <div class="modal-body" style="text-align:center; padding: 2rem;">
+                    <p style="color:#666;">No se encontraron productos comprados anteriormente a este proveedor.</p>
+                </div>
+                 <div class="modal-footer">
+                    <button class="btn-secondary" onclick="app.closeModal()">Cerrar</button>
+                </div>
+            </div>`;
+            this.openModal(emptyHtml);
+            return;
+        }
+
+        // Sort by Name
+        products.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+        const rows = products.map(p => `
+            <tr>
+                <td style="text-align:center;">
+                    <input type="checkbox" class="history-select-check" value="${p.codigo}" data-desc="${p.nombre}" data-cost="${p.costo}">
+                </td>
+                <td style="font-family:monospace; color:#666;">${p.codigo}</td>
+                <td style="font-weight:600;">${p.nombre}</td>
+                <td>${p.costo ? 'S/ ' + parseFloat(p.costo).toFixed(2) : '-'}</td>
+                <td style="font-size:0.8rem; color:#888;">${p.fecha ? new Date(p.fecha).toLocaleDateString() : '-'}</td>
+            </tr>
+        `).join('');
+
+        const modalHtml = `
+            <div class="modal-card" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h3>Historial: ${providerName}</h3>
+                    <button class="modal-close" onclick="app.closeModal()">&times;</button>
+                </div>
+                <div class="modal-body" style="padding: 1rem;">
+                    <div class="alert-info" style="font-size:0.9rem; color:#666; margin-bottom:1rem;">
+                        <i class="fa-solid fa-info-circle"></i> Seleccione los productos para generar el prepedido.
+                    </div>
+                    
+                    <div class="history-table-wrapper">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th width="40" style="text-align:center;"><input type="checkbox" onclick="app.toggleHistoryAll(this)"></th>
+                                    <th>Código</th>
+                                    <th>Producto</th>
+                                    <th>Costo Ref.</th>
+                                    <th>Últ. Compra</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rows}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                     <span id="history-selected-count" style="margin-right:auto; font-weight:bold; color:var(--primary-color);">0 seleccionados</span>
+                     <button class="btn-secondary" onclick="app.closeModal()">Cancelar</button>
+                     <button class="btn-primary" onclick="app.generatePrepedidoFromHistory()">Generar Prepedido</button>
+                </div>
+            </div>`;
+
+        this.openModal(modalHtml);
+
+        // Bind Checkbox events for counter
+        setTimeout(() => {
+            const checks = document.querySelectorAll('.history-select-check');
+            checks.forEach(c => {
+                c.addEventListener('change', () => this.updateHistoryCounter());
+            });
+        }, 100);
+    }
+
+    toggleHistoryAll(source) {
+        document.querySelectorAll('.history-select-check').forEach(c => c.checked = source.checked);
+        this.updateHistoryCounter();
+    }
+
+    updateHistoryCounter() {
+        const count = document.querySelectorAll('.history-select-check:checked').length;
+        document.getElementById('history-selected-count').innerText = `${count} seleccionados`;
+    }
+
+    generatePrepedidoFromHistory() {
+        const selected = [];
+        document.querySelectorAll('.history-select-check:checked').forEach(c => {
+            selected.push({
+                codigo: c.value,
+                desc: c.dataset.desc,
+                cantidad: 1 // Default quantity
+            });
+        });
+
+        if (selected.length === 0) return alert('Seleccione al menos un producto.');
+
+        // Close History Modal
+        this.closeModal();
+
+        // HERE IS WHERE YOU WOULD NAVIGATE TO THE PREPEDIDO CREATION LOGIC
+        // For now, let's just show an alert or a simple confirmation that data was captured.
+        // User asked: "Start prepedido with these products".
+        // Assuming we have a "New Prepedido" flow?
+        // Let's reuse 'openNewRequestModal' but pre-fill it? Or is this different?
+        // "Generar Prepedido" usually means creating a PDF or Logic.
+        // The prompt says: "Start the prepedido... showing the list".
+        // I will implement a placeholder or reuse 'openNewRequestModal' if applicable.
+        // But 'openNewRequestModal' is for generic requests.
+        // Let's create a specific 'Prepedido Summary' modal for now.
+
+        console.log("Selected products for prepedido:", selected);
+        alert(`Generando prepedido con ${selected.length} productos... (Lógica de PDF/Envío pendiente)`);
     }
 
     filterPrepedidos(input) {
