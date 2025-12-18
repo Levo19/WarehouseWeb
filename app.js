@@ -254,6 +254,7 @@ class App {
             if (this.closeGuiaDetails) this.closeGuiaDetails(); // Reset Panel
             this.loadMovimientosData();
             this.renderMovimientosHeader(); // Inject Header Buttons
+            this.switchMovTab('guias'); // Force Reset to Guias Tab
 
             // Auto-refresh every 60s
             setInterval(() => {
