@@ -1641,7 +1641,7 @@ class App {
                     <div style="display:flex; overflow-x:auto; gap:0.75rem; padding-bottom:0.5rem; scrollbar-width:thin;">
                         ${slides}
                     </div>
-                </div >
+                </div>
                     `;
         } else {
             carouselHtml = `<div style="margin-top:1.5rem; color:#999; font-style:italic;">No hay imagenes adjuntas.</div>`;
@@ -1997,12 +1997,12 @@ class App {
 
         if (matches.length > 0) {
             resultsDiv.innerHTML = matches.map(([code, p]) => `
-                    < div style = "padding:0.5rem; border-bottom:1px solid #eee; cursor:pointer; font-size:0.9rem;"
-                onmouseover = "this.style.background='#f3f4f6'"
-                onmouseout = "this.style.background='white'"
-                onclick = "app.selectProductForGuia('${code}', '${p.desc.replace(/'/g, "")}')" >
+                    <div style="padding:0.5rem; border-bottom:1px solid #eee; cursor:pointer; font-size:0.9rem;"
+                onmouseover="this.style.background='#f3f4f6'"
+                onmouseout="this.style.background='white'"
+                onclick="app.selectProductForGuia('${code}', '${p.desc.replace(/'/g, "")}')">
                     <strong>${code}</strong> - ${p.desc}
-                </div >
+                </div>
                     `).join('');
             resultsDiv.style.display = 'block';
         } else {
@@ -2072,7 +2072,7 @@ class App {
         }
 
         container.innerHTML = this.tempGuiaProducts.map((p, index) => `
-                    < div class="temp-item" style = "padding: 0.75rem; align-items: center;" >
+                    <div class="temp-item" style="padding: 0.75rem; align-items: center;">
                 <div style="flex:1;">
                     <div style="font-weight:bold; font-size:1rem; color: #333;">${p.codigo}</div>
                     <div style="font-size:0.85rem; color:#666;">${p.descripcion}</div>
@@ -2085,7 +2085,7 @@ class App {
                 </div>
 
                 <button onclick="app.removeTempProduct(${index})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1.1rem; padding: 0.5rem;"><i class="fa-solid fa-trash"></i></button>
-            </div >
+            </div>
                     `).join('');
     }
 
@@ -2405,13 +2405,13 @@ class App {
         const renderCard = (item, isPending) => {
             // Image Logic for Requests
             const imgSrc = item.img ? item.img : 'recursos/defaultImageProduct.png';
-            const imgHtml = `< img src = "${imgSrc}" class="card-img" alt = "${item.desc}" referrerpolicy = "no-referrer" loading = "lazy" onerror = "app.handleImageError(this)" > `;
+            const imgHtml = `<img src="${imgSrc}" class="card-img" alt="${item.desc}" referrerpolicy="no-referrer" loading="lazy" onerror="app.handleImageError(this)">`;
 
             // Combine code and desc for search, normalized
             const searchTerms = `${item.code} ${item.desc} `.toLowerCase();
 
             return `
-                    < div class="product-card request-card" data - search="${searchTerms}" onclick = "this.classList.toggle('flipped')" >
+                    <div class="product-card request-card" data-search="${searchTerms}" onclick="this.classList.toggle('flipped')">
                         <div class="product-card-inner" style="border-left: 4px solid ${isPending ? 'var(--primary-color)' : '#2e7d32'};">
                             <!-- FRONT -->
                             <div class="card-front">
@@ -2453,7 +2453,7 @@ class App {
                                 <div class="back-value">${item.desc}</div>
                             </div>
                         </div>
-                </div > `;
+                </div>`;
         };
 
         const hasSeparated = separatedList.length > 0;
@@ -2461,7 +2461,7 @@ class App {
         const isCollapsed = separatedList.length === 0;
 
         container.innerHTML = `
-                    < !--Flux Container-- >
+                    <!--Flux Container-->
                         <div style="display: flex; flex-direction: row; flex-wrap: nowrap; gap: 2rem; align-items: start; height: 85vh; overflow: hidden;">
 
                             <!-- COLUMN 1: PENDING -->
@@ -2624,7 +2624,7 @@ class App {
      */
     openNewRequestModal() {
         const modalHtml = `
-                    < div class="modal-card" >
+                    <div class="modal-card">
                 <div class="modal-header">
                     <h3>Nueva Solicitud</h3>
                     <button class="modal-close" onclick="app.closeModal()">&times;</button>
@@ -2646,7 +2646,7 @@ class App {
                         <button type="submit" class="btn-primary">Guardar Solicitud</button>
                     </div>
                 </form>
-            </div >
+            </div>
                     `;
 
         this.openModal(modalHtml);
@@ -2763,11 +2763,11 @@ class App {
             if (result.status === 'success') {
                 this.renderProviders(result.data);
             } else {
-                container.innerHTML = `< div class="error-card" style = "grid-column:1/-1; color:red; text-align:center;" > Error: ${result.message}</div > `;
+                container.innerHTML = `<div class="error-card" style="grid-column:1/-1; color:red; text-align:center;">Error: ${result.message}</div>`;
             }
         } catch (e) {
             console.error(e);
-            container.innerHTML = `< div class="error-card" style = "grid-column:1/-1; color:red; text-align:center;" > Error de conexión.Intente nuevamente.</div > `;
+            container.innerHTML = `<div class="error-card" style="grid-column:1/-1; color:red; text-align:center;">Error de conexión.Intente nuevamente.</div>`;
         }
     }
 
@@ -2788,31 +2788,31 @@ class App {
             const deliveryClass = (diaEntrega === todayName) ? 'pill-today-delivery' : 'pill-default';
 
             return `
-                    < div class="provider-card" >
-                <div class="provider-card-header">
-                    <img src="${imgUrl}" alt="${p.nombre}" class="provider-img" onerror="this.onerror=null; this.src='recursos/supplierDefault.png'">
+                <div class="provider-card">
+            <div class="provider-card-header">
+                <img src="${imgUrl}" alt="${p.nombre}" class="provider-img" onerror="this.onerror=null; this.src='recursos/supplierDefault.png'">
+            </div>
+            <div class="provider-body">
+                <div class="provider-name-container">
+                     <h3 class="provider-name">${p.nombre}</h3>
                 </div>
-                <div class="provider-body">
-                    <div class="provider-name-container">
-                         <h3 class="provider-name">${p.nombre}</h3>
-                    </div>
 
-                    <div class="provider-info-row">
-                        <span class="provider-label"><i class="fa-regular fa-calendar-check" style="margin-right:5px;"></i> Día Pedido:</span>
-                        <span class="provider-pill ${orderClass}">${diaPedido}</span>
-                    </div>
-                    <div class="provider-info-row">
-                        <span class="provider-label"><i class="fa-solid fa-truck-ramp-box" style="margin-right:5px;"></i> Día Entrega:</span>
-                        <span class="provider-pill ${deliveryClass}">${diaEntrega}</span>
-                    </div>
+                <div class="provider-info-row">
+                    <span class="provider-label"><i class="fa-regular fa-calendar-check" style="margin-right:5px;"></i> Día Pedido:</span>
+                    <span class="provider-pill ${orderClass}">${diaPedido}</span>
                 </div>
-                <div class="provider-footer">
-                    <button class="btn-primary" style="width: 100%; padding: 10px; font-size: 0.9rem; border-radius: 8px; box-shadow: none;">
-                        <i class="fa-solid fa-cart-plus"></i> Generar Prepedido
-                    </button>
+                <div class="provider-info-row">
+                    <span class="provider-label"><i class="fa-solid fa-truck-ramp-box" style="margin-right:5px;"></i> Día Entrega:</span>
+                    <span class="provider-pill ${deliveryClass}">${diaEntrega}</span>
                 </div>
-            </div >
-                    `;
+            </div>
+            <div class="provider-footer">
+                <button class="btn-primary" style="width: 100%; padding: 10px; font-size: 0.9rem; border-radius: 8px; box-shadow: none;">
+                    <i class="fa-solid fa-cart-plus"></i> Generar Prepedido
+                </button>
+            </div>
+        </div>
+                `;
         }).join('');
     }
 
