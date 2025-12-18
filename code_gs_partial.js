@@ -59,3 +59,55 @@ function separateRequest(payload) {
 
     return ContentService.createTextOutput(JSON.stringify({ status: 'success' })).setMimeType(ContentService.MimeType.JSON);
 }
+
+// --- NEW FUNCTION FOR COMPRAS HISTORY ---
+function getProviderPurchases(payload) {
+    const COMPRAS_ID = '11Ajy-Mq-Zv11FFoYmI74k36nCzM7q0J83hLWD0YmdlI';
+    const targetProvider = payload.provider; // sent from frontend
+
+    if (!targetProvider) return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'No provider specified' })).setMimeType(ContentService.MimeType.JSON);
+
+    try {
+        const ss = SpreadsheetApp.openById(COMPRAS_ID);
+        const sheet = ss.getSheetByName('Compras'); // Assuming default tab name, or 'Hoja 1'? Screenshot shows 'Compras' specific? No, screenshot 1 shows 'Tablas' maybe?
+        // Screenshot 2 shows 'bdLevoWeb'. Bottom tabs: 'Compras'.
+        // Wait, the screenshot shows 'Compras' at the bottom tab.
+
+        let ws = ss.getSheetByName('Compras');
+        if (!ws) ws = ss.getSheets()[0]; // Fallback to first sheet
+
+        const data = ws.getDataRange().getValues();
+        // Headers: IdCompra(0), Fecha(1), Hora(2), CodigoProducto(3), NombreProducto(4)... CostoUnitario(10), Proveedor(11)
+
+        // Map to store unique products. Key: CodigoProducto
+        const productsMap = {};
+
+        // Skip header (row 0)
+        for (let i = 1; i < data.length; i++) {
+            const row = data[i];
+            const provider = row[11]; // Col L
+
+            if (String(provider).toLowerCase().trim() === String(targetProvider).toLowerCase().trim()) {
+                const code = row[3]; // Col D
+                if (!productsMap[code]) {
+                    productsMap[code] = {
+                        codigo: code,
+                        nombre: row[4], // Col E
+                        costo: row[10], // Col K
+                        fecha: row[1]   // Keep date to maybe show "Last Bought"?
+                    };
+                }
+            }
+        }
+
+        const productList = Object.values(productsMap);
+
+        return ContentService.createTextOutput(JSON.stringify({
+            status: 'success',
+            data: productList
+        })).setMimeType(ContentService.MimeType.JSON);
+
+    } catch (e) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: e.toString() })).setMimeType(ContentService.MimeType.JSON);
+    }
+}
