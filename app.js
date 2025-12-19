@@ -3216,13 +3216,24 @@ class App {
         // Join with Master Product Data for Stock Logic
         // We assume 'this.products' is loaded. If not, fallback to simple view.
         const masterProducts = this.products || [];
-        console.log('Rendering Packing List. Master Products:', masterProducts.length);
+        console.log(`Rendering Packing List. Master List Size: ${masterProducts.length}`);
+        if (masterProducts.length > 0) {
+            console.log('Sample Master Product (First 3):', masterProducts.slice(0, 3));
+        } else {
+            console.warn('MASTER PRODUCTS LIST IS EMPTY! Check fetchProducts().');
+        }
 
         html += list.map(item => {
-            // Find Match
-            const master = masterProducts.find(p => p.codigo === item.codigo);
-            if (!master) console.warn('No master product found for:', item.codigo);
-            else console.log('Match found:', item.codigo, master.stock, master.min);
+            // Find Match (Case-Insensitive & Trimmed)
+            const targetCode = String(item.codigo).trim().toLowerCase();
+            const master = masterProducts.find(p => String(p.codigo).trim().toLowerCase() === targetCode);
+
+            if (!master) {
+                // Throttle warnings to avoid spamming (e.g., only first 5)
+                // console.warn('No master match for:', targetCode); 
+            } else {
+                // console.log('Match:', item.codigo, 'Stock:', master.stock, 'Min:', master.min);
+            }
 
             // Calc Battery Logic
             let batteryLevel = 0; // %
