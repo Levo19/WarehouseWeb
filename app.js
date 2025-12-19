@@ -346,6 +346,7 @@ class App {
         document.body.appendChild(loadingToast);
 
         await Promise.all([
+            this.fetchProducts(),
             this.fetchRequests(),
             this.fetchPackingList()
         ]);
