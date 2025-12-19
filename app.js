@@ -2321,12 +2321,19 @@ class App {
 
     renderZonePickup(zone, container) {
         // 1. Get Today's Date for Filtering (Local String Comparison)
+        // Manually format to match Server "dd/MM/yyyy" to ensure consistency
         const today = new Date();
-        const localTodayStr = today.toLocaleDateString('es-PE'); // e.g., "13/12/2025" or similar
+        const dd = String(today.getDate()).padStart(2, '0');
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const yyyy = today.getFullYear();
+        const localTodayStr = `${dd}/${mm}/${yyyy}`;
 
-        const isSameDay = (dateStr) => {
+        const isSameDay = (dateStr, id) => {
+            // ALWAYS SHOW MOCKS (Optimistic Updates)
+            if (id && String(id).startsWith('temp-')) return true;
+
             if (!dateStr) return false;
-            // Strictly match what the User sees as "Today" (dd/MM/yyyy)
+            // Strictly match "Today" (dd/MM/yyyy)
             return dateStr.startsWith(localTodayStr);
         };
 
@@ -2344,7 +2351,7 @@ class App {
             // Check Date
 
             // Check Date
-            if (!isSameDay(req.fecha)) {
+            if (!isSameDay(req.fecha, req.idSolicitud)) {
                 return;
             }
 
