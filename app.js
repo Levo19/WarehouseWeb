@@ -2838,8 +2838,11 @@ class App {
                     // Silent Background Sync to get real IDs
                     // We don't need to re-render potentially if data matches, but good to ensure consistency
                     console.log('Server synced separation.');
-                    return this.fetchRequests();
+                    // REMOVED IMMEDIATE FETCH to prevent Race Condition where server returns data BEFORE the new row is committed.
+                    // Rely on Background Auto-Refresh (45s) or Optimistic UI.
+                    // return this.fetchRequests(); 
                 })
+                // Check if we need to re-render? No, stick with valid optimistic data.
                 .then(() => {
                     // Optional: Re-render one last time to ensure ID consistency (tempId -> realId)
                     // This might cause a slight flicker if IDs change, but usually imperceptible if content is same.
