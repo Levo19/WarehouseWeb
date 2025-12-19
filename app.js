@@ -3289,6 +3289,11 @@ class App {
             <div class="packing-card" onclick="app.openSideDrawer('${item.codigo}')">
                 <div class="packing-card-header">
                     <div class="code-badge">${item.codigo}</div>
+                    <button class="btn-sm btn-neon-icon" 
+                            onclick="event.stopPropagation(); app.showRegisterModal('${item.codigo}')" 
+                            title="Registrar Envasado">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
                 </div>
                 
                 <div class="packing-card-body">
@@ -3311,7 +3316,9 @@ class App {
                 </div>
 
                 <div class="packing-card-footer">
-                   <div style="font-size:0.75rem; color:#888;">${item.presentacion || ''}</div>
+                   <div style="font-size:0.85rem; color:var(--neon-blue); font-weight:bold;">
+                        <i class="fa-solid fa-box"></i> ${item.empaque || 'S/D'}
+                   </div>
                 </div>
             </div>
             `;
