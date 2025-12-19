@@ -3135,6 +3135,7 @@ class App {
             });
         });
     }
+
     // --- ENVASADOR MODULE LOGIC ---
 
     loadPackingModule() {
