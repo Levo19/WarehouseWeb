@@ -3333,6 +3333,11 @@ class App {
         this.renderPackingList(filtered);
     }
 
+    // Alias for click handler compatibility
+    openSideDrawer(code) {
+        this.openPackingDrawer(code);
+    }
+
     openPackingDrawer(code) {
         const item = this.packingList.find(p => p.codigo === code);
         if (!item) return;
@@ -3357,20 +3362,15 @@ class App {
                         <label>Origen</label>
                         <div class="drawer-value"><i class="fa-solid fa-globe"></i> ${item.origen}</div>
                     </div>
-                    <div class="drawer-section">
-                        <label>Tipo</label>
-                        <div class="drawer-value">${item.tipo}</div>
+                     <div class="drawer-section">
+                        <label>Empaque</label>
+                        <div class="drawer-value highlight" style="font-size:1.2rem; color:var(--neon-blue);">${item.empaque}</div>
                     </div>
                 </div>
 
                 <div class="drawer-section">
                     <label>Presentación</label>
                     <div class="drawer-value">${item.presentacion}</div>
-                </div>
-
-                <div class="drawer-section">
-                    <label>Empaque</label>
-                    <div class="drawer-value highlight">${item.empaque}</div>
                 </div>
 
                 <div class="drawer-grid">
@@ -3383,6 +3383,14 @@ class App {
                         <div class="drawer-value">${item.cantidad}</div>
                     </div>
                 </div>
+
+                <!-- ACTION: REGISTER PACKING -->
+                <div style="margin-top:2rem; padding-top:1rem; border-top:1px solid rgba(255,255,255,0.1); text-align:center;">
+                    <button class="btn-neon" style="width:100%; padding: 1rem; font-size:1.1rem;" onclick="app.showRegisterModal('${item.codigo}')">
+                        <i class="fa-solid fa-box-open"></i> Registrar Envasado
+                    </button>
+                </div>
+
             </div >
             `;
 
@@ -3400,8 +3408,52 @@ class App {
         if (drawer) drawer.classList.remove('active');
         if (backdrop) backdrop.classList.remove('active');
     }
-}
 
+    showRegisterModal(productCode) {
+        // Simple Prompt for MVP (User asked for button "+" to input quantity)
+        // We can use a custom modal but prompt is safer for quick implementation unless specified.
+        // Let's stick to prompt for reliability first, or inject a modal if needed.
+        // User said: "al darle click al boton "+" se pueda poner la cantidad"
+
+        const qty = prompt(`Ingrese cantidad envasada para ${productCode}:`);
+        if (qty && !isNaN(qty) && Number(qty) > 0) {
+            this.registerEnvasado(productCode, Number(qty));
+        }
+    }
+
+    async registerEnvasado(productCode, quantity) {
+        if (!confirm(`¿Confirmar envasado de ${quantity} unidades para ${productCode}?`)) return;
+
+        this.showToast('Registrando envasado...', 'info');
+
+        try {
+            const user = this.currentUser ? this.currentUser.username : 'Unknown';
+            const payload = {
+                idProducto: productCode,
+                cantidad: quantity,
+                usuario: user
+            };
+
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: 'saveEnvasado', payload: payload })
+            });
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                this.showToast('Envasado registrado con éxito', 'success');
+                this.closePackingDrawer();
+            } else {
+                alert('Error al guardar: ' + result.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error de conexión al guardar.');
+        }
+    }
+}
 // Initialize App
 
 try {
