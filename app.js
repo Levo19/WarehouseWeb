@@ -3455,25 +3455,17 @@ class App {
                 <button class="close-drawer-btn" onclick="app.closePackingDrawer()"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="drawer-body">
+                
+                <!-- IMAGE SECTION -->
+                ${master && master.imagen ?
+                `<div style="text-align:center; margin-bottom:1rem;">
+                        <img src="${master.imagen}" alt="${item.nombre}" style="max-height:150px; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.3);">
+                     </div>` : ''
+            }
+
                 <div class="drawer-section">
                     <label>Código</label>
                     <div class="drawer-value main">${item.codigo}</div>
-                </div>
-                
-                <div class="drawer-grid">
-                    <div class="drawer-section">
-                        <label>Origen</label>
-                        <div class="drawer-value"><i class="fa-solid fa-globe"></i> ${item.origen}</div>
-                    </div>
-                     <div class="drawer-section">
-                        <label>Empaque</label>
-                        <div class="drawer-value highlight" style="font-size:1.2rem; color:var(--neon-blue);">${item.empaque}</div>
-                    </div>
-                </div>
-
-                <div class="drawer-section">
-                    <label>Presentación</label>
-                    <div class="drawer-value">${item.presentacion}</div>
                 </div>
 
                 <div class="drawer-grid">
@@ -3481,9 +3473,21 @@ class App {
                         <label>Factor</label>
                         <div class="drawer-value">${item.factor}</div>
                     </div>
+                     <div class="drawer-section">
+                        <label>Empaque</label>
+                        <div class="drawer-value highlight" style="font-size:1.2rem; color:var(--neon-blue);">${item.empaque}</div>
+                    </div>
+                </div>
+
+                <!-- STOCK INFO from Master -->
+                <div class="drawer-grid" style="margin-top:1rem; padding-top:1rem; border-top:1px solid #333;">
                     <div class="drawer-section">
-                        <label>Cantidad Base</label>
-                        <div class="drawer-value">${item.cantidad}</div>
+                        <label>Stock Actual</label>
+                        <div class="drawer-value" style="color:${stockReal < stockMin ? '#ef4444' : '#22c55e'}">${stockReal}</div>
+                    </div>
+                    <div class="drawer-section">
+                        <label>Stock Mínimo</label>
+                        <div class="drawer-value" style="color:#aaa;">${stockMin}</div>
                     </div>
                 </div>
 
