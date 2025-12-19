@@ -2221,6 +2221,32 @@ h3 {
     border-radius: 6px;
     border: 1px solid #ffe082;
     display: inline-block;
+    color: var(--neon-blue);
+    font-weight: bold;
+}
+
+.btn-neon {
+    background: transparent;
+    color: var(--neon-blue);
+    border: 1px solid var(--neon-blue);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+    box-shadow: 0 0 5px rgba(0, 243, 255, 0.2);
+}
+
+.btn-neon:hover {
+    background: var(--neon-blue);
+    color: #000;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.6);
+    transform: translateY(-2px);
+}
+
+.btn-neon:active {
+    transform: translateY(0);
 }
 
 .drawer-grid {
