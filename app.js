@@ -3445,6 +3445,11 @@ class App {
         const item = this.packingList.find(p => p.codigo === code);
         if (!item) return;
 
+        // Find Master Product for Details (Image, Stock)
+        const master = this.products ? this.products.find(p => String(p.codigo).trim().toLowerCase() === String(code).trim().toLowerCase()) : null;
+        const stockReal = master ? (Number(master.stock) || 0) : 0;
+        const stockMin = master ? (Number(master.min) || 0) : 0;
+
         const drawer = document.getElementById('packing-drawer');
         const backdrop = document.getElementById('packing-drawer-backdrop');
 
