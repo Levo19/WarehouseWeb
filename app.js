@@ -2326,29 +2326,8 @@ class App {
 
         const isSameDay = (dateStr) => {
             if (!dateStr) return false;
-            let d;
-            // Handle "DD/MM/YYYY" manually (common in GAS/Sheets)
-            if (typeof dateStr === 'string' && dateStr.includes('/')) {
-                const parts = dateStr.split('/');
-                if (parts.length === 3) {
-                    // Note: Month is 0-indexed in JS Constructor
-                    // Parsing as Local Time: new Date(2025, 11, 13)
-                    d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                }
-            } else {
-                // Formatting ISO or standard strings
-                d = new Date(dateStr);
-            }
-
-            if (!d || isNaN(d.getTime())) return false;
-
-            // Robust Comparison: Allow TODAY and TOMORROW (to handle manual entry errors or timezone shifts)
-            // d is already set to 00:00:00
-            const diffTime = d.getTime() - today.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-            // Allow: Same Day (0) OR Next Day (1) (User's sheet showed 14/12 vs 13/12)
-            return diffDays === 0 || diffDays === 1;
+            // Strictly match what the User sees as "Today" (dd/MM/yyyy)
+            return dateStr.startsWith(localTodayStr);
         };
 
         // 2. Aggregate Data Logic
