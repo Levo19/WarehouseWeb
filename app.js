@@ -2815,6 +2815,9 @@ class App {
             // Push mock data
             this.data.requests.push(mockSeparated);
 
+            // DELAY NEXT REFRESH to prevent overwriting our Mock with stale server data
+            if (this.resetAutoRefresh) this.resetAutoRefresh();
+
             // Re-render immediately (Animation is flying over the top)
             setTimeout(() => {
                 const activeBtn = document.querySelector('.zone-carousel .btn-secondary.active');
