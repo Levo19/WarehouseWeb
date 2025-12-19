@@ -1792,8 +1792,8 @@ class App {
         const title = type === 'INGRESO' ? 'Nueva Guía de Ingreso' : 'Nueva Guía de Salida';
 
         // Providers Options
-        const providers = this.data.movimientos?.proveedores || [];
-        const providerOptions = providers.map(p => `<option value="${p}"></option>`).join('');
+        const providers = this.data.providers || [];
+        const providerOptions = providers.map(p => `<option value="${p.nombre}"></option>`).join('');
 
 
 
