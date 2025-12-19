@@ -32,20 +32,21 @@ class App {
         }
 
         // Background Auto-Refresh (Every 45s)
-        setInterval(() => {
-            if (this.currentUser && this.state.currentModule === 'dispatch-view') {
-                console.log('🔄 Auto-refreshing Dispatch Data...');
-                this.fetchRequests().then(() => {
-                    // Refresh Active Zone View
-                    const activeBtn = document.querySelector('.zone-carousel .btn-secondary.active');
-                    if (activeBtn) {
-                        const zone = activeBtn.innerText.toLowerCase().replace('zona ', 'zona');
-                        const zoneContainer = document.getElementById('zone-content');
-                        if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
-                    }
-                });
-            }
-        }, 45000);
+        // Background Auto-Refresh (Disabled as per user request for Manual Control)
+        // setInterval(() => {
+        //     if (this.currentUser && this.state.currentModule === 'dispatch-view') {
+        //         console.log('🔄 Auto-refreshing Dispatch Data...');
+        //         this.fetchRequests().then(() => {
+        //             // Refresh Active Zone View
+        //             const activeBtn = document.querySelector('.zone-carousel .btn-secondary.active');
+        //             if (activeBtn) {
+        //                 const zone = activeBtn.innerText.toLowerCase().replace('zona ', 'zona');
+        //                 const zoneContainer = document.getElementById('zone-content');
+        //                 if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
+        //             }
+        //         });
+        //     }
+        // }, 45000);
     }
 
     cacheDOM() {
@@ -668,7 +669,7 @@ class App {
         }, 300); // Wait 300ms after typing stops
     }
 
-    selectZone(zone) {
+    async selectZone(zone) {
         // Toggle Logic
         const container = document.getElementById('zone-workspace');
 
@@ -703,7 +704,22 @@ class App {
             return; // Exit
         }
 
-        // SELECT NEW ZONE
+        // SELECT NEW ZONE: TRIGGER REFRESH
+        // --------------------------------
+        // Visual Feedback on Button
+        if (clickedBtn) {
+            const originalText = clickedBtn.innerText;
+            clickedBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+            clickedBtn.disabled = true;
+
+            // Fetch Data
+            await this.fetchRequests({ isBackground: false });
+
+            // Restore Button
+            clickedBtn.innerHTML = originalText;
+            clickedBtn.disabled = false;
+        }
+
         // Highlight active zone logic
         buttons.forEach(b => {
             if (b === clickedBtn) {
