@@ -1,3 +1,7 @@
+:root {
+    --neon-green: #39ff14;
+}
+
 /* ZONE BUTTONS - HEADER INTEGRATION */
 .zone-header-actions {
     display: flex;
@@ -2247,10 +2251,6 @@ h3 {
 
 .btn-neon:active {
     transform: translateY(0);
-}
-
-:root {
-    --neon-green: #39ff14;
 }
 
 .btn-neon-icon {
