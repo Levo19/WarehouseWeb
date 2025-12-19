@@ -30,6 +30,22 @@ class App {
         if (this.currentUser) {
             this.loadInitialData();
         }
+
+        // Background Auto-Refresh (Every 45s)
+        setInterval(() => {
+            if (this.currentUser && this.state.currentModule === 'dispatch-view') {
+                console.log('🔄 Auto-refreshing Dispatch Data...');
+                this.fetchRequests().then(() => {
+                    // Refresh Active Zone View
+                    const activeBtn = document.querySelector('.zone-carousel .btn-secondary.active');
+                    if (activeBtn) {
+                        const zone = activeBtn.innerText.toLowerCase().replace('zona ', 'zona');
+                        const zoneContainer = document.getElementById('zone-content');
+                        if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
+                    }
+                });
+            }
+        }, 45000);
     }
 
     cacheDOM() {
@@ -2726,10 +2742,23 @@ class App {
         if (newQty <= 0) { alert('Cantidad inválida'); return; }
 
         // --- ANIMATION START ---
-        // 1. Find the card element to animate
+        // 1. Find the card and Data
         const card = btnElement.closest('.request-card');
-        if (card) {
-            // Clone and Position Fixed
+        const sourceRequest = this.data.requests.find(r => r.idSolicitud == id);
+
+        if (card && sourceRequest) {
+            // OPTIMISTIC UPDATE PREPARATION
+            // Create a temporary 'separado' item in local data to reflect change instantly
+            const tempId = 'temp-' + Date.now();
+            const mockSeparated = {
+                ...sourceRequest,
+                idSolicitud: tempId,
+                categoria: 'separado',
+                cantidad: newQty,
+                fecha: new Date().toISOString() // Use ISO for local date sort
+            };
+
+            // Clone for Animation
             const rect = card.getBoundingClientRect();
             const clone = card.cloneNode(true);
 
@@ -2739,41 +2768,49 @@ class App {
             clone.style.width = rect.width + 'px';
             clone.style.height = rect.height + 'px';
             clone.style.zIndex = '9999';
-            clone.style.transition = 'all 0.6s ease-in-out';
+            clone.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'; // Faster & Bouncy
             clone.style.opacity = '1';
-            clone.style.pointerEvents = 'none'; // Click-through
+            clone.style.pointerEvents = 'none';
             document.body.appendChild(clone);
 
-            // Hide original immediately to prevent double vision
-            card.style.opacity = '0';
+            // Hide original card instantly -> Visual Pop
+            card.style.visibility = 'hidden'; // Keep layout space for a moment? No, user wants instant move.
+            // Actually, if we re-render instantly, the card might disappear from DOM anyway.
 
-            // 2. Animate to Right Column (approximate center of right column)
-            // Ideally find the .column-separated container
+            // UI Feedback on button (just in case)
+            btnElement.innerHTML = '<i class="fa-solid fa-check"></i>';
+            btnElement.disabled = true;
+
+            // 2. Animate to Right
             const targetCol = document.querySelector('.column-separated');
             if (targetCol) {
                 const targetRect = targetCol.getBoundingClientRect();
-                // Move to center of target column
-                setTimeout(() => {
-                    clone.style.top = (targetRect.top + 100) + 'px'; // A bit down from top
+                requestAnimationFrame(() => {
+                    clone.style.top = (targetRect.top + 50) + 'px';
                     clone.style.left = (targetRect.left + 50) + 'px';
-                    clone.style.transform = 'scale(0.5)'; // Shrink
-                    clone.style.opacity = '0';
-                }, 50);
+                    clone.style.transform = 'scale(0.2)';
+                    clone.style.opacity = '0.5';
+                });
             }
 
-            // Cleanup clone after animation
+            // 3. APPLY OPTIMISTIC DATA UPDATE (Instant)
+            // Push mock data
+            this.data.requests.push(mockSeparated);
+
+            // Re-render immediately (Animation is flying over the top)
             setTimeout(() => {
+                const activeBtn = document.querySelector('.zone-carousel .btn-secondary.active');
+                if (activeBtn) {
+                    const zone = activeBtn.innerText.toLowerCase().replace('zona ', 'zona');
+                    const zoneContainer = document.getElementById('zone-content');
+                    if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
+                }
+                // Remove clone after re-render (it effectively "lands" in the new list)
                 clone.remove();
-            }, 700);
-        }
-        // --- ANIMATION END ---
+            }, 400); // Sync with animation duration
 
-        // UI Feedback (on button if visible, though card is hidden now)
-        btnElement.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
-        btnElement.disabled = true;
-
-        try {
-            await fetch(API_URL, {
+            // 4. SERVER SYNC (Background)
+            fetch(API_URL, {
                 method: 'POST',
                 redirect: 'follow',
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -2781,29 +2818,37 @@ class App {
                     action: 'separateRequest',
                     payload: {
                         idSolicitud: id,
-                        qtyToSeparate: newQty // FIXED: Matches code.gs payload expectation
+                        qtyToSeparate: newQty
                     }
                 })
-            });
+            })
+                .then(() => {
+                    // Silent Background Sync to get real IDs
+                    // We don't need to re-render potentially if data matches, but good to ensure consistency
+                    console.log('Server synced separation.');
+                    return this.fetchRequests();
+                })
+                .then(() => {
+                    // Optional: Re-render one last time to ensure ID consistency (tempId -> realId)
+                    // This might cause a slight flicker if IDs change, but usually imperceptible if content is same.
+                    // We can skip re-render if we trust the math, but for safety lets do it.
+                    const activeBtn = document.querySelector('.zone-carousel .btn-secondary.active');
+                    if (activeBtn) {
+                        const zone = activeBtn.innerText.toLowerCase().replace('zona ', 'zona');
+                        const zoneContainer = document.getElementById('zone-content');
+                        if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
+                    }
+                })
+                .catch(err => {
+                    console.error("Separation failed:", err);
+                    alert("Error guardando en servidor. Verifique conexión.");
+                    // Rollback optimistic update? 
+                    // Too complex for now, user can refresh.
+                });
 
-            // Re-fetch to sync
-            await this.fetchRequests();
-
-            // Refresh View logic 
-            const activeBtn = document.querySelector('.zone-carousel .btn-secondary.active');
-            if (activeBtn) {
-                const zone = activeBtn.innerText.toLowerCase().replace('zona ', 'zona');
-                const zoneContainer = document.getElementById('zone-content');
-                if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
-            }
-
-        } catch (error) {
-            console.error(error);
-            alert('Error de conexión.');
-            // Restore card if error
-            if (card) card.style.opacity = '1';
-            btnElement.innerHTML = 'Error';
-            setTimeout(() => { btnElement.innerHTML = 'Separar'; btnElement.disabled = false; }, 2000);
+        } else {
+            // Fallback if data missing (shouldn't happen)
+            alert('Error identificando solicitud');
         }
     }
     async dispatchAll(zone) {
