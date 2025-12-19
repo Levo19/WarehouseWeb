@@ -2626,19 +2626,28 @@ class App {
                     }
                     
                     /* Columns */
-                    .col-qty { 
-                        text-align: right; 
-                        width: 15%; 
-                        font-weight: bold; 
-                        font-size: 16px; /* High visibility for Qty */
+                    .item-block {
+                        border-bottom: 2px dashed #000;
+                        padding: 8px 0;
+                        page-break-inside: avoid; /* Prevent splitting item across pages */
                     }
-                    .col-code { 
-                        font-size: 11px; 
+                    .item-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: baseline;
+                        margin-bottom: 4px;
+                    }
+                    .item-code {
                         font-weight: bold;
-                        display: block; /* Code on its own line if needed, or small above */
+                        font-size: 14px;
                     }
-                    .col-desc {
-                        padding-right: 5px;
+                    .item-qty {
+                        font-weight: 800;
+                        font-size: 18px;
+                    }
+                    .item-desc {
+                        font-size: 14px;
+                        line-height: 1.2;
                     }
 
                     @media print {
@@ -2651,25 +2660,17 @@ class App {
                     <h2>${zone.toUpperCase()}</h2>
                     <div class="meta">${today.toLocaleString()}</div>
                     
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width:75%">PRODUCTO</th>
-                                <th style="text-align:right;">CANT</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${pendingItems.map(item => `
-                                <tr>
-                                    <td>
-                                        <div class="col-code">${item.code}</div>
-                                        <div style="margin-top:2px; line-height:1.1;">${item.desc}</div>
-                                    </td>
-                                    <td class="col-qty">${item.qty}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
+                    <div class="items-container">
+                        ${pendingItems.map(item => `
+                            <div class="item-block">
+                                <div class="item-header">
+                                    <span class="item-code">${item.code}</span>
+                                    <span class="item-qty">${item.qty}</span>
+                                </div>
+                                <div class="item-desc">${item.desc}</div>
+                            </div>
+                        `).join('')}
+                    </div>
                     
                     <div style="margin-top:20px; text-align:center; font-size:10px;">
                         --- FIN DE TICKET ---
