@@ -3216,10 +3216,13 @@ class App {
         // Join with Master Product Data for Stock Logic
         // We assume 'this.products' is loaded. If not, fallback to simple view.
         const masterProducts = this.products || [];
+        console.log('Rendering Packing List. Master Products:', masterProducts.length);
 
         html += list.map(item => {
             // Find Match
             const master = masterProducts.find(p => p.codigo === item.codigo);
+            if (!master) console.warn('No master product found for:', item.codigo);
+            else console.log('Match found:', item.codigo, master.stock, master.min);
 
             // Calc Battery Logic
             let batteryLevel = 0; // %
@@ -3364,7 +3367,7 @@ class App {
 // Initialize App
 
 try {
-    const app = new App();
+    window.app = new App();
 } catch (err) {
     console.error('Critical Init Error:', err);
     alert('Error crítico al iniciar la aplicación: ' + err.message);
