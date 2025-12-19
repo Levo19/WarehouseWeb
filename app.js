@@ -2822,11 +2822,12 @@ class App {
 
             // Re-render immediately (Animation is flying over the top)
             setTimeout(() => {
-                const activeBtn = document.querySelector('.zone-carousel .btn-secondary.active');
+                // Selector updated to match new Header structure
+                const activeBtn = document.querySelector('.client-buttons-group .btn-zone.active');
                 if (activeBtn) {
-                    const zone = activeBtn.innerText.toLowerCase().replace('zona ', 'zona');
+                    const zone = activeBtn.dataset.client; // Use robust data attribute
                     const zoneContainer = document.getElementById('zone-content');
-                    if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
+                    if (zoneContainer && zone) this.renderZonePickup(zone, zoneContainer);
                 }
                 // Remove clone after re-render (it effectively "lands" in the new list)
                 clone.remove();
