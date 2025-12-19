@@ -3198,19 +3198,103 @@ class App {
 
             if (result.status === 'success') {
                 this.packingList = result.data; // Store in memory
-                if (this.state.currentModule === 'envasador') {
-                    this.renderPackingList(this.packingList);
-                }
+
+                // Fetch History to calculate totals
+                await this.fetchEnvasadosHistory();
+
+                this.renderPackingList(this.packingList);
             } else {
-                console.error('Error fetching packing list:', result.message);
-                if (!isBackground) container.innerHTML = `<div style="text-align:center; color:red;">Error: ${result.message}</div>`;
+                if (container && !isBackground) container.innerHTML = `<div class="error-msg">${result.message}</div>`;
             }
 
         } catch (e) {
-            console.error('Network error fetching packing list:', e);
-            if (!isBackground) container.innerHTML = `<div style="text-align:center; color:red;">Error de conexión.</div>`;
+            console.error(e);
+            if (container && !isBackground) container.innerHTML = `<div class="error-msg">Error de conexión</div>`;
         }
     }
+
+    async fetchEnvasadosHistory() {
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: 'getEnvasados' })
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+                this.envasados = result.data;
+                this.calculateDailyTotals();
+            }
+        } catch (e) {
+            console.error("Error fetching envasados history:", e);
+        }
+    }
+
+    calculateDailyTotals() {
+        if (!this.envasados) return;
+
+        const today = new Date().toLocaleDateString('es-PE'); // "d/M/yyyy" or similar depending on browser 
+        // Backend returns "dd/MM/yyyy HH:mm:ss". We need to match dates.
+        // Let's rely on string comparison of the first 10 chars if format is strictly dd/MM/yyyy
+        // Or better, parse it.
+
+        // Helper to parse "dd/MM/yyyy HH:mm:ss"
+        const parseDate = (str) => {
+            const parts = str.split(' ')[0].split('/');
+            return `${parseInt(parts[0])}/${parseInt(parts[1])}/${parts[2]}`; // normalize d/m/y
+        };
+
+        const currentUser = this.currentUser ? this.currentUser.username : '';
+        this.dailyTotals = {};
+        this.globalDailyTotal = 0;
+
+        // Current Date normalized
+        const now = new Date();
+        const currentDateStr = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+
+        this.envasados.forEach(record => {
+            // Check User
+            if (record.usuario !== currentUser) return;
+
+            // Check Date
+            const recordDateStr = parseDate(record.fecha);
+            if (recordDateStr !== currentDateStr) return;
+
+            // Add to totals
+            const qty = Number(record.cantidad) || 0;
+            if (!this.dailyTotals[record.idProducto]) this.dailyTotals[record.idProducto] = 0;
+            this.dailyTotals[record.idProducto] += qty;
+            this.globalDailyTotal += qty;
+        });
+
+        // Update Header Global Total
+        this.updateHeaderTotal();
+    }
+
+    updateHeaderTotal() {
+        const headerActions = document.getElementById('header-dynamic-actions');
+        // We need to inject the total next to the title or inside the actions area.
+        // Let's create a badge if it doesn't exist, or update it.
+        // Find existing badge
+        let badge = document.getElementById('daily-total-badge');
+        if (!badge && headerActions) {
+            // Insert before the search wrapper
+            const badgeHtml = `
+                <div id="daily-total-badge" style="display:flex; align-items:center; gap:0.5rem; margin-right:1rem; color:var(--neon-green); font-weight:bold; font-size:1.1rem;">
+                    <i class="fa-solid fa-clipboard-check"></i>
+                    <span id="daily-total-value">0</span>
+                </div>
+            `;
+            headerActions.insertAdjacentHTML('afterbegin', badgeHtml);
+            badge = document.getElementById('daily-total-badge');
+        }
+
+        if (badge) {
+            document.getElementById('daily-total-value').innerText = this.globalDailyTotal || 0;
+        }
+    }
+
 
     renderPackingList(list) {
         const container = document.getElementById('packing-list-container');
@@ -3292,7 +3376,9 @@ class App {
                     <button class="btn-sm btn-neon-icon" 
                             onclick="event.stopPropagation(); app.showRegisterModal('${item.codigo}')" 
                             title="Registrar Envasado">
-                        <i class="fa-solid fa-plus"></i>
+                        ${(this.dailyTotals && this.dailyTotals[item.codigo] > 0) ?
+                    `<span style="font-weight:800; font-size:0.85rem;">${this.dailyTotals[item.codigo]}</span>` :
+                    `<i class="fa-solid fa-plus"></i>`}
                     </button>
                 </div>
                 
@@ -3452,6 +3538,12 @@ class App {
             if (result.status === 'success') {
                 this.showToast('Envasado registrado con éxito', 'success');
                 this.closePackingDrawer();
+
+                // Refresh Totals & UI immediately
+                await this.fetchEnvasadosHistory();
+                if (this.state.currentModule === 'envasador') {
+                    this.renderPackingList(this.packingList);
+                }
             } else {
                 alert('Error al guardar: ' + result.message);
             }
