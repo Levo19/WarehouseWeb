@@ -3216,92 +3216,108 @@ class App {
         const container = document.getElementById('packing-list-container');
         if (!container) return;
 
-        if (list.length === 0) {
-            container.innerHTML = '<div style="text-align:center; padding:2rem; color:#666;">No se encontraron productos.</div>';
+        if (!list || list.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:2rem; color:#666;">No hay productos en lista de envasado</div>';
             return;
         }
 
-        // --- GRID LAYOUT ---
-        let html = `<div class="packing-grid">`;
+        // --- PRE-PROCESS & SORT ---
+        const masterProducts = this.products || []; // Array from fetchProducts
 
-        // Join with Master Product Data for Stock Logic
-        // We assume 'this.products' is loaded. If not, fallback to simple view.
-        const masterProducts = this.products || [];
-        console.log(`Rendering Packing List. Master List Size: ${masterProducts.length}`);
-        if (masterProducts.length > 0) {
-            console.log('Sample Master Product (First 3):', masterProducts.slice(0, 3));
-        } else {
-            console.warn('MASTER PRODUCTS LIST IS EMPTY! Check fetchProducts().');
-        }
-
-        html += list.map(item => {
+        const processedList = list.map(item => {
             // Find Match (Case-Insensitive & Trimmed)
             const targetCode = String(item.codigo).trim().toLowerCase();
             const master = masterProducts.find(p => String(p.codigo).trim().toLowerCase() === targetCode);
 
-            if (!master) {
-                // Throttle warnings to avoid spamming (e.g., only first 5)
-                // console.warn('No master match for:', targetCode); 
-            } else {
-                // console.log('Match:', item.codigo, 'Stock:', master.stock, 'Min:', master.min);
-            }
-
-            // Calc Battery Logic
-            let batteryLevel = 0; // %
-            let batteryClass = 'low';
             let stockReal = 0;
             let stockMin = 0;
+            let batteryLevel = 0;
+            let batteryClass = 'critical'; // Default red
+            let missingMin = false;
 
             if (master) {
                 stockReal = Number(master.stock) || 0;
-                stockMin = Number(master.min) || 0;
+                stockMin = Number(master.min);
 
-                if (stockMin > 0) {
-                    // Charge = How much of the "Needed Shelf" is full?
-                    // Or "How safe are we?". 
-                    // If Real >= Min, we are 100% charged/safe.
-                    // If Real < Min, we are (Real/Min)% charged.
-                    batteryLevel = (stockReal / stockMin) * 100;
-                    if (batteryLevel > 100) batteryLevel = 100;
+                // Check for missing/invalid Min Stock
+                if (master.min === undefined || master.min === null || master.min === '' || isNaN(stockMin) || stockMin <= 0) {
+                    missingMin = true;
+                    stockMin = 100; // Fake base for calc avoids div/0, but marked as missing
+                    batteryLevel = 0; // Force low
                 } else {
-                    // No strict min, assume full or based on arbitrary cap?
-                    // Return 0 or 100? Let's say 100 if stock existing.
-                    batteryLevel = stockReal > 0 ? 100 : 0;
+                    batteryLevel = Math.round((stockReal / stockMin) * 100);
+                    if (batteryLevel > 100) batteryLevel = 100;
                 }
 
-                // Determine Color Class
-                if (batteryLevel < 20) batteryClass = 'critical'; // Red
-                else if (batteryLevel < 50) batteryClass = 'low'; // Orange
-                else if (batteryLevel < 80) batteryClass = 'medium'; // Blue/Yellow
-                else batteryClass = 'full'; // Green
+                if (batteryLevel >= 50) batteryClass = 'full';
+                else if (batteryLevel >= 25) batteryClass = 'medium';
+                else if (batteryLevel >= 10) batteryClass = 'low';
+                else batteryClass = 'critical';
             }
 
+            return {
+                ...item,
+                stockReal,
+                stockMin,
+                batteryLevel,
+                batteryClass,
+                missingMin,
+                masterDesc: master ? master.descripcion : item.descripcion
+            };
+        });
+
+        // SORT: Ascending Battery Level (Critical First)
+        processedList.sort((a, b) => a.batteryLevel - b.batteryLevel);
+
+
+        // --- GRID LAYOUT ---
+        let html = '<div class="packing-grid">';
+
+        html += processedList.map(item => {
+
+            // Battery Visuals
+            const isCritical = item.batteryClass === 'critical';
+            // If missing Min, show Alert Icon overlay
+            const alertOverlay = item.missingMin ?
+                `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#ef4444; font-size:1.5rem; text-shadow:0 1px 3px rgba(255,255,255,0.8); z-index:2;" title="Stock Mínimo no definido">
+                    <i class="fa-solid fa-triangle-exclamation fa-beat-fade"></i>
+                 </div>` : '';
+
+            const percentageText = item.missingMin ? '<span style="color:red; font-size:0.8rem;">Min?</span>' : `${item.batteryLevel}%`;
+
             return `
-            <div class="packing-card" onclick="app.openPackingDrawer('${item.codigo}')" title="Stock: ${stockReal} / Min: ${stockMin}">
+            <div class="packing-card" onclick="app.openSideDrawer('${item.codigo}')">
                 <div class="packing-card-header">
-                    <h4>${item.nombre}</h4>
+                    <div class="code-badge">${item.codigo}</div>
                 </div>
                 
                 <div class="packing-card-body">
+                    <div class="title" style="min-height:2.5rem; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+                        ${item.masterDesc || item.descripcion}
+                    </div>
+                    
                     <!-- BATTERY INDICATOR -->
                     <div class="battery-container">
-                        <div class="battery-body">
-                            <div class="battery-level ${batteryClass}" style="height: ${batteryLevel}%;"></div>
-                            <div class="battery-reflection"></div>
-                        </div>
+                        ${alertOverlay}
                         <div class="battery-cap"></div>
-                        <div class="battery-value">${Math.round(batteryLevel)}%</div>
+                        <div class="battery-body">
+                            <div class="battery-level ${item.batteryClass}" style="height: ${item.batteryLevel}%">
+                                <div class="battery-reflection"></div>
+                            </div>
+                            <div class="battery-value">${percentageText}</div>
+                        </div>
                     </div>
+
                 </div>
 
                 <div class="packing-card-footer">
-                    <span class="code-badge">${item.codigo}</span>
+                   <div style="font-size:0.75rem; color:#888;">${item.presentacion || ''}</div>
                 </div>
             </div>
             `;
         }).join('');
 
-        html += `</div>`;
+        html += '</div>';
         container.innerHTML = html;
     }
 
