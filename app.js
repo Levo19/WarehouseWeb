@@ -2477,7 +2477,7 @@ class App {
                                     <h5 style="color: var(--primary-color); margin:0;">
                                         <i class="fa-solid fa-list-ul"></i> Pendientes (${pendingList.length})
                                     </h5>
-                                    ${new Date().getHours() >= 18 ?
+                                    ${new Date().getHours() >= 16 ?
                 `<button class="btn-sm" style="background:#666; color:white; border:none; border-radius:4px;" 
                                                  title="Imprimir Pendientes" onclick="app.printPendingList('${zone}')">
                                             <i class="fa-solid fa-print"></i> Imprimir
@@ -2564,47 +2564,114 @@ class App {
 
         if (pendingItems.length === 0) return alert('No hay pendientes para imprimir.');
 
-        // 2. Generate Print HTML
+        // 2. Generate Print HTML (POS/Ticket Style)
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
             <html>
             <head>
                 <title>Pendientes ${zone.toUpperCase()}</title>
                 <style>
-                    body { font-family: monospace; padding: 20px; }
-                    h2 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                    th, td { border: 1px solid #000; padding: 8px; text-align: left; }
-                    th { background: #eee; }
-                    .text-right { text-align: right; }
+                    /* POS Ticket Reset */
+                    * { box-sizing: border-box; }
+                    body { 
+                        font-family: 'Courier New', monospace; /* Monospace aligns better on thermal */
+                        margin: 0; 
+                        padding: 0; 
+                        width: 76mm; /* Standard 80mm paper has ~72-76mm printable */
+                    }
+                    @page { 
+                        margin: 0; 
+                        size: auto; 
+                    }
+                    
+                    /* Container */
+                    .ticket {
+                        padding: 5px;
+                        width: 100%;
+                    }
+
+                    /* Typography */
+                    h2 { 
+                        font-size: 16px; 
+                        text-align: center; 
+                        margin: 5px 0 2px 0; 
+                        text-transform: uppercase;
+                    }
+                    .meta {
+                        font-size: 12px;
+                        text-align: center;
+                        margin-bottom: 10px;
+                        border-bottom: 2px dashed #000;
+                        padding-bottom: 5px;
+                    }
+
+                    /* Table */
+                    table { width: 100%; border-collapse: collapse; }
+                    th { 
+                        text-align: left; 
+                        border-bottom: 1px solid #000; 
+                        font-size: 12px; 
+                        padding: 2px 0;
+                    }
+                    td { 
+                        padding: 4px 0; 
+                        font-size: 14px; /* Larger font as requested */
+                        vertical-align: top;
+                        border-bottom: 1px dotted #ccc;
+                    }
+                    
+                    /* Columns */
+                    .col-qty { 
+                        text-align: right; 
+                        width: 15%; 
+                        font-weight: bold; 
+                        font-size: 16px; /* High visibility for Qty */
+                    }
+                    .col-code { 
+                        font-size: 11px; 
+                        font-weight: bold;
+                        display: block; /* Code on its own line if needed, or small above */
+                    }
+                    .col-desc {
+                        padding-right: 5px;
+                    }
+
                     @media print {
                         .no-print { display: none; }
                     }
                 </style>
             </head>
             <body>
-                <h2>PENDIENTES DE ${zone.toUpperCase()}</h2>
-                <p>Fecha: ${today.toLocaleString()}</p>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>CÓDIGO</th>
-                            <th>DESCRIPCIÓN</th>
-                            <th class="text-right">CANT</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${pendingItems.map(item => `
+                <div class="ticket">
+                    <h2>${zone.toUpperCase()}</h2>
+                    <div class="meta">${today.toLocaleString()}</div>
+                    
+                    <table>
+                        <thead>
                             <tr>
-                                <td>${item.code}</td>
-                                <td>${item.desc}</td>
-                                <td class="text-right"><strong>${item.qty}</strong></td>
+                                <th style="width:75%">PRODUCTO</th>
+                                <th style="text-align:right;">CANT</th>
                             </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            ${pendingItems.map(item => `
+                                <tr>
+                                    <td>
+                                        <div class="col-code">${item.code}</div>
+                                        <div style="margin-top:2px; line-height:1.1;">${item.desc}</div>
+                                    </td>
+                                    <td class="col-qty">${item.qty}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    
+                    <div style="margin-top:20px; text-align:center; font-size:10px;">
+                        --- FIN DE TICKET ---
+                    </div>
+                </div>
                 <script>
-                    window.onload = function() { window.print(); window.close(); }
+                    window.onload = function() { window.print(); window.setTimeout(function(){ window.close(); }, 500); }
                 </script>
             </body>
             </html>
