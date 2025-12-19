@@ -3464,7 +3464,7 @@ class App {
                 <!-- IMAGE SECTION -->
                 ${master && master.imagen ?
                 `<div style="text-align:center; margin-bottom:1rem;">
-                        <img src="${master.imagen}" alt="${item.nombre}" style="max-height:150px; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.3);">
+                        <img src="${master.imagen}" alt="${item.nombre}" referrerpolicy="no-referrer" style="max-height:150px; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.3);">
                      </div>` : ''
             }
 
