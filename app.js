@@ -2750,12 +2750,24 @@ class App {
             // OPTIMISTIC UPDATE PREPARATION
             // Create a temporary 'separado' item in local data to reflect change instantly
             const tempId = 'temp-' + Date.now();
+
+            // Format Date manually to match Server "dd/MM/yyyy HH:mm:ss" 
+            // This ensures isSameDay() validates it correctly (checking dd/MM/yyyy)
+            const now = new Date();
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const formattedDate = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+
             const mockSeparated = {
                 ...sourceRequest,
                 idSolicitud: tempId,
                 categoria: 'separado',
                 cantidad: newQty,
-                fecha: new Date().toISOString() // Use ISO for local date sort
+                fecha: formattedDate
             };
 
             // Clone for Animation
