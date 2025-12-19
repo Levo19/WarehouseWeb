@@ -2250,22 +2250,44 @@ h3 {
 }
 
 .btn-neon-icon {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     padding: 0;
-    line-height: 28px;
+    line-height: 30px;
     border-radius: 50%;
-    font-size: 0.9rem;
+    font-size: 1rem;
     position: absolute;
-    right: 0.5rem;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 5;
+    right: 0px;
+    /* Moved slightly out */
+    top: 5px;
+    /* Moved up */
+    background: rgba(0, 20, 40, 0.8);
+    /* Darker background */
+    z-index: 10;
+    border: 1px solid var(--neon-blue);
+    box-shadow: 0 0 5px var(--neon-blue);
+    animation: neon-pulse 1.5s infinite alternate;
+}
+
+@keyframes neon-pulse {
+    from {
+        box-shadow: 0 0 5px var(--neon-blue), 0 0 10px var(--neon-blue);
+        transform: scale(1);
+    }
+
+    to {
+        box-shadow: 0 0 15px var(--neon-blue), 0 0 25px var(--neon-blue);
+        transform: scale(1.1);
+    }
 }
 
 .btn-neon-icon:hover {
-    transform: translateY(-50%) scale(1.1);
+    animation: none;
+    /* Pause on hover or intensify? Let's keep it simple */
+    transform: scale(1.2);
+    box-shadow: 0 0 20px var(--neon-blue);
+    background: var(--neon-blue);
+    color: #000;
 }
 
 .drawer-grid {
@@ -2273,6 +2295,29 @@ h3 {
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
 }
+
+/* ENVASADOR BATTERY STANDARDIZATION */
+.packing-card .battery-container {
+    height: 120px;
+    /* Fixed height for container */
+    width: 60px;
+    /* Fixed width */
+    margin: 1rem auto;
+    /* Center */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    /* Ensure it doesn't shrink/grow weirdly */
+    flex-shrink: 0;
+}
+
+.packing-card .battery-body {
+    width: 100%;
+    height: 100%;
+    /* Override any specific flexible sizing */
+}
+
 
 .badge {
     padding: 0.25rem 0.75rem;
