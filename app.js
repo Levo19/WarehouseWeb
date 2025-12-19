@@ -2715,7 +2715,7 @@ class App {
 
     async moveToSeparated(btnElement, id) {
         // Correct signature: btnElement first, then ID
-        const qtyInput = document.getElementById(`qty - ${id} `);
+        const qtyInput = document.getElementById(`qty-${id}`);
         // Safety check
         if (!qtyInput) {
             console.error('Input not found for ID:', id);
@@ -2723,10 +2723,52 @@ class App {
         }
 
         const newQty = qtyInput.value;
-
         if (newQty <= 0) { alert('Cantidad inválida'); return; }
 
-        // UI Feedback
+        // --- ANIMATION START ---
+        // 1. Find the card element to animate
+        const card = btnElement.closest('.request-card');
+        if (card) {
+            // Clone and Position Fixed
+            const rect = card.getBoundingClientRect();
+            const clone = card.cloneNode(true);
+
+            clone.style.position = 'fixed';
+            clone.style.top = rect.top + 'px';
+            clone.style.left = rect.left + 'px';
+            clone.style.width = rect.width + 'px';
+            clone.style.height = rect.height + 'px';
+            clone.style.zIndex = '9999';
+            clone.style.transition = 'all 0.6s ease-in-out';
+            clone.style.opacity = '1';
+            clone.style.pointerEvents = 'none'; // Click-through
+            document.body.appendChild(clone);
+
+            // Hide original immediately to prevent double vision
+            card.style.opacity = '0';
+
+            // 2. Animate to Right Column (approximate center of right column)
+            // Ideally find the .column-separated container
+            const targetCol = document.querySelector('.column-separated');
+            if (targetCol) {
+                const targetRect = targetCol.getBoundingClientRect();
+                // Move to center of target column
+                setTimeout(() => {
+                    clone.style.top = (targetRect.top + 100) + 'px'; // A bit down from top
+                    clone.style.left = (targetRect.left + 50) + 'px';
+                    clone.style.transform = 'scale(0.5)'; // Shrink
+                    clone.style.opacity = '0';
+                }, 50);
+            }
+
+            // Cleanup clone after animation
+            setTimeout(() => {
+                clone.remove();
+            }, 700);
+        }
+        // --- ANIMATION END ---
+
+        // UI Feedback (on button if visible, though card is hidden now)
         btnElement.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
         btnElement.disabled = true;
 
@@ -2739,7 +2781,7 @@ class App {
                     action: 'separateRequest',
                     payload: {
                         idSolicitud: id,
-                        cantidad: newQty
+                        qtyToSeparate: newQty // FIXED: Matches code.gs payload expectation
                     }
                 })
             });
@@ -2758,6 +2800,8 @@ class App {
         } catch (error) {
             console.error(error);
             alert('Error de conexión.');
+            // Restore card if error
+            if (card) card.style.opacity = '1';
             btnElement.innerHTML = 'Error';
             setTimeout(() => { btnElement.innerHTML = 'Separar'; btnElement.disabled = false; }, 2000);
         }
