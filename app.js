@@ -2783,6 +2783,12 @@ class App {
             clone.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'; // Faster & Bouncy
             clone.style.opacity = '1';
             clone.style.pointerEvents = 'none';
+
+            // Remove IDs from clone to prevent "Duplicate ID" errors
+            clone.removeAttribute('id');
+            const cloneInputs = clone.querySelectorAll('[id]');
+            cloneInputs.forEach(el => el.removeAttribute('id'));
+
             document.body.appendChild(clone);
 
             // Hide original card instantly -> Visual Pop
