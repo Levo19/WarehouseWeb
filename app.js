@@ -427,10 +427,12 @@ class App {
 
             if (result.status === 'success') {
                 // Update to store full product object
+                this.products = result.data; // Store raw array for array-based lookups (Envasador)
+
                 result.data.forEach(p => {
                     // Optimize the image URL immediately upon storage
                     const stableImg = this.getOptimizedImageUrl(p.imagen);
-                    this.data.products[p.codigo] = { desc: p.descripcion, stock: p.stock, img: stableImg };
+                    this.data.products[p.codigo] = { desc: p.descripcion, stock: p.stock, img: stableImg, min: p.min };
                 });
 
                 // DATA DEBUG
