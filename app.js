@@ -2565,11 +2565,16 @@ class App {
         if (pendingItems.length === 0) return alert('No hay pendientes para imprimir.');
 
         // 2. Generate Print HTML (POS/Ticket Style)
-        const printWindow = window.open('', '_blank');
+        // Use named window to avoid caching and force refresh
+        const printWindow = window.open('', 'DispatchPrintWindow', 'width=450,height=600,scrollbars=yes');
+        printWindow.document.open(); // Reset document content
         printWindow.document.write(`
             <html>
             <head>
                 <title>Pendientes ${zone.toUpperCase()}</title>
+                <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+                <meta http-equiv="Pragma" content="no-cache">
+                <meta http-equiv="Expires" content="0">
                 <style>
                     /* POS Ticket Reset */
                     * { box-sizing: border-box; }
