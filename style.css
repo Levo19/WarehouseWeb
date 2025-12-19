@@ -2249,6 +2249,10 @@ h3 {
     transform: translateY(0);
 }
 
+:root {
+    --neon-green: #39ff14;
+}
+
 .btn-neon-icon {
     width: 32px;
     height: 32px;
@@ -2258,35 +2262,36 @@ h3 {
     font-size: 1rem;
     position: absolute;
     right: 0px;
-    /* Moved slightly out */
     top: 5px;
-    /* Moved up */
-    background: rgba(0, 20, 40, 0.8);
-    /* Darker background */
+    background: rgba(0, 40, 0, 0.8);
+    /* Dark Green bg */
     z-index: 10;
-    border: 1px solid var(--neon-blue);
-    box-shadow: 0 0 5px var(--neon-blue);
-    animation: neon-pulse 1.5s infinite alternate;
+    border: 1px solid var(--neon-green);
+    box-shadow: 0 0 5px var(--neon-green);
+    color: var(--neon-green);
+    animation: neon-pulse-green 2s infinite alternate;
+    transition: all 0.3s ease;
 }
 
-@keyframes neon-pulse {
+@keyframes neon-pulse-green {
     from {
-        box-shadow: 0 0 5px var(--neon-blue), 0 0 10px var(--neon-blue);
+        box-shadow: 0 0 5px var(--neon-green), 0 0 10px var(--neon-green);
         transform: scale(1);
     }
 
     to {
-        box-shadow: 0 0 15px var(--neon-blue), 0 0 25px var(--neon-blue);
-        transform: scale(1.1);
+        box-shadow: 0 0 15px var(--neon-green), 0 0 25px var(--neon-green);
+        transform: scale(1.05);
+        /* Gentle pulse */
     }
 }
 
 .btn-neon-icon:hover {
     animation: none;
-    /* Pause on hover or intensify? Let's keep it simple */
-    transform: scale(1.2);
-    box-shadow: 0 0 20px var(--neon-blue);
-    background: var(--neon-blue);
+    transform: scale(1.3);
+    /* Grow significantly like search bar */
+    box-shadow: 0 0 20px var(--neon-green), 0 0 40px var(--neon-green);
+    background: var(--neon-green);
     color: #000;
 }
 
