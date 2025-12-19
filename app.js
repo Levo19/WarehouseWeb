@@ -2406,24 +2406,14 @@ class App {
             // Left Col: Items with status 'solicitado'
             // Right Col: Items with status 'separado'
 
-            if (pendingQty > 0) {
-                // SHOW PENDING as whatever is requested. 
-                // If the logic is "Movement", pending is Requested - Separated.
-                // If the user wants to see "What was requested", we show item.requested.
-                // If the user wants "What is LEFT to separate", we show pendingQty.
-                // Based on "Cant: [input]", it implies separating balance.
-                // But wait, if pendingQty <= 0, it means fully separated.
-                // Should we hide it from "Pendientes"? 
-                // YES, "Pendientes" usually means "Pending Action".
-                // BUT the user screenshot shows "Pendientes (1)".
-                // If I hide it, it disappears.
-                // Let's stick to showing it if pendingQty > 0.
-                if (pendingQty > 0) {
-                    pendingList.push({ ...item, qtyToShow: pendingQty, type: 'pending', useId: item.reqIds[0] });
-                }
-            }
+            // STRICT LOGIC: Mutually Exclusive Columns
+            // If ANY amount is separated -> Ends up in Separated Column (Removes from Pending).
             if (item.separated > 0) {
                 separatedList.push({ ...item, qtyToShow: item.separated, type: 'separated' });
+            }
+            else if (pendingQty > 0) {
+                // Only show in Pending if Not Touched Yet (separated === 0)
+                pendingList.push({ ...item, qtyToShow: pendingQty, type: 'pending', useId: item.reqIds[0] });
             }
         });
 
