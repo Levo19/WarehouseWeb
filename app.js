@@ -3141,7 +3141,7 @@ class App {
     loadPackingModule() {
         // 1. Set Title
         const title = document.getElementById('page-title');
-        if (title) title.innerText = 'Modulo Envasador';
+        if (title) title.innerText = 'Envasador';
 
         // 2. Inject Search Bar (Neon Style)
         const headerActions = document.getElementById('header-dynamic-actions');
@@ -3210,34 +3210,73 @@ class App {
             return;
         }
 
-        // Build Table Structure
-        let html = `
-            <table class="packing-table">
-                <thead>
-                    <tr>
-                        <th style="width:100px;">CÓDIGO</th>
-                        <th>NOMBRE PRODUCTO</th>
-                        <th>PRESENTACIÓN</th>
-                        <th>ORIGEN</th>
-                        <th style="text-align:center;">ACCIÓN</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
+        // --- GRID LAYOUT ---
+        let html = `<div class="packing-grid">`;
 
-        html += list.map(item => `
-            <tr class="packing-row" onclick="app.openPackingDrawer('${item.codigo}')">
-                <td style="font-weight:bold; color:#555;">${item.codigo}</td>
-                <td style="font-weight:600; color:#333;">${item.nombre}</td>
-                <td>${item.presentacion}</td>
-                <td><span class="badge" style="background:#e0f2fe; color:#0369a1;">${item.origen}</span></td>
-                <td style="text-align:center;">
-                    <button class="btn-icon-sm"><i class="fa-solid fa-chevron-right"></i></button>
-                </td>
-            </tr>
-        `).join('');
+        // Join with Master Product Data for Stock Logic
+        // We assume 'this.products' is loaded. If not, fallback to simple view.
+        const masterProducts = this.products || [];
 
-        html += '</tbody></table>';
+        html += list.map(item => {
+            // Find Match
+            const master = masterProducts.find(p => p.codigo === item.codigo);
+
+            // Calc Battery Logic
+            let batteryLevel = 0; // %
+            let batteryClass = 'low';
+            let stockReal = 0;
+            let stockMin = 0;
+
+            if (master) {
+                stockReal = Number(master.stock) || 0;
+                stockMin = Number(master.min) || 0;
+
+                if (stockMin > 0) {
+                    // Charge = How much of the "Needed Shelf" is full?
+                    // Or "How safe are we?". 
+                    // If Real >= Min, we are 100% charged/safe.
+                    // If Real < Min, we are (Real/Min)% charged.
+                    batteryLevel = (stockReal / stockMin) * 100;
+                    if (batteryLevel > 100) batteryLevel = 100;
+                } else {
+                    // No strict min, assume full or based on arbitrary cap?
+                    // Return 0 or 100? Let's say 100 if stock existing.
+                    batteryLevel = stockReal > 0 ? 100 : 0;
+                }
+
+                // Determine Color Class
+                if (batteryLevel < 20) batteryClass = 'critical'; // Red
+                else if (batteryLevel < 50) batteryClass = 'low'; // Orange
+                else if (batteryLevel < 80) batteryClass = 'medium'; // Blue/Yellow
+                else batteryClass = 'full'; // Green
+            }
+
+            return `
+            <div class="packing-card" onclick="app.openPackingDrawer('${item.codigo}')" title="Stock: ${stockReal} / Min: ${stockMin}">
+                <div class="packing-card-header">
+                    <h4>${item.nombre}</h4>
+                </div>
+                
+                <div class="packing-card-body">
+                    <!-- BATTERY INDICATOR -->
+                    <div class="battery-container">
+                        <div class="battery-body">
+                            <div class="battery-level ${batteryClass}" style="height: ${batteryLevel}%;"></div>
+                            <div class="battery-reflection"></div>
+                        </div>
+                        <div class="battery-cap"></div>
+                        <div class="battery-value">${Math.round(batteryLevel)}%</div>
+                    </div>
+                </div>
+
+                <div class="packing-card-footer">
+                    <span class="code-badge">${item.codigo}</span>
+                </div>
+            </div>
+            `;
+        }).join('');
+
+        html += `</div>`;
         container.innerHTML = html;
     }
 
