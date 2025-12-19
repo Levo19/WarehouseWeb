@@ -3297,7 +3297,7 @@ class App {
                 </div>
                 
                 <div class="packing-card-body">
-                    <div class="title" style="min-height:2.5rem; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+                    <div class="title" style="min-height:3.6rem; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
                         ${item.masterDesc || item.descripcion}
                     </div>
                     
