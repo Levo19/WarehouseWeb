@@ -2319,6 +2319,79 @@ class App {
         }, 4000);
     }
 
+    toggleEditSeparated(id) {
+        const input = document.getElementById(`edit-qty-${id}`);
+        const btn = document.getElementById(`btn-edit-${id}`);
+        if (!input || !btn) return;
+
+        if (input.disabled) {
+            // Enable
+            input.disabled = false;
+            input.focus();
+            btn.innerHTML = '<i class="fa-solid fa-check"></i>'; // Check icon for Save
+            btn.style.color = '#2e7d32'; // Green for save
+        } else {
+            // Save
+            const newVal = parseFloat(input.value);
+            if (isNaN(newVal) || newVal < 0) {
+                alert('Cantidad inválida');
+                return;
+            }
+            this.saveSeparatedEdit(id, newVal, btn, input);
+        }
+    }
+
+    saveSeparatedEdit(id, newVal, btn, input) {
+        // Optimistic Update UI
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        input.disabled = true;
+
+        // API Call
+        const payload = { id: id, quantity: newVal };
+        fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'updateSeparatedQuantity', payload })
+        })
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    this.showToast(res.message, 'success');
+
+                    // Update Local Data
+                    const reqIndex = this.data.requests.findIndex(r => r.idSolicitud === id);
+                    if (reqIndex !== -1) {
+                        if (newVal === 0) {
+                            // "Regresa a pendientes" (Delete separated row)
+                            this.data.requests.splice(reqIndex, 1);
+                        } else {
+                            // Update Quantity
+                            this.data.requests[reqIndex].cantidad = newVal;
+                        }
+                    }
+
+                    // Re-render Zone immediately
+                    const activeBtn = document.querySelector('.client-buttons-group .btn-zone.active');
+                    if (activeBtn) {
+                        const zone = activeBtn.dataset.client;
+                        const zoneContainer = document.getElementById('zone-content');
+                        if (zoneContainer && zone) this.renderZonePickup(zone, zoneContainer);
+                    }
+
+                } else {
+                    this.showToast('Error: ' + res.message, 'error');
+                    // Revert UI to Edit mode on error
+                    input.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+                }
+            })
+            .catch(e => {
+                console.error(e);
+                this.showToast('Error de red al guardar', 'error');
+                input.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+            });
+    }
+
     renderZonePickup(zone, container) {
         // 0. PRESERVE SCROLL POSITION
         const pendingScrollDiv = container.querySelector('.column-pending .scroll-container');
@@ -2402,6 +2475,9 @@ class App {
                 aggregator[codeKey].reqIds.push(req.idSolicitud);
             } else if (cat === 'separado') {
                 aggregator[codeKey].separated += qty;
+                // Add tracking
+                if (!aggregator[codeKey].sepIds) aggregator[codeKey].sepIds = [];
+                aggregator[codeKey].sepIds.push(req.idSolicitud);
             }
         });
 
@@ -2432,7 +2508,8 @@ class App {
             // STRICT LOGIC: Mutually Exclusive Columns
             // If ANY amount is separated -> Ends up in Separated Column (Removes from Pending).
             if (item.separated > 0) {
-                separatedList.push({ ...item, qtyToShow: item.separated, type: 'separated' });
+                const sepId = item.sepIds && item.sepIds.length > 0 ? item.sepIds[item.sepIds.length - 1] : null;
+                separatedList.push({ ...item, qtyToShow: item.separated, type: 'separated', useId: sepId });
             }
             else if (pendingQty > 0) {
                 // Only show in Pending if Not Touched Yet (separated === 0)
@@ -2492,7 +2569,23 @@ class App {
                                 </h5>
                                 <div class="back-label">Descripción</div>
                                 <div class="back-value">${item.desc}</div>
-                            </div>
+                                 
+                                     ${!isPending ? `
+                                        <div class="edit-qty-section" style="margin-top:auto; padding-top:10px; border-top:1px solid #eee;" onclick="event.stopPropagation()">
+                                            <div style="font-size:0.8rem; color:#666; margin-bottom:5px;">Editar Cantidad:</div>
+                                            <div style="display:flex; align-items:center; gap:8px; justify-content:center;">
+                                                <input type="number" id="edit-qty-${item.useId}"  
+                                                       value="${item.qtyToShow}" 
+                                                       disabled 
+                                                       style="width:60px; padding:5px; text-align:center; border:1px solid #ddd; border-radius:4px;">
+                                                <button class="btn-icon" id="btn-edit-${item.useId}" onclick="app.toggleEditSeparated('${item.useId}')" style="background:none; border:none; cursor:pointer; font-size:1.2rem; color:#666;">
+                                                    <i class="fa-solid fa-pencil"></i>
+                                                </button>
+                                            </div>
+                                            <div style="font-size:0.7rem; color:#999; margin-top:5px; text-align: center;">(0 regresa a pendientes)</div>
+                                        </div>
+                                    ` : ''}
+                             </div>
                         </div>
                 </div>`;
         };
