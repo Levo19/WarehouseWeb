@@ -2320,6 +2320,10 @@ class App {
     }
 
     renderZonePickup(zone, container) {
+        // 0. PRESERVE SCROLL POSITION
+        const pendingScrollDiv = container.querySelector('.column-pending .scroll-container');
+        const prevScrollTop = pendingScrollDiv ? pendingScrollDiv.scrollTop : 0;
+
         // 1. Get Today's Date for Filtering (Local String Comparison)
         // Manually format to match Server "dd/MM/yyyy" to ensure consistency
         const today = new Date();
@@ -2335,6 +2339,18 @@ class App {
             if (!dateStr) return false;
             // Strictly match "Today" (dd/MM/yyyy)
             return dateStr.startsWith(localTodayStr);
+        };
+
+        // Helper to parse "dd/MM/yyyy HH:mm:ss" for Sorting
+        const parseDateTime = (str) => {
+            if (!str) return 0;
+            try {
+                const [datePart, timePart] = str.split(' ');
+                const [d, m, y] = datePart.split('/').map(Number);
+                let h = 0, min = 0, sec = 0;
+                if (timePart) { [h, min, sec] = timePart.split(':').map(Number); }
+                return new Date(y, m - 1, d, h, min, sec).getTime();
+            } catch (e) { return 0; }
         };
 
         // 2. Aggregate Data Logic
@@ -2357,6 +2373,7 @@ class App {
 
             // Normalize Code to String to prevent mismatch
             const codeKey = String(req.codigo).trim();
+            const reqTs = parseDateTime(req.fecha);
 
             // Initialize Aggregator Item
             if (!aggregator[codeKey]) {
@@ -2367,8 +2384,14 @@ class App {
                     img: product.img, // Pass image
                     requested: 0, // Sum of 'solicitado'
                     separated: 0, // Sum of 'separado'
-                    reqIds: []    // To track at least one ID for API call
+                    reqIds: [],    // To track at least one ID for API call
+                    lastTs: 0     // Track latest timestamp for sorting
                 };
+            }
+
+            // Update Last Timestamp (Max) logic
+            if (reqTs > aggregator[codeKey].lastTs) {
+                aggregator[codeKey].lastTs = reqTs;
             }
 
             const qty = parseFloat(req.cantidad);
@@ -2416,6 +2439,9 @@ class App {
                 pendingList.push({ ...item, qtyToShow: pendingQty, type: 'pending', useId: item.reqIds[0] });
             }
         });
+
+        // 2b. SORT SEPARATED LIST (Newest First)
+        separatedList.sort((a, b) => b.lastTs - a.lastTs);
 
         const renderCard = (item, isPending) => {
             // Image Logic for Requests
@@ -2498,7 +2524,7 @@ class App {
                                     <input type="text" placeholder="Filtrar pendientes..." onkeyup="app.filterColumnList(this, 'column-pending')"
                                         style="width: 100%; padding: 8px 10px 8px 32px; border: 1px solid #ddd; border-radius: 20px; outline: none;">
                                 </div>
-                                <div style="flex: 1; overflow-y: auto; padding-right: 5px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); grid-auto-rows: max-content; gap: 1rem; align-content: start;">
+                                <div class="scroll-container" style="flex: 1; overflow-y: auto; padding-right: 5px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); grid-auto-rows: max-content; gap: 1rem; align-content: start;">
                                     ${pendingList.length > 0
                 ? pendingList.map(i => renderCard(i, true)).join('')
                 : '<div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:#999;">Todo al día 🎉</div>'}
@@ -2516,7 +2542,7 @@ class App {
                                     <input type="text" placeholder="Filtrar separados..." onkeyup="app.filterColumnList(this, 'column-separated')"
                                         style="width: 100%; padding: 8px 10px 8px 32px; border: 1px solid #a5d6a7; border-radius: 20px; outline: none; background: #fff;">
                                 </div>
-                                <div style="flex: 1; overflow-y: auto; padding-right: 5px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); grid-auto-rows: max-content; gap: 1rem; align-content: start;">
+                                <div class="scroll-container" style="flex: 1; overflow-y: auto; padding-right: 5px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); grid-auto-rows: max-content; gap: 1rem; align-content: start;">
                                     ${separatedList.length > 0
                 ? separatedList.map(i => renderCard(i, false)).join('')
                 : '<div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:#81c784; font-style:italic;">Nada separado aún</div>'}
@@ -2524,6 +2550,14 @@ class App {
                             </div>
                         </div>
                 `;
+
+        // 3. RESTORE SCROLL POSITION
+        requestAnimationFrame(() => {
+            const newPendingScroll = container.querySelector('.column-pending .scroll-container');
+            if (newPendingScroll && prevScrollTop > 0) {
+                newPendingScroll.scrollTop = prevScrollTop;
+            }
+        });
     }
     printPendingList(zone) {
         // 1. Re-aggregate Pending Data
