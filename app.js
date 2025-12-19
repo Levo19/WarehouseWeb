@@ -3139,7 +3139,7 @@ class App {
 
     // --- ENVASADOR MODULE LOGIC ---
 
-    loadPackingModule() {
+    async loadPackingModule() {
         // 1. Set Title
         const title = document.getElementById('page-title');
         if (title) title.innerText = 'Envasador';
@@ -3159,14 +3159,22 @@ class App {
         }
 
         // 3. Initial Load
-        this.fetchPackingList();
-
-        // 4. Start Auto-Refresh (60s)
+        // Start Auto-Refresh (60s) FIRST to ensure it's registered
         if (this.packingRefreshInterval) clearInterval(this.packingRefreshInterval);
         this.packingRefreshInterval = setInterval(() => {
             console.log('Auto-refreshing Packing List...');
             this.fetchPackingList(true);
         }, 60000);
+
+        // 4. Check & Fetch Master Products if Missing logic
+        const container = document.getElementById('packing-list-container');
+        if (!this.products || this.products.length === 0) {
+            console.warn('LoadPackingModule: Master list empty. Fetching now...');
+            if (container) container.innerHTML = '<div style="text-align:center; padding:2rem; color:#666;"><i class="fa-solid fa-sync fa-spin"></i> Sincronizando datos maestros...</div>';
+            await this.fetchProducts();
+        }
+
+        this.fetchPackingList();
     }
 
     async fetchPackingList(isBackground = false) {
