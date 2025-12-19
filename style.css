@@ -2249,6 +2249,25 @@ h3 {
     transform: translateY(0);
 }
 
+.btn-neon-icon {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    line-height: 28px;
+    border-radius: 50%;
+    font-size: 0.9rem;
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 5;
+}
+
+.btn-neon-icon:hover {
+    transform: translateY(-50%) scale(1.1);
+}
+
 .drawer-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
