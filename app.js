@@ -2473,9 +2473,17 @@ class App {
 
                             <!-- COLUMN 1: PENDING -->
                             <div class="column-pending" style="flex: 1; min-width: 0; background: #f8f9fa; padding: 1rem; border-radius: 8px; display: flex; flex-direction: column; height: 100%; transition: all 0.3s ease;">
-                                <h5 style="color: var(--primary-color); border-bottom:1px solid #ddd; padding-bottom:0.5rem; flex-shrink: 0; margin-bottom: 0.5rem;">
-                                    <i class="fa-solid fa-list-ul"></i> Pendientes (${pendingList.length})
-                                </h5>
+                                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding-bottom:0.5rem; margin-bottom: 0.5rem; flex-shrink: 0;">
+                                    <h5 style="color: var(--primary-color); margin:0;">
+                                        <i class="fa-solid fa-list-ul"></i> Pendientes (${pendingList.length})
+                                    </h5>
+                                    ${new Date().getHours() >= 18 ?
+                `<button class="btn-sm" style="background:#666; color:white; border:none; border-radius:4px;" 
+                                                 title="Imprimir Pendientes" onclick="app.printPendingList('${zone}')">
+                                            <i class="fa-solid fa-print"></i> Imprimir
+                                         </button>` : ''
+            }
+                                </div>
                                 <!-- Search Input Pending -->
                                 <div style="margin-bottom: 1rem; position: relative; flex-shrink: 0;">
                                     <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #999;"></i>
@@ -2508,6 +2516,100 @@ class App {
                             </div>
                         </div>
                 `;
+    }
+    printPendingList(zone) {
+        // 1. Re-aggregate Pending Data
+        const today = new Date();
+        const isSameDay = (dateStr) => {
+            if (!dateStr) return false;
+            let d;
+            if (typeof dateStr === 'string' && dateStr.includes('/')) {
+                const parts = dateStr.split('/');
+                if (parts.length === 3) {
+                    d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                }
+            } else {
+                d = new Date(dateStr);
+            }
+            if (!d || isNaN(d.getTime())) return false;
+            const diffDays = Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            return diffDays === 0 || diffDays === 1; // Today/Tomorrow match
+        };
+
+        const targetZone = zone.toLowerCase();
+        const aggregator = {};
+
+        this.data.requests.forEach(req => {
+            if (req.usuario.toLowerCase() !== targetZone) return;
+            if (!isSameDay(req.fecha)) return;
+
+            const codeKey = String(req.codigo).trim();
+            if (!aggregator[codeKey]) {
+                const product = this.data.products[codeKey] || { desc: 'Producto Desconocido - ' + codeKey };
+                aggregator[codeKey] = { code: codeKey, desc: product.desc, requested: 0, separated: 0 };
+            }
+            const qty = parseFloat(req.cantidad);
+            const cat = String(req.categoria).trim().toLowerCase();
+            if (cat === 'solicitado') aggregator[codeKey].requested += qty;
+            else if (cat === 'separado') aggregator[codeKey].separated += qty;
+        });
+
+        const pendingItems = [];
+        Object.values(aggregator).forEach(item => {
+            const pendingQty = item.requested - item.separated;
+            if (pendingQty > 0) {
+                pendingItems.push({ ...item, qty: pendingQty });
+            }
+        });
+
+        if (pendingItems.length === 0) return alert('No hay pendientes para imprimir.');
+
+        // 2. Generate Print HTML
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Pendientes ${zone.toUpperCase()}</title>
+                <style>
+                    body { font-family: monospace; padding: 20px; }
+                    h2 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+                    th { background: #eee; }
+                    .text-right { text-align: right; }
+                    @media print {
+                        .no-print { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <h2>PENDIENTES DE ${zone.toUpperCase()}</h2>
+                <p>Fecha: ${today.toLocaleString()}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>CÓDIGO</th>
+                            <th>DESCRIPCIÓN</th>
+                            <th class="text-right">CANT</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${pendingItems.map(item => `
+                            <tr>
+                                <td>${item.code}</td>
+                                <td>${item.desc}</td>
+                                <td class="text-right"><strong>${item.qty}</strong></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                <script>
+                    window.onload = function() { window.print(); window.close(); }
+                </script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
     }
 
     // Scoped Column Filtering
@@ -3453,6 +3555,26 @@ class App {
         const drawer = document.getElementById('packing-drawer');
         const backdrop = document.getElementById('packing-drawer-backdrop');
 
+        // Helper to format Drive Image URL
+        const formatDriveImage = (url) => {
+            if (!url) return '';
+            // If it's already a direct link or not drive, return as is
+            if (!url.includes('drive.google.com')) return url;
+
+            // Extract ID from: /file/d/ID/view or /open?id=ID or /uc?id=ID
+            let id = '';
+            const match1 = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+            const match2 = url.match(/id=([a-zA-Z0-9_-]+)/);
+
+            if (match1) id = match1[1];
+            else if (match2) id = match2[1];
+
+            if (id) return `https://drive.google.com/uc?export=view&id=${id}`;
+            return url;
+        };
+
+        const imageUrl = master && master.imagen ? formatDriveImage(master.imagen) : '';
+
         // Populate Drawer
         drawer.innerHTML = `
             <div class="drawer-header">
@@ -3462,9 +3584,12 @@ class App {
             <div class="drawer-body">
                 
                 <!-- IMAGE SECTION -->
-                ${master && master.imagen ?
+                ${imageUrl ?
                 `<div style="text-align:center; margin-bottom:1rem;">
-                        <img src="${master.imagen}" alt="${item.nombre}" referrerpolicy="no-referrer" style="max-height:150px; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.3);">
+                        <img src="${imageUrl}" alt="${item.nombre}" 
+                             referrerpolicy="no-referrer" 
+                             style="max-height:150px; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.3);"
+                             onerror="this.style.display='none'; console.warn('Failed to load image:', '${imageUrl}')">
                      </div>` : ''
             }
 
