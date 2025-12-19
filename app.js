@@ -3149,6 +3149,11 @@ class App {
         // 2. Inject Search Bar (Neon Style)
         const headerActions = document.getElementById('header-dynamic-actions');
         if (headerActions) {
+            // Force flex layout for inline badge and search
+            headerActions.style.display = 'flex';
+            headerActions.style.alignItems = 'center';
+            headerActions.style.gap = '1rem';
+
             headerActions.innerHTML = `
                  <div class="search-neon-wrapper" style="position: relative; width: 300px;">
                     <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#999;"></i>
@@ -3234,41 +3239,46 @@ class App {
     calculateDailyTotals() {
         if (!this.envasados) return;
 
-        const today = new Date().toLocaleDateString('es-PE'); // "d/M/yyyy" or similar depending on browser 
-        // Backend returns "dd/MM/yyyy HH:mm:ss". We need to match dates.
-        // Let's rely on string comparison of the first 10 chars if format is strictly dd/MM/yyyy
-        // Or better, parse it.
-
         // Helper to parse "dd/MM/yyyy HH:mm:ss"
         const parseDate = (str) => {
-            const parts = str.split(' ')[0].split('/');
-            return `${parseInt(parts[0])}/${parseInt(parts[1])}/${parts[2]}`; // normalize d/m/y
+            if (!str) return '';
+            const parts = str.toString().split(' ')[0].split('/');
+            if (parts.length < 3) return '';
+            return `${parseInt(parts[0])}/${parseInt(parts[1])}/${parts[2]}`;
         };
 
         const currentUser = this.currentUser ? this.currentUser.username : '';
         this.dailyTotals = {};
         this.globalDailyTotal = 0;
 
-        // Current Date normalized
         const now = new Date();
         const currentDateStr = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
 
-        this.envasados.forEach(record => {
-            // Check User
-            if (record.usuario !== currentUser) return;
+        console.log('--- Daily Totals Debug ---');
+        console.log('Current User:', currentUser);
+        console.log('Current Date ID:', currentDateStr);
 
-            // Check Date
+        this.envasados.forEach(record => {
             const recordDateStr = parseDate(record.fecha);
+
+            // DEBUG: Log first few records
+            if (this.envasados.length < 50 || Math.random() < 0.05) {
+                console.log(`Checking: User=${record.usuario} (Expected ${currentUser}), Date=${recordDateStr} (Expected ${currentDateStr}), Qty=${record.cantidad}`);
+            }
+
+            if (record.usuario !== currentUser) return;
             if (recordDateStr !== currentDateStr) return;
 
-            // Add to totals
             const qty = Number(record.cantidad) || 0;
             if (!this.dailyTotals[record.idProducto]) this.dailyTotals[record.idProducto] = 0;
             this.dailyTotals[record.idProducto] += qty;
             this.globalDailyTotal += qty;
         });
 
-        // Update Header Global Total
+        console.log('Calculated Totals:', this.dailyTotals);
+        console.log('Global Total:', this.globalDailyTotal);
+        console.log('--------------------------');
+
         this.updateHeaderTotal();
     }
 
