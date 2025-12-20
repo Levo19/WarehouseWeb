@@ -28,7 +28,7 @@ class App {
         this.checkSession();
         // Load data if logged in
         if (this.currentUser) {
-            this.loadInitialData();
+            this.preloadAllData();
         }
 
         // Background Auto-Refresh (Every 45s)
@@ -125,6 +125,10 @@ class App {
         const originalBtnText = submitBtn.innerHTML;
         submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Conectando...';
         submitBtn.disabled = true;
+
+        // PRELOAD START (Fire and Forget)
+        // Starts fetching data while login is processing
+        this.preloadAllData();
 
         try {
             // IMPORTANT: Request as text/plain to avoid CORS Preflight (OPTIONS) which GAS doesn't handle.
@@ -348,34 +352,27 @@ class App {
     /**
      * DATA LOADING
      */
+    async preloadAllData() {
+        console.log("🚀 Preloading Data for All Modules...");
+
+        // Parallel requests (Fire & Forget style where appropriate)
+        const p1 = this.fetchProducts({ isBackground: true });
+        const p2 = this.fetchRequests({ isBackground: true }); // Dispatch
+        const p3 = this.fetchPackingList(true); // Envasador (Cache enabled)
+        const p4 = this.fetchProvidersBackground(); // Prepedidos
+        const p5 = this.loadMovimientosData(true); // Guias / History
+
+        // We do not await here to block UI, but we track them
+        Promise.allSettled([p1, p2, p3, p4, p5]).then(() => {
+            console.log("✅ All Modules Preloaded & Cached");
+        });
+    }
+
+    /**
+     * DATA LOADING (Legacy Wrapper)
+     */
     async loadInitialData() {
-        console.log('Loading Initial Data...');
-        const loadingToast = document.createElement('div');
-        loadingToast.id = 'loading-toast';
-        loadingToast.innerHTML = '<i class="fa-solid fa-sync fa-spin"></i> Sincronizando datos...';
-        loadingToast.style.cssText = `
-            position: fixed; bottom: 20px; right: 20px; 
-            background: var(--primary-color); color: white; 
-            padding: 10px 20px; border-radius: 50px; 
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 2000;
-            font-size: 0.9rem; transition: opacity 0.5s;
-        `;
-        document.body.appendChild(loadingToast);
-
-        await Promise.all([
-            this.fetchProducts(),
-            this.fetchRequests(),
-            this.fetchPackingList()
-        ]);
-
-        loadingToast.innerHTML = '<i class="fa-solid fa-check"></i> Datos sincronizados';
-        setTimeout(() => {
-            loadingToast.style.opacity = '0';
-            setTimeout(() => loadingToast.remove(), 500);
-        }, 2000);
-
-        // Start Background Sync Loop
-        this.startBackgroundSync();
+        this.preloadAllData();
     }
 
     startBackgroundSync() {
@@ -461,14 +458,21 @@ class App {
                     }
                 }
 
-                // Initial Load ONLY: Auto-refresh view if empty
-                if (!options.isBackground && (this.state.currentModule === 'dispatch')) {
+                // Auto-refresh view if active (Dispatch Module)
+                if (this.state.currentModule === 'dispatch') {
                     const workspace = document.getElementById('zone-workspace');
                     if (workspace && (!workspace.querySelector('.pickup-layout') || workspace.innerText.includes('Cargando'))) {
                         const activeBtn = document.querySelector('.client-buttons-group .btn-zone.active');
                         if (!activeBtn) {
                             workspace.innerHTML = this.renderProductMasterList();
+                        } else {
+                            // If in zone view, we might want to refresh renderZonePickup? 
+                            // updateCurrentView handles both cases.
+                            this.updateCurrentView();
                         }
+                    } else if (workspace) {
+                        // General update (e.g. stock changes)
+                        this.updateCurrentView();
                     }
                 }
             } else {
@@ -507,6 +511,11 @@ class App {
                 this.data.requests = result.data;
                 this.data.lastFetch = Date.now();
                 if (!options.isBackground) console.log('Requests loaded:', this.data.requests.length);
+
+                // Auto-Update View if Active (even for background fetch)
+                if (this.state.currentModule === 'dispatch') {
+                    this.updateCurrentView();
+                }
             }
         } catch (e) {
             console.error('Error fetching requests', e);
@@ -1007,14 +1016,17 @@ class App {
                     this.data.providers = result.data.proveedores;
                 }
 
-                this.renderGuiasList();
-                this.renderPreingresos();
+                // Only Render if active module is movements
+                if (this.state.currentModule === 'movements' || !isBackground) {
+                    this.renderGuiasList();
+                    this.renderPreingresos();
 
-                // Refresh open panel if exists
-                const activeRow = document.querySelector('.guia-row-card.active');
-                if (activeRow) {
-                    const id = activeRow.id.replace('guia-row-', '');
-                    this.toggleGuiaDetail(id); // Re-open to update
+                    // Refresh open panel if exists
+                    const activeRow = document.querySelector('.guia-row-card.active');
+                    if (activeRow) {
+                        const id = activeRow.id.replace('guia-row-', '');
+                        this.toggleGuiaDetail(id); // Re-open to update
+                    }
                 }
             }
         } catch (e) {
@@ -4052,11 +4064,27 @@ class App {
         this.fetchPackingList();
     }
 
-    async fetchPackingList(isBackground = false) {
+    async fetchPackingList(forceRefresh = false) {
+        const isBackground = forceRefresh; // If forcing refresh (e.g. preload), treat as background/silent or handle UI accordingly?
+        // Actually, if forceRefresh is true, we want to fetch.
+        // If false, check cache.
+
         const container = document.getElementById('packing-list-container');
+
+        // CACHE HIT
+        if (!forceRefresh && this.packingList) {
+            console.log('Using Cached Packing List');
+            if (container && container.innerHTML.includes('loading')) container.innerHTML = '';
+            this.renderPackingList(this.packingList);
+            // Trigger history calc if needed (should be cached too)
+            if (this.envasados) this.calculateDailyTotals();
+            else this.fetchEnvasadosHistory();
+            return;
+        }
+
         if (!container && !isBackground) return;
 
-        if (!isBackground) {
+        if (!isBackground && container) {
             container.innerHTML = '<div style="text-align:center; padding:2rem; color:#999;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando lista...</div>';
         }
 
@@ -4072,8 +4100,8 @@ class App {
             if (result.status === 'success') {
                 this.packingList = result.data; // Store in memory
 
-                // Fetch History to calculate totals
-                await this.fetchEnvasadosHistory();
+                // Fetch History to calculate totals (force if we just refreshed packing list?)
+                await this.fetchEnvasadosHistory(forceRefresh);
 
                 this.renderPackingList(this.packingList);
             } else {
@@ -4086,7 +4114,11 @@ class App {
         }
     }
 
-    async fetchEnvasadosHistory() {
+    async fetchEnvasadosHistory(forceRefresh = false) {
+        if (!forceRefresh && this.envasados) {
+            this.calculateDailyTotals();
+            return;
+        }
         try {
             const response = await fetch(API_URL, {
                 method: 'POST',
