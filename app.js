@@ -2918,6 +2918,11 @@ class App {
                                 </div>
                             </div>
                         </div>
+                        
+                        ${separatedList.length > 0 ? `
+                        <button class="fab-dispatch" onclick="app.handleDispatchZone('${zone}')" title="Despachar ${separatedList.length} ítems">
+                            <i class="fa-solid fa-truck-fast fab-icon"></i>
+                        </button>` : ''}
                 `;
 
         // 3. RESTORE SCROLL POSITION
