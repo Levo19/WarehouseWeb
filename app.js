@@ -2948,6 +2948,13 @@ class App {
                                             style="position:absolute; top:8px; right:8px; background:none; border:none; color:#e74c3c; font-size:1.1rem; cursor:pointer;">
                                         <i class="fa-solid fa-rectangle-xmark"></i>
                                     </button>
+                                    
+                                    <!-- History Button (Top Left) NEW -->
+                                    <button class="btn-icon" onclick="event.stopPropagation(); app.showProductHistory('${item.code}', '${item.desc}')"
+                                            title="Ver Historial de Stock"
+                                            style="position:absolute; top:8px; left:8px; background:white; border:1px solid #ddd; border-radius:4px; padding:2px 6px; color:#2980b9; font-size:0.9rem; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,0.1);">
+                                        <i class="fa-solid fa-clock-rotate-left"></i> Historial
+                                    </button>
 
                                     <div class="edit-qty-section" style="margin-top:auto; padding-top:10px; border-top:1px solid #eee;" onclick="event.stopPropagation()">
                                         <div style="font-size:0.8rem; color:#666; margin-bottom:5px;">Editar Cantidad:</div>
