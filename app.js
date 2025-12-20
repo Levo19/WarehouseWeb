@@ -812,7 +812,7 @@ class App {
             <div class="product-card" data-search="${searchText}" onclick="this.classList.toggle('flipped')">
                 <div class="product-card-inner">
                     <!-- FRONT -->
-                    <div class="card-front" style="position:relative;">
+                    <div class="card-front">
                         <button class="btn-quick-dispatch" 
                             onclick="event.stopPropagation(); app.openQuickDispatchModal('${code}', '${product.desc.replace(/'/g, "\\'")}')"
                             title="Despacho Rápido"
@@ -4704,16 +4704,8 @@ class App {
 
         if (!qty || qty <= 0) return alert('Cantidad inválida');
 
-        // PRE-OPEN Window to avoid Popup Blockers
-        const printWin = window.open('', 'Imprimir Ticket', 'width=400,height=600');
-        if (printWin) {
-            printWin.document.write('<div style="font-family:sans-serif; text-align:center; padding:2rem; color:#666;"><h3>Generando Ticket...</h3><p>Por favor espere mientras procesamos el despacho.</p></div>');
-        } else {
-            console.warn("Popup blocked. Printing might fail.");
-        }
-
         const btn = document.querySelector('.modal-body .btn-primary');
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
         btn.disabled = true;
 
         try {
@@ -4729,21 +4721,17 @@ class App {
 
             if (result.status === 'success') {
                 this.closeModal();
-                this.showToast('Despacho Exitoso', 'success');
-                // Open Print Ticket in the PRE-OPENED window
-                this.printQuickTicket(result.data, printWin);
+                this.showToast('Despacho Guardado (2do Plano)', 'success');
                 // Refresh Products to show new stock
                 this.fetchProducts();
             } else {
-                if (printWin) printWin.close(); // Close if failed
                 alert('Error: ' + result.message);
                 btn.disabled = false;
                 btn.innerHTML = 'Confirmar y Despachar';
             }
         } catch (e) {
-            if (printWin) printWin.close();
             console.error(e);
-            alert('Error de conexión o Bloqueo de Ventanas. Por favor habilite popups.');
+            alert('Error de conexión');
             btn.disabled = false;
             btn.innerHTML = 'Confirmar y Despachar';
         }
