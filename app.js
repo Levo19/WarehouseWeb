@@ -2930,9 +2930,14 @@ class App {
 
                             <!-- BACK -->
                             <div class="card-back">
-                                <h5 style="margin-bottom:0.5rem; border-bottom:1px solid #eee; padding-bottom:0.5rem;">
-                                    ${isPending ? 'Historial de Solicitudes' : 'Ítem Separado'}
-                                </h5>
+                                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:0.5rem; margin-bottom:0.5rem;">
+                                    <h5 style="margin:0;">
+                                        ${isPending ? 'Historial Solicitudes' : 'Ítem Separado'}
+                                    </h5>
+                                    <button class="btn-sm" style="font-size:0.8rem; padding: 4px 8px; background:#eff6ff; color:var(--primary-color); border:none; border-radius:4px; cursor:pointer;" onclick="event.stopPropagation(); app.showProductHistory('${item.code}', '${item.desc.replace(/'/g, "")}')" title="Ver Historial Completo">
+                                        <i class="fa-solid fa-clock-rotate-left"></i> Historial
+                                    </button>
+                                </div>
                                 
                                 ${isPending ? `
                                     <div style="flex:1; overflow-y: auto; padding: 2px; max-height: 250px; scrollbar-width: thin;">
@@ -2948,11 +2953,7 @@ class App {
                                         <i class="fa-solid fa-rectangle-xmark"></i>
                                     </button>
                                     
-                                    <!-- History Button (Top Left) -->
-                                    <button class="btn-history-icon" onclick="event.stopPropagation(); app.showProductHistory('${item.code}', '${item.desc}')"
-                                            title="Ver Historial de Stock">
-                                        <i class="fa-solid fa-clock-rotate-left"></i> Historial
-                                    </button>
+
 
                                     <div class="edit-qty-section" style="margin-top:auto; padding-top:10px; border-top:1px solid #eee;" onclick="event.stopPropagation()">
                                         <div style="font-size:0.8rem; color:#666; margin-bottom:5px;">Editar Cantidad:</div>
