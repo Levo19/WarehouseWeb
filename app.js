@@ -4882,62 +4882,68 @@ class App {
     }
 
     // Shared Helper for Receipt HTML
+    // Shared Helper for Receipt HTML (Optimized for 80mm Thermal)
     writeReceiptHtml(win, data) {
         // data: { title, subtitle, meta: {}, items: [{desc, code, qty}], qr }
+
         const itemsHtml = data.items.map(item => `
             <div class="item-row">
                 <div class="item-desc">
                     <span class="desc-text">${item.desc}</span>
                     <span class="code-text">${item.code || ''}</span>
                 </div>
-                <div class="item-qty">${item.qty}</div>
+                <div class="item-qty">x${item.qty}</div>
             </div>
         `).join('');
 
-        const metaHtml = Object.entries(data.meta).map(([key, val]) => `
+        // Filter out ID from meta if it exists (user said QR is enough)
+        const metaEntries = Object.entries(data.meta).filter(([key]) => key !== 'ID');
+
+        const metaHtml = metaEntries.map(([key, val]) => `
             <div class="meta-row"><span class="label">${key}:</span> <span class="val">${val}</span></div>
         `).join('');
 
         win.document.open();
         win.document.write(`
+            <!DOCTYPE html>
             <html>
             <head>
-                <title>Ticket ${data.subtitle}</title>
+                <title>Ticket</title>
                 <style>
                     @page { size: 80mm auto; margin: 0; }
                     body { 
-                        width: 76mm; /* Safe width for 80mm paper */
+                        width: 78mm;
                         margin: 0 auto; 
-                        padding: 5px 2px;
-                        font-family: 'Courier New', monospace; 
+                        padding: 5px 0;
+                        font-family: Arial, Helvetica, sans-serif; /* Thick sans-serif for thermal */
                         color: #000;
                         background: #fff;
                     }
                     .header { text-align: center; margin-bottom: 10px; }
-                    .title { font-size: 16px; font-weight: 900; margin: 0; }
-                    .subtitle { font-size: 14px; font-weight: bold; margin: 2px 0; border-bottom: 2px dashed #000; padding-bottom: 5px; }
+                    .title { font-size: 20px; font-weight: 900; margin: 0; letter-spacing: 1px; }
+                    .subtitle { font-size: 16px; font-weight: 800; margin-top: 5px; border-bottom: 3px solid #000; padding-bottom: 8px; }
                     
-                    .qr-container { text-align: center; margin: 10px 0; }
-                    .qr-img { width: 100px; height: 100px; }
+                    .qr-container { text-align: center; margin: 15px 0; }
+                    .qr-img { width: 140px; height: 140px; }
                     
-                    .meta-info { font-size: 11px; margin-bottom: 10px; border-bottom: 1px dashed #000; padding-bottom: 5px; }
-                    .meta-row { display: flex; margin-bottom: 2px; }
-                    .label { font-weight: bold; width: 80px; flex-shrink: 0; }
-                    .val { white-space: normal; word-break: break-word; }
+                    .meta-info { font-size: 13px; margin-bottom: 15px; border-bottom: 2px dashed #000; padding-bottom: 15px; }
+                    .meta-row { display: flex; margin-bottom: 4px; }
+                    .label { font-weight: 800; width: 90px; flex-shrink: 0; }
+                    .val { font-weight: 600; white-space: normal; word-break: break-all; }
 
-                    .items-container { margin-top: 5px; }
-                    .item-row { display: flex; align-items: flex-start; margin-bottom: 6px; border-bottom: 1px dotted #ccc; padding-bottom: 2px; }
+                    .items-container { margin-top: 10px; }
+                    .item-row { display: flex; align-items: center; margin-bottom: 8px; border-bottom: 1px solid #000; padding-bottom: 6px; }
                     .item-desc { flex: 1; padding-right: 5px; overflow: hidden; }
-                    .desc-text { display: block; font-weight: bold; font-size: 12px; line-height: 1.1; margin-bottom: 2px; }
-                    .code-text { display: block; font-size: 10px; color: #333; }
-                    .item-qty { font-weight: 900; font-size: 14px; width: 40px; text-align: right; margin-top: 2px; }
+                    .desc-text { display: block; font-weight: 900; font-size: 15px; line-height: 1.2; margin-bottom: 3px; }
+                    .code-text { display: block; font-size: 12px; font-weight: 600; color: #000; }
+                    .item-qty { font-weight: 900; font-size: 20px; width: 50px; text-align: right; }
 
-                    .footer { margin-top: 15px; text-align: center; font-size: 10px; border-top: 2px solid #000; padding-top: 10px; }
+                    .footer { margin-top: 25px; text-align: center; font-size: 12px; font-weight: bold; border-top: 3px solid #000; padding-top: 15px; }
                 </style>
             </head>
-            <body onload="setTimeout(function(){window.print();}, 500)">
+            <body onload="setTimeout(function(){window.print();window.close();}, 800)">
                 <div class="header">
-                    <div class="title">${data.title}</div>
+                    <div class="title">${data.title || 'LEVO ERP'}</div>
                     <div class="subtitle">${data.subtitle}</div>
                 </div>
 
@@ -4955,8 +4961,8 @@ class App {
 
                 <div class="footer">
                     <div>RECIBIDO CONFORME</div>
-                    <br><br>
-                    <div style="border-top:1px solid #000; width:60%; margin:0 auto; padding-top:2px;">Firma</div>
+                    <br><br><br>
+                    <div style="border-top:2px solid #000; width:70%; margin:0 auto; padding-top:4px;">Firma</div>
                 </div>
             </body>
             </html>
