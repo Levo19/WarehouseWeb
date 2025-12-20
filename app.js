@@ -520,10 +520,22 @@ class App {
         return this.data.products[code]?.stock || 0;
     }
 
-    handleImageError(imgElement) {
-        imgElement.onerror = null; // Prevent infinite loop
-        // Fallback to default image
-        imgElement.src = 'recursos/defaultImageProduct.png';
+    handleImageError(imgElement, originalUrl) {
+        imgElement.onerror = null; // Reset first to avoid rapid fires
+
+        // If we were using the optimized lh3 link and it failed, try the original link
+        // We know it's lh3 if it contains 'lh3.googleusercontent.com'
+        if (imgElement.src.includes('lh3.googleusercontent.com') && originalUrl && originalUrl !== 'undefined') {
+            // Define a NEW onerror for the second attempt
+            imgElement.onerror = function () {
+                this.src = 'recursos/defaultImageProduct.png';
+            };
+            // Try original
+            imgElement.src = originalUrl;
+        } else {
+            // Fallback to default immediately
+            imgElement.src = 'recursos/defaultImageProduct.png';
+        }
     }
 
     // New Helper to stabilize Drive URLs
@@ -778,9 +790,19 @@ class App {
         });
 
         const productCards = productEntries.map(([code, product]) => {
-            // Image Logic
-            const imgSrc = product.img ? product.img : 'recursos/defaultImageProduct.png';
-            const imgHtml = `<img src="${imgSrc}" class="card-img" alt="${product.desc}" referrerpolicy="no-referrer" loading="lazy" onerror="app.handleImageError(this)">`;
+            // Image Logic (Optimized for Drive)
+            let imgSrc = product.img ? product.img : 'recursos/defaultImageProduct.png';
+
+            // Optimization: Convert Drive links to direct lh3 links to avoid Rate Limits/HTTP2 errors on thumbnails
+            if (imgSrc.includes('drive.google.com') || imgSrc.includes('docs.google.com')) {
+                const idMatch = imgSrc.match(/[-\w]{25,}/);
+                if (idMatch) {
+                    // Use lh3.googleusercontent.com/d/{ID}=s300 (size 300px)
+                    imgSrc = `https://lh3.googleusercontent.com/d/${idMatch[0]}=s300`;
+                }
+            }
+
+            const imgHtml = `<img src="${imgSrc}" class="card-img" alt="${product.desc}" referrerpolicy="no-referrer" loading="lazy" onerror="app.handleImageError(this, '${product.img || ''}')">`;
 
             // Searchable Text for Performance
             const searchText = `${code} ${product.desc}`.toLowerCase();
