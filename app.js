@@ -2341,55 +2341,108 @@ class App {
         }
     }
 
-    saveSeparatedEdit(id, newVal, btn, input) {
-        // Optimistic Update UI
+
+
+    async saveSeparatedEdit(id, newVal, btn, input) {
+        if (newVal < 0.1) {
+            alert('La cantidad mínima es 0.1');
+            // Find original value to reset input
+            const originalReq = this.data.requests.find(r => r.idSolicitud === id);
+            if (originalReq) {
+                input.value = originalReq.cantidad;
+            }
+            return;
+        }
+
+        // Optimistic Update
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-        input.disabled = true;
+        input.disabled = true; // Disable during save
 
-        // API Call
-        const payload = { id: id, quantity: newVal };
-        fetch(API_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'updateSeparatedQuantity', payload })
-        })
-            .then(r => r.json())
-            .then(res => {
-                if (res.status === 'success') {
-                    this.showToast(res.message, 'success');
+        try {
+            // Update Local Data
+            const reqIndex = this.data.requests.findIndex(r => r.idSolicitud === id);
+            if (reqIndex !== -1) {
+                this.data.requests[reqIndex].cantidad = newVal;
+            }
 
-                    // Update Local Data
-                    const reqIndex = this.data.requests.findIndex(r => r.idSolicitud === id);
-                    if (reqIndex !== -1) {
-                        if (newVal === 0) {
-                            // "Regresa a pendientes" (Delete separated row)
-                            this.data.requests.splice(reqIndex, 1);
-                        } else {
-                            // Update Quantity
-                            this.data.requests[reqIndex].cantidad = newVal;
-                        }
-                    }
+            // Re-render Zone to reflect changes
+            const activeBtn = document.querySelector('.client-buttons-group .btn-zone.active');
+            if (activeBtn) {
+                const zone = activeBtn.dataset.client;
+                const zoneContainer = document.getElementById('zone-content');
+                if (zoneContainer && zone) this.renderZonePickup(zone, zoneContainer);
+            }
 
-                    // Re-render Zone immediately
-                    const activeBtn = document.querySelector('.client-buttons-group .btn-zone.active');
-                    if (activeBtn) {
-                        const zone = activeBtn.dataset.client;
-                        const zoneContainer = document.getElementById('zone-content');
-                        if (zoneContainer && zone) this.renderZonePickup(zone, zoneContainer);
-                    }
 
-                } else {
-                    this.showToast('Error: ' + res.message, 'error');
-                    // Revert UI to Edit mode on error
-                    input.disabled = false;
-                    btn.innerHTML = '<i class="fa-solid fa-check"></i>';
-                }
-            })
-            .catch(e => {
-                console.error(e);
-                this.showToast('Error de red al guardar', 'error');
-                input.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+            // API Call
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: 'updateSeparatedQuantity',
+                    payload: { id: id, quantity: newVal }
+                })
             });
+            const result = await response.json();
+            if (result.status !== 'success') {
+                alert('Error al guardar: ' + result.message);
+                // Revert UI to previous state or reload data if error is critical
+                // For now, just alert and leave the optimistic update.
+                // A full reload (this.fetchRequests()) might be better for robust error handling.
+            } else {
+                this.showToast(result.message || 'Cantidad actualizada', 'success');
+            }
+
+        } catch (e) {
+            console.error(e);
+            alert('Error de conexión');
+            // Revert UI on network error
+            input.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+        }
+    }
+
+    async deleteSeparatedRequest(id) {
+        if (!confirm('¿Eliminar este ítem separado? Regresará a la lista de pendientes.')) return;
+
+        // Optimistic Delete
+        const reqIndex = this.data.requests.findIndex(r => r.idSolicitud === id);
+        if (reqIndex !== -1) {
+            this.data.requests.splice(reqIndex, 1);
+        }
+
+        // Re-render
+        const activeBtn = document.querySelector('.client-buttons-group .btn-zone.active');
+        if (activeBtn) {
+            const zone = activeBtn.dataset.client;
+            const zoneContainer = document.getElementById('zone-content');
+            if (zoneContainer && zone) this.renderZonePickup(zone, zoneContainer);
+        }
+
+        try {
+            // API Call with Qty 0 to trigger deletion in backend
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: 'updateSeparatedQuantity',
+                    payload: { id: id, quantity: 0 }
+                })
+            });
+            const result = await response.json();
+            if (result.status !== 'success') {
+                alert('Error al eliminar: ' + result.message);
+                this.fetchRequests(); // Reload on error to ensure data consistency
+            } else {
+                this.showToast(result.message || 'Ítem eliminado y regresado a pendientes', 'info');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error al conectar con servidor');
+            this.fetchRequests(); // Reload on network error
+        }
     }
 
     renderZonePickup(zone, container) {
@@ -2622,18 +2675,25 @@ class App {
                                     <div class="back-label">Descripción</div>
                                     <div class="back-value">${item.desc}</div>
                                      
+                                    <!-- Delete Button (Top Right) -->
+                                    <button class="btn-icon" onclick="app.deleteSeparatedRequest('${item.useId}')" 
+                                            title="Eliminar Separación (Regresar a Pendientes)"
+                                            style="position:absolute; top:8px; right:8px; background:none; border:none; color:#e74c3c; font-size:1.1rem; cursor:pointer;">
+                                        <i class="fa-solid fa-rectangle-xmark"></i>
+                                    </button>
+
                                     <div class="edit-qty-section" style="margin-top:auto; padding-top:10px; border-top:1px solid #eee;" onclick="event.stopPropagation()">
                                         <div style="font-size:0.8rem; color:#666; margin-bottom:5px;">Editar Cantidad:</div>
                                         <div style="display:flex; align-items:center; gap:8px; justify-content:center;">
                                             <input type="number" id="edit-qty-${item.useId}"  
                                                    value="${item.qtyToShow}" 
                                                    disabled 
+                                                   min="0.1" step="0.1"
                                                    style="width:60px; padding:5px; text-align:center; border:1px solid #ddd; border-radius:4px;">
                                             <button class="btn-icon" id="btn-edit-${item.useId}" onclick="app.toggleEditSeparated('${item.useId}')" style="background:none; border:none; cursor:pointer; font-size:1.2rem; color:#666;">
                                                 <i class="fa-solid fa-pencil"></i>
                                             </button>
                                         </div>
-                                        <div style="font-size:0.7rem; color:#999; margin-top:5px; text-align: center;">(0 regresa a pendientes)</div>
                                     </div>
                                 `}
                              </div>
