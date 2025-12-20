@@ -3319,13 +3319,20 @@ class App {
                     }
                 })
             })
-                .then(() => {
-                    // Silent Background Sync to get real IDs
-                    // We don't need to re-render potentially if data matches, but good to ensure consistency
-                    console.log('Server synced separation.');
-                    // REMOVED IMMEDIATE FETCH to prevent Race Condition where server returns data BEFORE the new row is committed.
-                    // Rely on Background Auto-Refresh (45s) or Optimistic UI.
-                    // return this.fetchRequests(); 
+                .then(response => response.json())
+                .then(result => {
+                    if (result.status === 'success' && result.idSolicitud) {
+                        console.log('Server synced separation. New ID:', result.idSolicitud);
+
+                        // CRITICAL FIX: Update the Optimistic Item with REAL ID
+                        const item = this.data.requests.find(r => r.idSolicitud === tempId);
+                        if (item) {
+                            item.idSolicitud = result.idSolicitud; // Swap temp for real
+                            console.log('Swapped temp ID for Real ID in local state');
+                        }
+                    } else {
+                        console.error("Server synced but no ID returned or error", result);
+                    }
                 })
                 // Check if we need to re-render? No, stick with valid optimistic data.
                 .then(() => {
