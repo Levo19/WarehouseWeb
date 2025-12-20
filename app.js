@@ -848,7 +848,7 @@ class App {
                                 <div class="card-code" style="font-size:0.9rem; color:#6b7280; font-family:monospace;">${code}</div>
                             </div>
                              <div style="margin-top:0.5rem; font-weight:bold; color:var(--primary-color); display:flex; align-items:center; gap:0.5rem;">
-                                <i class="fa-solid fa-cubes"></i> Stock: ${product.stock}
+                                <i class="fa-solid fa-cubes"></i> Stock: <span class="stock-display-${code}">${product.stock}</span>
                             </div>
                         </div>
                     </div>
@@ -883,7 +883,7 @@ class App {
                         <div class="back-value">${code}</div>
 
                         <div class="back-label">Stock Disponible</div>
-                        <div class="back-value" style="font-size:1.2rem; color:var(--primary-color);">${product.stock}</div>
+                        <div class="back-value" style="font-size:1.2rem; color:var(--primary-color);"><span class="stock-display-${code}">${product.stock}</span></div>
 
                         <div style="margin-top:auto; text-align:center; color:#999; font-size:0.8rem;">
                             <i class="fa-solid fa-rotate"></i> Click para voltear
@@ -4717,13 +4717,26 @@ class App {
                     payload: { code, desc, client, qty, usuario: this.currentUser.username }
                 })
             });
-            const result = await response.json();
-
             if (result.status === 'success') {
                 this.closeModal();
                 this.showToast('Despacho Guardado (2do Plano)', 'success');
-                // Refresh Products to show new stock
-                this.fetchProducts();
+
+                // OPTIMISTIC UPDATE: Update stock locally for instant feedback
+                if (this.data.products[code]) {
+                    // Update Local State
+                    this.data.products[code].stock = (parseFloat(this.data.products[code].stock) - qty).toFixed(2);
+
+                    // Update DOM (All instances: Front card, Back card, etc.)
+                    const stockElements = document.querySelectorAll(`.stock-display-${code}`);
+                    stockElements.forEach(el => {
+                        el.innerText = this.data.products[code].stock;
+                        // Optional: Flash red to indicate change
+                        el.style.color = 'red';
+                        setTimeout(() => el.style.color = '', 1000);
+                    });
+                }
+
+                // REMOVED: this.fetchProducts(); // Too slow, relying on optimistic update
             } else {
                 alert('Error: ' + result.message);
                 btn.disabled = false;
