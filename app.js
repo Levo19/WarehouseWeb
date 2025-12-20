@@ -4704,6 +4704,14 @@ class App {
 
         if (!qty || qty <= 0) return alert('Cantidad inválida');
 
+        // PRE-OPEN Window to avoid Popup Blockers
+        const printWin = window.open('', 'Imprimir Ticket', 'width=400,height=600');
+        if (printWin) {
+            printWin.document.write('<div style="font-family:sans-serif; text-align:center; padding:2rem; color:#666;"><h3>Generando Ticket...</h3><p>Por favor espere mientras procesamos el despacho.</p></div>');
+        } else {
+            console.warn("Popup blocked. Printing might fail.");
+        }
+
         const btn = document.querySelector('.modal-body .btn-primary');
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
         btn.disabled = true;
@@ -4722,78 +4730,98 @@ class App {
             if (result.status === 'success') {
                 this.closeModal();
                 this.showToast('Despacho Exitoso', 'success');
-                // Open Print Ticket
-                this.printQuickTicket(result.data);
+                // Open Print Ticket in the PRE-OPENED window
+                this.printQuickTicket(result.data, printWin);
                 // Refresh Products to show new stock
                 this.fetchProducts();
             } else {
+                if (printWin) printWin.close(); // Close if failed
                 alert('Error: ' + result.message);
                 btn.disabled = false;
                 btn.innerHTML = 'Confirmar y Despachar';
             }
         } catch (e) {
+            if (printWin) printWin.close();
             console.error(e);
-            alert('Error de conexión');
+            alert('Error de conexión o Bloqueo de Ventanas. Por favor habilite popups.');
             btn.disabled = false;
+            btn.innerHTML = 'Confirmar y Despachar';
         }
     }
 
-    printQuickTicket(data) {
+    printQuickTicket(data, existingWin) {
         // Data contains: { idGuia, fecha, cliente, items: [{desc, qty, code}], qrData }
-        const win = window.open('', 'Imprimir Ticket', 'width=400,height=600');
+        let win = existingWin;
+        if (!win || win.closed) {
+            win = window.open('', 'Imprimir Ticket', 'width=400,height=600');
+        }
+        if (!win) {
+            alert('Por favor habilite las ventanas emergentes (Popups) para imprimir el ticket.');
+            return;
+        }
         const itemsHtml = data.items.map(item => `
-            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;">
-                <div style="width:70%;">
-                    <div style="font-weight:bold; font-size:0.9rem;">${item.desc}</div>
-                    <div style="font-size:0.8rem; font-family:monospace;">COD: ${item.code}</div>
+            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:5px; border-bottom:1px dotted #ccc; padding-bottom:2px;">
+                <div style="width:75%; padding-right:5px;">
+                    <div style="font-weight:bold; font-size:12px; line-height:1.2;">${item.desc}</div>
+                    <div style="font-size:10px; font-family:monospace;">${item.code}</div>
                 </div>
-                <div style="font-size:1.2rem; font-weight:bold;">${item.qty}</div>
+                <div style="font-size:14px; font-weight:bold;">${item.qty}</div>
             </div>
         `).join('');
 
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(data.idGuia)}`;
+
+        win.document.open();
         win.document.write(`
             <html>
                 <head>
                     <title>Ticket de Salida</title>
                     <style>
-                        body { font-family: 'Courier New', monospace; padding: 20px; max-width: 320px; margin: 0 auto; }
+                        @page { size: auto; margin: 0mm; }
+                        body { 
+                            font-family: 'Courier New', monospace; 
+                            margin: 5px; 
+                            padding: 0;
+                            width: calc(100% - 10px); 
+                            background: white;
+                        }
                         .text-center { text-align: center; }
                         .bold { font-weight: bold; }
-                        .dashed { border-top: 1px dashed #000; margin: 10px 0; }
-                        .qr { width: 120px; height: 120px; margin: 0 auto; display:block; }
+                        .dashed { border-top: 1px dashed #000; margin: 8px 0; }
+                        .qr { width: 120px; height: 120px; margin: 10px auto; display:block; }
+                        .ticket-container { width: 100%; max-width: 80mm; margin: 0 auto; }
                     </style>
                 </head>
-                <body>
-                    <div class="text-center bold" style="font-size:1.2rem;">LEVO ERP</div>
-                    <div class="text-center bold" style="margin-bottom:10px;">GUÍA DE SALIDA</div>
-                    
-                    <img src="https://chart.googleapis.com/chart?cht=qr&chl=${data.idGuia}&chs=150x150" class="qr">
-                    
-                    <div class="dashed"></div>
-                    
-                    <div><span class="bold">Destino:</span> ${data.cliente}</div>
-                    <div><span class="bold">Fecha:</span> ${data.fecha}</div>
-                    
-                    <div class="dashed"></div>
-                    
-                    ${itemsHtml}
-                    
-                    <div class="dashed"></div>
-                    <div style="margin-top:5px;">TOTAL ITEMS: ${data.items.length}</div>
-                    
-                    <br><br><br>
-                    <div class="dashed"></div>
-                    <div class="text-center">Recibido Conforme</div>
-                    <br><div style="border-bottom:1px solid #000; margin: 0 20px;"></div>
+                <body onload="setTimeout(function(){window.print();}, 500)">
+                    <div class="ticket-container">
+                        <div class="text-center bold" style="font-size:16px;">LEVO ERP</div>
+                        <div class="text-center bold" style="font-size:14px; margin-bottom:5px;">GUÍA DE SALIDA</div>
+                        
+                        <img src="${qrUrl}" class="qr" alt="QR Code" onerror="this.style.display='none'">
+                        
+                        <div class="text-center" style="font-size:10px;">ID: ${data.idGuia.substring(0, 8)}...</div>
+
+                        <div class="dashed"></div>
+                        
+                        <div style="font-size:12px;"><span class="bold">Destino:</span> ${data.cliente}</div>
+                        <div style="font-size:12px;"><span class="bold">Fecha:</span> ${data.fecha}</div>
+                        
+                        <div class="dashed"></div>
+                        
+                        ${itemsHtml}
+                        
+                        <div class="dashed"></div>
+                        <div style="margin-top:5px; font-weight:bold; font-size:14px;">TOTAL ITEMS: ${data.items.length}</div>
+                        
+                        <br><br>
+                        <div class="dashed"></div>
+                        <div class="text-center" style="margin-top:5px;">Recibido Conforme</div>
+                        <br>
+                    </div>
                 </body>
             </html>
         `);
         win.document.close();
-        setTimeout(() => {
-            win.focus();
-            win.print();
-            // win.close(); // Optional: user closes it manually
-        }, 500);
     }
 }
 // Initialize App
