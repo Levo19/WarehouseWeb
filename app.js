@@ -4400,6 +4400,198 @@ class App {
             alert('Error de conexión al guardar.');
         }
     }
+    /* STOCK HISTORY MODAL */
+    async showProductHistory(code, desc) {
+        // Show Loading Modal
+        const loadingHtml = `<div style="text-align:center; padding:3rem;"><i class="fa-solid fa-clock-rotate-left fa-spin fa-2x"></i><br><br>Cargando historial...</div>`;
+        this.openModal(loadingHtml);
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: 'getProductHistory',
+                    payload: { codigo: code }
+                })
+            });
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                this.renderHistoryModal(code, desc, result.data);
+            } else {
+                this.openModal(`<div class="error-msg">Error: ${result.message}</div>`);
+            }
+        } catch (e) {
+            this.openModal(`<div class="error-msg">Error de conexión: ${e.message}</div>`);
+        }
+    }
+
+    renderHistoryModal(code, desc, data) {
+        const { initial, movements } = data;
+        let runningBalance = initial;
+
+        // Sort just in case backend didn't
+        // movements.sort... (backend does it)
+
+        let rowsHtml = '';
+
+        // Initial Row
+        rowsHtml += `
+            <tr style="background:#f0f0f0; font-weight:bold;">
+                <td>Inicio</td>
+                <td>Stock Inicial</td>
+                <td>-</td>
+                <td>-</td>
+                <td>${initial}</td>
+            </tr>
+        `;
+
+        movements.forEach(mov => {
+            let change = mov.qty;
+            // Logic:
+            // INGRESO: +qty
+            // SALIDA: -qty
+            // AJUSTE: qty (can be neg or pos)
+
+            let colorClass = '';
+            let icon = '';
+            let amountDisplay = '';
+
+            if (mov.type === 'INGRESO') {
+                runningBalance += change;
+                colorClass = 'text-green';
+                icon = '<i class="fa-solid fa-arrow-right-to-bracket"></i>';
+                amountDisplay = `+${change}`;
+            } else if (mov.type === 'SALIDA') {
+                runningBalance -= change; // Assuming backend sends positive qty for details
+                colorClass = 'text-red';
+                icon = '<i class="fa-solid fa-arrow-right-from-bracket"></i>';
+                amountDisplay = `-${change}`;
+            } else { // AJUSTE
+                runningBalance += change;
+                colorClass = 'text-orange';
+                icon = '<i class="fa-solid fa-wrench"></i>';
+                amountDisplay = change > 0 ? `+${change}` : `${change}`;
+            }
+
+            // Date Formatting
+            let dateStr = mov.date;
+            try {
+                const dateObj = new Date(mov.date);
+                if (!isNaN(dateObj)) {
+                    dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+            } catch (e) { }
+
+            rowsHtml += `
+                <tr>
+                    <td style="font-size:0.85rem; color:#666;">${dateStr}</td>
+                    <td>
+                        <span class="${colorClass}">${icon} ${mov.type}</span>
+                        <div style="font-size:0.8rem; color:#888;">${mov.ref || '-'}</div>
+                    </td>
+                    <td style="font-weight:bold; text-align:right;" class="${colorClass}">${amountDisplay}</td>
+                    <td style="font-weight:bold; text-align:right;">${runningBalance}</td>
+                </tr>
+            `;
+        });
+
+        const modalHtml = `
+            <div class="modal-card" style="max-width: 600px; width: 95%;">
+                <div class="modal-header">
+                    <h3>${desc}</h3>
+                    <button class="modal-close" onclick="app.closeModal()">&times;</button>
+                </div>
+                <div class="modal-body" style="padding: 1rem; max-height: 70vh; overflow-y: auto;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:1rem; align-items:center;">
+                        <span class="code-badge" style="font-size:1rem;">${code}</span>
+                        <button class="btn-sm" onclick="document.getElementById('adjust-form').style.display = document.getElementById('adjust-form').style.display === 'none' ? 'block' : 'none'">
+                            <i class="fa-solid fa-plus"></i> Nuevo Ajuste
+                        </button>
+                    </div>
+
+                    <!-- ADJUSTMENT FORM (Hidden by default) -->
+                    <div id="adjust-form" style="display:none; background:#f9f9f9; padding:1rem; border-radius:8px; margin-bottom:1rem; border:1px solid #ddd;">
+                        <h4 style="margin-top:0;">Registrar Ajuste Manual</h4>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-bottom:0.5rem;">
+                            <div>
+                                <label style="font-size:0.8rem;">Cantidad (+/-)</label>
+                                <input type="number" id="adj-qty" placeholder="-5 o 10" style="width:100%; padding:5px;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.8rem;">Motivo</label>
+                                <input type="text" id="adj-reason" placeholder="Merma, Inventario..." style="width:100%; padding:5px;">
+                            </div>
+                        </div>
+                        <button class="btn-primary" style="width:100%;" onclick="app.saveAdjustment('${code}')">Guardar Ajuste</button>
+                    </div>
+
+                    <table style="width:100%; border-collapse: collapse; font-size:0.9rem;">
+                        <thead>
+                            <tr style="border-bottom:2px solid #ddd;">
+                                <th style="text-align:left; padding:8px;">Fecha</th>
+                                <th style="text-align:left; padding:8px;">Movimiento</th>
+                                <th style="text-align:right; padding:8px;">Cant.</th>
+                                <th style="text-align:right; padding:8px;">Saldo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <style>
+                .text-green { color: #2ecc71; }
+                .text-red { color: #e74c3c; }
+                .text-orange { color: #f39c12; }
+            </style>
+        `;
+
+        this.openModal(modalHtml);
+    }
+
+    async saveAdjustment(code) {
+        const qtyToSave = parseFloat(document.getElementById('adj-qty').value);
+        const reason = document.getElementById('adj-reason').value;
+
+        if (isNaN(qtyToSave) || qtyToSave === 0) return alert('Ingrese una cantidad válida (positiva o negativa).');
+        if (!reason) return alert('Ingrese un motivo.');
+
+        const btn = document.querySelector('#adjust-form button');
+        btn.disabled = true;
+        btn.innerHTML = 'Guardando...';
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: 'saveAdjustment',
+                    payload: { code, qty: qtyToSave, reason }
+                })
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+                this.showToast('Ajuste guardado', 'success');
+                // Reload History
+                const desc = document.querySelector('.modal-header h3').innerText;
+                this.showProductHistory(code, desc);
+            } else {
+                alert('Error: ' + result.message);
+                btn.disabled = false;
+                btn.innerHTML = 'Guardar Ajuste';
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error de conexión');
+            btn.disabled = false;
+            btn.innerHTML = 'Guardar Ajuste';
+        }
+    }
 }
 // Initialize App
 
