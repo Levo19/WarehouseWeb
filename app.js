@@ -2575,51 +2575,108 @@ class App {
             <head>
                 <title>Ticket de Despacho</title>
                 <style>
-                    body { font-family: 'Courier New', monospace; padding: 20px; font-size: 12px; }
-                    .header { text-align: center; margin-bottom: 20px; border-bottom: 1px dashed black; padding-bottom: 10px; }
-                    .info { margin-bottom: 15px; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                    th { text-align: left; border-bottom: 1px solid black; }
-                    td { padding: 4px 0; }
-                    .footer { text-align: center; margin-top: 30px; border-top: 1px dashed black; padding-top: 10px; }
-                    .total { font-weight: bold; font-size: 14px; text-align: right; margin-top: 10px; }
+                    @page { margin: 0; size: auto; }
+                    body { 
+                        font-family: 'Courier New', monospace; 
+                        margin: 0; 
+                        padding: 5px; 
+                        width: 100%; 
+                        box-sizing: border-box;
+                        font-size: 12px;
+                    }
+                    .header { 
+                        text-align: center; 
+                        margin-bottom: 10px; 
+                        border-bottom: 2px dashed black; 
+                        padding-bottom: 10px; 
+                    }
+                    .info { 
+                        margin-bottom: 15px; 
+                        font-size: 13px;
+                    }
+                    
+                    /* Block Layout for Smart Page Breaks */
+                    .item-container {
+                        display: flex;
+                        flex-direction: column;
+                    }
+                    .item-block {
+                        display: flex;
+                        flex-direction: column;
+                        border-bottom: 1px dotted #ccc;
+                        padding: 6px 0;
+                        page-break-inside: avoid; /* CRITICAL: Prevent split */
+                    }
+                    .item-row-top {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                        margin-bottom: 4px;
+                    }
+                    .item-desc {
+                        font-weight: bold;
+                        font-size: 13px;
+                        width: 85%;
+                        overflow-wrap: break-word; /* Ensure wrapping */
+                    }
+                    .item-qty {
+                        font-weight: 900;
+                        font-size: 16px;
+                        width: 15%;
+                        text-align: right;
+                        white-space: nowrap;
+                    }
+                    .item-code {
+                        font-size: 11px;
+                        color: #555;
+                    }
+
+                    .footer { text-align: center; margin-top: 20px; border-top: 2px dashed black; padding-top: 10px; }
+                    .total { 
+                        font-weight: bold; 
+                        font-size: 18px; 
+                        text-align: right; 
+                        margin-top: 10px; 
+                        border-top: 1px solid black;
+                        padding-top: 5px;
+                    }
                 </style>
             </head>
             <body>
                 <div class="header">
-                    <h2 style="margin:0;">LEVO ERP</h2>
-                    <div>GUÍA DE SALIDA</div>
-                    <div style="font-size:10px;">ID: ${guiaId}</div>
+                    <h2 style="margin:5px 0;">LEVO ERP</h2>
+                    <div style="font-weight:bold;">GUÍA DE SALIDA</div>
+                    <div style="font-size:11px;">${guiaId.substring(0, 18)}...</div>
                 </div>
+                
                 <div class="info">
-                    <div><strong>Cliente/Zona:</strong> ${zone.toUpperCase()}</div>
+                    <div style="font-size:14px; margin-bottom:4px;"><strong>Destino:</strong> ${zone.toUpperCase()}</div>
                     <div><strong>Fecha:</strong> ${date}</div>
                 </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Desc</th>
-                            <th style="text-align:right;">Cant</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${items.map(item => `
-                            <tr>
-                                <td>${item.desc.substring(0, 25)}<br><span style="font-size:10px;color:#666;">${item.code}</span></td>
-                                <td style="text-align:right;">${item.qty}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-                <div class="total">TOTAL UNIDADES: ${totalQty}</div>
+
+                <div class="item-container">
+                    ${items.map(item => `
+                        <div class="item-block">
+                            <div class="item-row-top">
+                                <div class="item-desc">${item.desc}</div>
+                                <div class="item-qty">${item.qty}</div>
+                            </div>
+                            <div class="item-code">COD: ${item.code}</div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="total">TOTAL: ${totalQty}</div>
+                
                 <div class="footer">
-                    <p>Recibido Conforme</p>
-                    <br><br>
-                    __________________________
+                    <p style="margin-bottom:30px;">Recibido Conforme</p>
+                    <div style="border-bottom: 1px solid black; width: 80%; margin: 0 auto;"></div>
                 </div>
                 <script>
-                    window.print();
-                    setTimeout(() => window.close(), 1000);
+                    window.onload = function() {
+                        window.print();
+                        setTimeout(() => window.close(), 500);
+                    };
                 </script>
             </body>
             </html>
