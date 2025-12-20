@@ -2482,6 +2482,15 @@ class App {
             } else if (cat === 'despachado') {
                 aggregator[codeKey].dispatched += qty;
             }
+
+            // Collect individual request for Detail View
+            if (!aggregator[codeKey].allRequests) aggregator[codeKey].allRequests = [];
+            aggregator[codeKey].allRequests.push({
+                status: cat,
+                qty: qty,
+                time: req.fecha.split(' ')[1] || '',
+                id: req.idSolicitud
+            });
         });
 
         // Split into Lists
@@ -2498,15 +2507,6 @@ class App {
             // - 'separado' = Done
             // But they might duplicate lines. 
             // Simplified view: Show 'solicitado' items in left, 'separado' items in right.
-
-            // LEFT COLUMN (Pendientes)
-            // Show any item that has 'requested' amount > 0 (assuming 'solicitado' status means pending)
-            // Wait, if I approve it, does it change status to 'separado'?
-            // Assuming YES. So 'requested' sum represents the *current* pending load if the DB updates rows.
-            // If the DB *adds* new rows for separated, then we need to net them?
-            // Let's stick to the status:
-            // Left Col: Items with status 'solicitado'
-            // Right Col: Items with status 'separado'
 
             // STRICT LOGIC: Mutually Exclusive Columns
             // If ANY amount is separated -> Ends up in Separated Column (Removes from Pending).
@@ -2530,6 +2530,49 @@ class App {
 
             // Combine code and desc for search, normalized
             const searchTerms = `${item.code} ${item.desc} `.toLowerCase();
+
+            // Generate Request List HTML for Back
+            let requestListHtml = '';
+            if (isPending && item.allRequests && item.allRequests.length > 0) {
+                requestListHtml = item.allRequests.map(r => {
+                    let shadowColor = '#ccc';
+                    let borderColor = '#ccc';
+                    let statusText = r.status;
+
+                    if (r.status === 'solicitado') {
+                        shadowColor = 'rgba(46, 204, 113, 0.6)'; // Green
+                        borderColor = '#2ecc71';
+                    } else if (r.status === 'separado') {
+                        shadowColor = 'rgba(243, 156, 18, 0.6)'; // Orange
+                        borderColor = '#f39c12';
+                    } else if (r.status === 'despachado') {
+                        shadowColor = 'rgba(231, 76, 60, 0.6)'; // Red
+                        borderColor = '#e74c3c';
+                    }
+
+                    return `
+                        <div style="
+                            padding: 6px 10px; 
+                            margin-bottom: 8px; 
+                            background: white; 
+                            border-radius: 6px; 
+                            border-left: 4px solid ${borderColor};
+                            box-shadow: 2px 2px 6px ${shadowColor};
+                            display: flex; 
+                            justify-content: space-between; 
+                            align-items: center;
+                            font-size: 0.85rem;
+                        ">
+                            <div>
+                                <div style="font-weight: bold; text-transform: capitalize; color:#333;">${statusText}</div>
+                                <div style="font-size: 0.75rem; color: #888;">${r.time}</div>
+                            </div>
+                            <div style="font-weight: bold; font-size: 1rem;">${r.qty}</div>
+                        </div>
+                     `;
+                }).join('');
+            }
+
 
             return `
                     <div class="product-card request-card" data-search="${searchTerms}" onclick="this.classList.toggle('flipped')">
@@ -2567,27 +2610,32 @@ class App {
 
                             <!-- BACK -->
                             <div class="card-back">
-                                <h5 style="margin-bottom:1rem; border-bottom:1px solid #eee; padding-bottom:0.5rem;">
-                                    ${isPending ? 'Detalles de Solicitud' : 'Ítem Separado'}
+                                <h5 style="margin-bottom:0.5rem; border-bottom:1px solid #eee; padding-bottom:0.5rem;">
+                                    ${isPending ? 'Historial de Solicitudes' : 'Ítem Separado'}
                                 </h5>
-                                <div class="back-label">Descripción</div>
-                                <div class="back-value">${item.desc}</div>
-                                 
-                                     ${!isPending ? `
-                                        <div class="edit-qty-section" style="margin-top:auto; padding-top:10px; border-top:1px solid #eee;" onclick="event.stopPropagation()">
-                                            <div style="font-size:0.8rem; color:#666; margin-bottom:5px;">Editar Cantidad:</div>
-                                            <div style="display:flex; align-items:center; gap:8px; justify-content:center;">
-                                                <input type="number" id="edit-qty-${item.useId}"  
-                                                       value="${item.qtyToShow}" 
-                                                       disabled 
-                                                       style="width:60px; padding:5px; text-align:center; border:1px solid #ddd; border-radius:4px;">
-                                                <button class="btn-icon" id="btn-edit-${item.useId}" onclick="app.toggleEditSeparated('${item.useId}')" style="background:none; border:none; cursor:pointer; font-size:1.2rem; color:#666;">
-                                                    <i class="fa-solid fa-pencil"></i>
-                                                </button>
-                                            </div>
-                                            <div style="font-size:0.7rem; color:#999; margin-top:5px; text-align: center;">(0 regresa a pendientes)</div>
+                                
+                                ${isPending ? `
+                                    <div style="flex:1; overflow-y: auto; padding: 2px; max-height: 250px; scrollbar-width: thin;">
+                                        ${requestListHtml}
+                                    </div>
+                                ` : `
+                                    <div class="back-label">Descripción</div>
+                                    <div class="back-value">${item.desc}</div>
+                                     
+                                    <div class="edit-qty-section" style="margin-top:auto; padding-top:10px; border-top:1px solid #eee;" onclick="event.stopPropagation()">
+                                        <div style="font-size:0.8rem; color:#666; margin-bottom:5px;">Editar Cantidad:</div>
+                                        <div style="display:flex; align-items:center; gap:8px; justify-content:center;">
+                                            <input type="number" id="edit-qty-${item.useId}"  
+                                                   value="${item.qtyToShow}" 
+                                                   disabled 
+                                                   style="width:60px; padding:5px; text-align:center; border:1px solid #ddd; border-radius:4px;">
+                                            <button class="btn-icon" id="btn-edit-${item.useId}" onclick="app.toggleEditSeparated('${item.useId}')" style="background:none; border:none; cursor:pointer; font-size:1.2rem; color:#666;">
+                                                <i class="fa-solid fa-pencil"></i>
+                                            </button>
                                         </div>
-                                    ` : ''}
+                                        <div style="font-size:0.7rem; color:#999; margin-top:5px; text-align: center;">(0 regresa a pendientes)</div>
+                                    </div>
+                                `}
                              </div>
                         </div>
                 </div>`;
