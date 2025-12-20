@@ -811,7 +811,33 @@ class App {
             <div class="product-card" data-search="${searchText}" onclick="this.classList.toggle('flipped')">
                 <div class="product-card-inner">
                     <!-- FRONT -->
-                    <div class="card-front">
+                    <div class="card-front" style="position:relative;">
+                        <button class="btn-quick-dispatch" 
+                            onclick="event.stopPropagation(); app.openQuickDispatchModal('${code}', '${product.desc.replace(/'/g, "\\'")}')"
+                            title="Despacho Rápido"
+                            style="
+                                position: absolute; 
+                                bottom: 10px; 
+                                right: 10px; 
+                                background: rgba(255, 255, 255, 0.95); 
+                                border: none; 
+                                border-radius: 50%; 
+                                width: 40px; 
+                                height: 40px; 
+                                box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+                                cursor: pointer; 
+                                color: var(--primary-color); 
+                                display: flex; 
+                                justify-content: center; 
+                                align-items: center; 
+                                z-index: 20;
+                                transition: transform 0.2s;
+                            "
+                            onmouseover="this.style.transform='scale(1.1)'"
+                            onmouseout="this.style.transform='scale(1)'">
+                            <i class="fa-solid fa-cart-shopping"></i>
+                        </button>
+
                         <div class="card-img-container">
                             ${imgHtml}
                         </div>
@@ -4626,6 +4652,148 @@ class App {
             btn.disabled = false;
             btn.innerHTML = 'Guardar Ajuste';
         }
+    }
+    // --- QUICK DISPATCH MODULE ---
+    openQuickDispatchModal(code, desc) {
+        const modalHtml = `
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h3>Despacho Rápido: ${desc}</h3>
+                    <button class="modal-close" onclick="app.closeModal()">&times;</button>
+                </div>
+                <div class="modal-body" style="padding: 1.5rem;">
+                     <div style="margin-bottom:1.5rem;">
+                        <label style="display:block; font-weight:bold; margin-bottom:0.5rem;">1. Seleccione Cliente / Zona</label>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;" id="qd-clients">
+                            <button type="button" class="btn-secondary option-btn selected" onclick="app.selectQuickClient(this, 'ZONA1')">ZONA 1</button>
+                            <button type="button" class="btn-secondary option-btn" onclick="app.selectQuickClient(this, 'ZONA2')">ZONA 2</button>
+                            <button type="button" class="btn-secondary option-btn" onclick="app.selectQuickClient(this, 'TIENDA')">TIENDA</button>
+                            <button type="button" class="btn-secondary option-btn" onclick="app.selectQuickClient(this, 'PERSONAL')">PERSONAL</button>
+                        </div>
+                     </div>
+
+                     <div style="margin-bottom:1.5rem;">
+                        <label style="display:block; font-weight:bold; margin-bottom:0.5rem;">2. Cantidad a Despachar</label>
+                        <input type="number" id="qd-qty" class="form-control" value="1" min="1" step="0.01" style="font-size:1.5rem; text-align:center;">
+                     </div>
+
+                     <div style="text-align:right;">
+                         <button class="btn-primary" onclick="app.handleQuickDispatch('${code}', '${desc}')">
+                            <i class="fa-solid fa-paper-plane"></i> Confirmar y Despachar
+                         </button>
+                     </div>
+                </div>
+            </div>
+            <style>
+                .option-btn.selected { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
+            </style>
+        `;
+        this.openModal(modalHtml);
+        setTimeout(() => document.getElementById('qd-qty').focus(), 100);
+    }
+
+    selectQuickClient(btn, val) {
+        document.querySelectorAll('#qd-clients .option-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+    }
+
+    async handleQuickDispatch(code, desc) {
+        const clientBtn = document.querySelector('#qd-clients .selected');
+        const client = clientBtn ? clientBtn.innerText : 'ZONA1';
+        const qty = parseFloat(document.getElementById('qd-qty').value);
+
+        if (!qty || qty <= 0) return alert('Cantidad inválida');
+
+        const btn = document.querySelector('.modal-body .btn-primary');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
+        btn.disabled = true;
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST', redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: 'saveQuickDispatch',
+                    payload: { code, desc, client, qty, usuario: this.currentUser.username }
+                })
+            });
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                this.closeModal();
+                this.showToast('Despacho Exitoso', 'success');
+                // Open Print Ticket
+                this.printQuickTicket(result.data);
+                // Refresh Products to show new stock
+                this.fetchProducts();
+            } else {
+                alert('Error: ' + result.message);
+                btn.disabled = false;
+                btn.innerHTML = 'Confirmar y Despachar';
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error de conexión');
+            btn.disabled = false;
+        }
+    }
+
+    printQuickTicket(data) {
+        // Data contains: { idGuia, fecha, cliente, items: [{desc, qty, code}], qrData }
+        const win = window.open('', 'Imprimir Ticket', 'width=400,height=600');
+        const itemsHtml = data.items.map(item => `
+            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;">
+                <div style="width:70%;">
+                    <div style="font-weight:bold; font-size:0.9rem;">${item.desc}</div>
+                    <div style="font-size:0.8rem; font-family:monospace;">COD: ${item.code}</div>
+                </div>
+                <div style="font-size:1.2rem; font-weight:bold;">${item.qty}</div>
+            </div>
+        `).join('');
+
+        win.document.write(`
+            <html>
+                <head>
+                    <title>Ticket de Salida</title>
+                    <style>
+                        body { font-family: 'Courier New', monospace; padding: 20px; max-width: 320px; margin: 0 auto; }
+                        .text-center { text-align: center; }
+                        .bold { font-weight: bold; }
+                        .dashed { border-top: 1px dashed #000; margin: 10px 0; }
+                        .qr { width: 120px; height: 120px; margin: 0 auto; display:block; }
+                    </style>
+                </head>
+                <body>
+                    <div class="text-center bold" style="font-size:1.2rem;">LEVO ERP</div>
+                    <div class="text-center bold" style="margin-bottom:10px;">GUÍA DE SALIDA</div>
+                    
+                    <img src="https://chart.googleapis.com/chart?cht=qr&chl=${data.idGuia}&chs=150x150" class="qr">
+                    
+                    <div class="dashed"></div>
+                    
+                    <div><span class="bold">Destino:</span> ${data.cliente}</div>
+                    <div><span class="bold">Fecha:</span> ${data.fecha}</div>
+                    
+                    <div class="dashed"></div>
+                    
+                    ${itemsHtml}
+                    
+                    <div class="dashed"></div>
+                    <div style="margin-top:5px;">TOTAL ITEMS: ${data.items.length}</div>
+                    
+                    <br><br><br>
+                    <div class="dashed"></div>
+                    <div class="text-center">Recibido Conforme</div>
+                    <br><div style="border-bottom:1px solid #000; margin: 0 20px;"></div>
+                </body>
+            </html>
+        `);
+        win.document.close();
+        setTimeout(() => {
+            win.focus();
+            win.print();
+            // win.close(); // Optional: user closes it manually
+        }, 500);
     }
 }
 // Initialize App
