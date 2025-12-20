@@ -1495,15 +1495,51 @@ class App {
         const provider = document.getElementById('edit-guia-provider').value;
         const btn = document.getElementById('btn-save-guia');
 
-        // Allow empty? previous user request said "Allow empty".
-        // But here line 1217 checks length.
-        // I will remove the check to align with "Guia Vacia" feature.
-        // if (this.editingDetails.length === 0) { ... }
-
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
 
         try {
+            // --- OPTIMISTIC UPDATE START ---
+            const guiaInfo = this.data.movimientos.guias.find(g => g.id === id);
+
+            if (guiaInfo) { // Should exist
+                const oldDetails = this.data.movimientos.detalles
+                    ? this.data.movimientos.detalles.filter(d => d.idGuia === id)
+                    : [];
+
+                // 1. Revert Old Stock
+                oldDetails.forEach(d => {
+                    const pCode = String(d.codigo).trim();
+                    const product = this.data.products[pCode] || Object.values(this.data.products).find(p => String(p.codigo).trim() === pCode);
+                    if (product) {
+                        if (guiaInfo.tipo === 'INGRESO') {
+                            product.stock -= Number(d.cantidad);
+                        } else { // SALIDA
+                            product.stock += Number(d.cantidad);
+                        }
+                    }
+                });
+
+                // 2. Apply New Stock
+                this.editingDetails.forEach(d => {
+                    const pCode = String(d.codigo).trim();
+                    const product = this.data.products[pCode] || Object.values(this.data.products).find(p => String(p.codigo).trim() === pCode);
+                    if (product) {
+                        if (guiaInfo.tipo === 'INGRESO') {
+                            product.stock += Number(d.cantidad);
+                        } else { // SALIDA
+                            product.stock -= Number(d.cantidad);
+                        }
+                    }
+                });
+
+                // 3. Refresh Grid UI Immediately
+                if (this.currentView === 'products') {
+                    this.renderProducts();
+                }
+            }
+            // --- OPTIMISTIC UPDATE END ---
+
             const payload = {
                 idGuia: id,
                 comentario: comment,
@@ -1521,7 +1557,7 @@ class App {
 
             if (result.status === 'success') {
                 alert('Guía actualizada correctamente');
-                // Reload Data
+                // Reload Data (Will overwrite optimistic stock with server truth, preventing drift)
                 await this.loadMovimientosData();
                 // Return to view mode (Refresh detail panel with new data)
                 this.toggleGuiaDetail(id);
@@ -1529,6 +1565,8 @@ class App {
                 alert('Error: ' + result.message);
                 btn.disabled = false;
                 btn.innerText = 'Guardar Cambios';
+                // ROLLBACK OPTIMISTIC? ideally yes, but for now simple reload is safer if error
+                window.location.reload();
             }
 
         } catch (e) {
