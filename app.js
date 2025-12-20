@@ -2943,16 +2943,14 @@ class App {
                                     <div class="back-value">${item.desc}</div>
                                      
                                     <!-- Delete Button (Top Right) -->
-                                    <button class="btn-icon" onclick="app.deleteSeparatedRequest('${item.useId}')" 
-                                            title="Eliminar Separación (Regresar a Pendientes)"
-                                            style="position:absolute; top:8px; right:8px; background:none; border:none; color:#e74c3c; font-size:1.1rem; cursor:pointer;">
+                                    <button class="btn-delete-separated" onclick="app.deleteSeparatedRequest('${item.useId}')" 
+                                            title="Eliminar Separación (Regresar a Pendientes)">
                                         <i class="fa-solid fa-rectangle-xmark"></i>
                                     </button>
                                     
-                                    <!-- History Button (Top Left) NEW -->
-                                    <button class="btn-icon" onclick="event.stopPropagation(); app.showProductHistory('${item.code}', '${item.desc}')"
-                                            title="Ver Historial de Stock"
-                                            style="position:absolute; top:8px; left:8px; background:white; border:1px solid #ddd; border-radius:4px; padding:2px 6px; color:#2980b9; font-size:0.9rem; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,0.1);">
+                                    <!-- History Button (Top Left) -->
+                                    <button class="btn-history-icon" onclick="event.stopPropagation(); app.showProductHistory('${item.code}', '${item.desc}')"
+                                            title="Ver Historial de Stock">
                                         <i class="fa-solid fa-clock-rotate-left"></i> Historial
                                     </button>
 
