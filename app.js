@@ -1367,15 +1367,34 @@ class App {
                 </div>
 
 
-                <!-- Add Product (Search Style) -->
-                <div style="margin-bottom:1rem; position:relative;">
-                     <div class="search-neon-wrapper" style="position:relative;">
-                         <i class="fa-solid fa-barcode" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--primary-color);"></i>
-                         <input type="text" id="edit-prod-search" placeholder="Buscar producto para agregar..." 
-                                style="width:100%; padding-left:35px; height:45px;" 
-                                onkeyup="app.searchProductForEdit(this, event)">
+                <!-- Add Product (Spotlight Button) -->
+                <div style="margin-bottom:1rem;">
+                    <button class="spotlight-btn-add" onclick="app.openSpotlight('${id}')">
+                        <i class="fa-solid fa-plus-circle" style="font-size:1.2rem; color:var(--primary-color);"></i>
+                        <span>Agregar Producto</span>
+                    </button>
+                    <div style="text-align:center; font-size:0.8rem; color:#888;">Presiona para buscar productos...</div>
+                </div>
+
+                <!-- SPOTLIGHT MODAL (Hidden by default) -->
+                <div id="spotlight-overlay" class="spotlight-overlay" onclick="if(event.target === this) app.closeSpotlight()">
+                    <div class="spotlight-modal">
+                        <div class="spotlight-header">
+                            <i class="fa-solid fa-magnifying-glass" style="color:#9ca3af; font-size:1.2rem;"></i>
+                            <input type="text" id="spotlight-input" class="spotlight-input" placeholder="Buscar producto..." autocomplete="off">
+                            <button onclick="app.closeSpotlight()" style="background:none; border:none; color:#9ca3af; cursor:pointer; font-size:0.9rem;">ESC</button>
+                        </div>
+                        <div id="spotlight-results" class="spotlight-results">
+                            <!-- Results here -->
+                            <div style="padding:2rem; text-align:center; color:#9ca3af;">
+                                Escribe para buscar...
+                            </div>
+                        </div>
+                        <div class="spotlight-footer">
+                            <span id="spotlight-count">0 encontrados</span>
+                            <button onclick="app.closeSpotlight()" style="padding:0.5rem 1rem; background:var(--primary-color); color:white; border:none; border-radius:6px; cursor:pointer;">Listo</button>
+                        </div>
                     </div>
-                    <div id="edit-prod-search-results" style="background:white; border:1px solid #eee; position:absolute; z-index:10; width:100%; display:none; max-height:200px; overflow-y:auto; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></div>
                 </div>
 
                 <div style="display:flex; gap:1rem; justify-content:end;">
@@ -1389,32 +1408,86 @@ class App {
     }
 
     /* --- EDIT SEARCH LOGIC --- */
-    searchProductForEdit(input, event) {
-        const term = input.value.toLowerCase().trim();
-        const resultsDiv = document.getElementById('edit-prod-search-results');
+    /* --- EDIT SEARCH LOGIC --- */
+    openSpotlight(guiaId) {
+        const overlay = document.getElementById('spotlight-overlay');
+        const input = document.getElementById('spotlight-input');
+        if (!overlay || !input) return;
+
+        overlay.classList.add('active');
+        input.value = '';
+        input.focus();
+
+        // Clear results
+        document.getElementById('spotlight-results').innerHTML = '<div style="padding:2rem; text-align:center; color:#9ca3af;">Escribe para buscar...</div>';
+
+        // Bind generic event for search
+        input.onkeyup = (e) => this.searchProductSpotlight(e.target.value);
+    }
+
+    closeSpotlight() {
+        const overlay = document.getElementById('spotlight-overlay');
+        if (overlay) overlay.classList.remove('active');
+        // Refresh table just in case
+        this.renderEditProductsTable();
+    }
+
+    searchProductSpotlight(term) {
+        term = term.toLowerCase().trim();
+        const resultsDiv = document.getElementById('spotlight-results');
+        const countSpan = document.getElementById('spotlight-count');
 
         if (term.length < 2) {
-            resultsDiv.style.display = 'none';
+            resultsDiv.innerHTML = '<div style="padding:2rem; text-align:center; color:#9ca3af;">BSigue escribiendo...</div>';
+            countSpan.innerText = '0 encontrados';
             return;
         }
 
         const matches = Object.entries(this.data.products)
             .filter(([code, p]) => code.toLowerCase().includes(term) || p.desc.toLowerCase().includes(term))
-            .slice(0, 15);
+            .slice(0, 50); // increased limit due to better UI
+
+        countSpan.innerText = `${matches.length} encontrados`;
 
         if (matches.length > 0) {
-            resultsDiv.innerHTML = matches.map(([code, p]) => `
-                <div style="padding:0.5rem; border-bottom:1px solid #eee; cursor:pointer; font-size:0.9rem;" 
-                     onmouseover="this.style.background='#f3f4f6'" 
-                     onmouseout="this.style.background='white'"
-                     onclick="app.selectProductForEdit('${code}', '${p.desc.replace(/'/g, "")}')">
-                    <strong>${p.desc}</strong> <span style="color:#888; font-size:0.8rem;">(${code})</span>
+            resultsDiv.innerHTML = matches.map(([code, p]) => {
+                // Check if already in list to highlight or show qty
+                const inList = this.editingDetails.find(d => String(d.codigo) === String(code));
+                const badge = inList ? `<span class="badge-adj" style="background:#dcfce7; color:#166534;">En lista: ${inList.cantidad}</span>` : '';
+
+                return `
+                <div class="spotlight-item ${inList ? 'highlighted' : ''}" 
+                     onclick="app.selectProductForSpotlight('${code}', '${p.desc.replace(/'/g, "")}')">
+                    <div>
+                        <div style="font-weight:bold; color:#333;">${p.desc}</div>
+                        <div style="font-size:0.8rem; color:#666;">Code: ${code}</div>
+                    </div>
+                    <div>
+                        ${badge}
+                        <i class="fa-solid fa-plus" style="color:#ccc; margin-left:10px;"></i>
+                    </div>
                 </div>
-             `).join('');
-            resultsDiv.style.display = 'block';
+             `}).join('');
         } else {
-            resultsDiv.style.display = 'none';
+            resultsDiv.innerHTML = '<div style="padding:2rem; text-align:center; color:#9ca3af;">No se encontraron productos</div>';
         }
+    }
+
+    selectProductForSpotlight(code, desc) {
+        // Add to editingDetails logic
+        const existingIndex = this.editingDetails.findIndex(p => String(p.codigo).trim() === String(code).trim());
+        if (existingIndex >= 0) {
+            this.editingDetails[existingIndex].cantidad = Number(this.editingDetails[existingIndex].cantidad) + 1;
+        } else {
+            this.editingDetails.push({ codigo: code, descripcion: desc, cantidad: 1 });
+        }
+
+        // Re-render search results to update badges instantly
+        const input = document.getElementById('spotlight-input');
+        if (input) this.searchProductSpotlight(input.value);
+
+        // Also update main table in background (optional, but good for context)
+        this.renderEditProductsTable();
     }
 
     selectProductForEdit(code, desc) {
