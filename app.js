@@ -2457,6 +2457,7 @@ class App {
                     img: product.img, // Pass image
                     requested: 0, // Sum of 'solicitado'
                     separated: 0, // Sum of 'separado'
+                    dispatched: 0, // Sum of 'despachado'
                     reqIds: [],    // To track at least one ID for API call
                     lastTs: 0     // Track latest timestamp for sorting
                 };
@@ -2478,6 +2479,8 @@ class App {
                 // Add tracking
                 if (!aggregator[codeKey].sepIds) aggregator[codeKey].sepIds = [];
                 aggregator[codeKey].sepIds.push(req.idSolicitud);
+            } else if (cat === 'despachado') {
+                aggregator[codeKey].dispatched += qty;
             }
         });
 
@@ -2486,7 +2489,7 @@ class App {
         const separatedList = [];
 
         Object.values(aggregator).forEach(item => {
-            const pendingQty = item.requested - item.separated;
+            const pendingQty = item.requested - (item.separated + item.dispatched);
 
             // Logic: What is requested but NOT separated yet?
             // Actually, usually 'solicitado' records convert to 'separado'. 
@@ -2681,17 +2684,18 @@ class App {
             const codeKey = String(req.codigo).trim();
             if (!aggregator[codeKey]) {
                 const product = this.data.products[codeKey] || { desc: 'Producto Desconocido - ' + codeKey };
-                aggregator[codeKey] = { code: codeKey, desc: product.desc, requested: 0, separated: 0 };
+                aggregator[codeKey] = { code: codeKey, desc: product.desc, requested: 0, separated: 0, dispatched: 0 };
             }
             const qty = parseFloat(req.cantidad);
             const cat = String(req.categoria).trim().toLowerCase();
             if (cat === 'solicitado') aggregator[codeKey].requested += qty;
             else if (cat === 'separado') aggregator[codeKey].separated += qty;
+            else if (cat === 'despachado') aggregator[codeKey].dispatched += qty;
         });
 
         const pendingItems = [];
         Object.values(aggregator).forEach(item => {
-            const pendingQty = item.requested - item.separated;
+            const pendingQty = item.requested - (item.separated + item.dispatched);
             if (pendingQty > 0) {
                 pendingItems.push({ ...item, qty: pendingQty });
             }
