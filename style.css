@@ -767,39 +767,39 @@ h3 {
 }
 
 .product-card.flipped .product-card-inner {
-    .card-back {
-        transform: rotateY(180deg);
-    }
+    transform: rotateY(180deg);
+}
 
-    /* Hover Effect: Lift & Neon/Gold Shadow */
-    .product-card-inner:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 0 15px rgba(255, 215, 0, 0.6), 0 0 30px rgba(255, 215, 0, 0.4);
-        /* Gold Neon */
-    }
+/* Hover Effect: Lift & Neon/Gold Shadow */
+.product-card-inner:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6), 0 0 30px rgba(255, 215, 0, 0.4);
+    /* Gold Neon */
+}
 
-    /* Alternate Neon Blue for variety if needed, but user asked for Gold/Neon specifically */
-    /* To make it pop more, we can use a border glow too */
+/* Alternate Neon Blue for variety if needed, but user asked for Gold/Neon specifically */
+/* To make it pop more, we can use a border glow too */
 
-    .card-front,
-    .card-back {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        -webkit-backface-visibility: hidden;
-        backface-visibility: hidden;
-        border-radius: var(--radius-md);
-        background: white;
-        border: 1px solid var(--border-color);
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-    }
+.card-front,
+.card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    border-radius: var(--radius-md);
+    background: white;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
 
-    .card-front {
-        /* Default Front */
-    }
+.card-front {
+    /* Default Front */
+}
 
+.card-back {
     transform: rotateY(180deg);
     background: #f8fafc;
     padding: 1rem;
