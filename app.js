@@ -4427,6 +4427,10 @@ class App {
     async registerEnvasado(productCode, quantity) {
         if (!confirm(`¿Confirmar envasado de ${quantity} unidades para ${productCode}?`)) return;
 
+        // Find Item metadata (Origin, Factor)
+        const item = this.packingList.find(p => p.codigo === productCode);
+        if (!item) return alert('Error: Producto no encontrado en lista local.');
+
         this.showToast('Registrando envasado...', 'info');
 
         try {
@@ -4434,7 +4438,9 @@ class App {
             const payload = {
                 idProducto: productCode,
                 cantidad: quantity,
-                usuario: user
+                usuario: user,
+                factor: item.factor,
+                origen: item.origen
             };
 
             const response = await fetch(API_URL, {
