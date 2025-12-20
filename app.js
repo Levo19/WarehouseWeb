@@ -2630,23 +2630,51 @@ class App {
                         font-size: 11px;
                         color: #555;
                     }
+                /* 2. QR Code for Guide ID instead of text */
+                .qr-code {
+                    display: block;
+                    margin: 5px auto;
+                    width: 100px;
+                    height: 100px;
+                }
+                .header-text { margin-bottom: 5px; }
 
-                    .footer { text-align: center; margin-top: 20px; border-top: 2px dashed black; padding-top: 10px; }
-                    .total { 
-                        font-weight: bold; 
-                        font-size: 18px; 
-                        text-align: right; 
-                        margin-top: 10px; 
-                        border-top: 1px solid black;
-                        padding-top: 5px;
-                    }
+                /* 3. Product Code Bold */
+                .prod-code {
+                    font-size: 11px;
+                    color: #000;
+                    font-weight: 700; /* Bold as requested */
+                }
+
+                .footer {
+                    margin-top: 20px;
+                    text-align: center;
+                    border-top: 1px solid #000;
+                    padding-top: 5px;
+                    font-size: 12px;
+                }
+                
+                .recibido-conforme {
+                    font-weight: 600; /* Semi-bold (thicker but not full bold) */
+                    font-size: 13px; /* Slightly larger */
+                    margin-top: 5px;
+                }
+
+                .signature-line {
+                    margin-top: 40px;
+                    border-bottom: 1px solid #000;
+                    width: 80%;
+                    margin-left: auto;
+                    margin-right: auto;
+                }
                 </style>
             </head>
             <body>
                 <div class="header">
                     <h2 style="margin:5px 0;">LEVO ERP</h2>
                     <div style="font-weight:bold;">GUÍA DE SALIDA</div>
-                    <div style="font-size:11px;">${guiaId.substring(0, 18)}...</div>
+                    <!-- QR Code uses simple API -->
+                    <img class="qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${guiaId}" alt="QR ID">
                 </div>
                 
                 <div class="info">
@@ -2661,7 +2689,7 @@ class App {
                                 <div class="item-desc">${item.desc}</div>
                                 <div class="item-qty">${item.qty}</div>
                             </div>
-                            <div class="item-code">COD: ${item.code}</div>
+                            <div class="prod-code"><strong>COD: ${item.code}</strong></div>
                         </div>
                     `).join('')}
                 </div>
@@ -2669,8 +2697,8 @@ class App {
                 <div class="total">TOTAL: ${totalQty}</div>
                 
                 <div class="footer">
-                    <p style="margin-bottom:30px;">Recibido Conforme</p>
-                    <div style="border-bottom: 1px solid black; width: 80%; margin: 0 auto;"></div>
+                    <div class="recibido-conforme">Recibido Conforme</div>
+                    <div class="signature-line"></div>
                 </div>
                 <script>
                     window.onload = function() {
