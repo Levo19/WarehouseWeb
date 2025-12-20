@@ -445,6 +445,7 @@ class App {
             if (result.status === 'success') {
                 // Update to store full product object
                 this.products = result.data; // Store raw array for array-based lookups (Envasador)
+                this.clients = result.clients || ['ZONA1', 'ZONA2', 'TIENDA', 'PERSONAL']; // Store Dynamic Clients
 
                 result.data.forEach(p => {
                     // Optimize the image URL immediately upon storage
@@ -4665,10 +4666,9 @@ class App {
                      <div style="margin-bottom:1.5rem;">
                         <label style="display:block; font-weight:bold; margin-bottom:0.5rem;">1. Seleccione Cliente / Zona</label>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;" id="qd-clients">
-                            <button type="button" class="btn-secondary option-btn selected" onclick="app.selectQuickClient(this, 'ZONA1')">ZONA 1</button>
-                            <button type="button" class="btn-secondary option-btn" onclick="app.selectQuickClient(this, 'ZONA2')">ZONA 2</button>
-                            <button type="button" class="btn-secondary option-btn" onclick="app.selectQuickClient(this, 'TIENDA')">TIENDA</button>
-                            <button type="button" class="btn-secondary option-btn" onclick="app.selectQuickClient(this, 'PERSONAL')">PERSONAL</button>
+                            ${(this.clients && this.clients.length > 0 ? this.clients : ['ZONA1', 'ZONA2', 'TIENDA', 'PERSONAL']).map((c, i) =>
+            `<button type="button" class="btn-secondary option-btn ${i === 0 ? 'selected' : ''}" onclick="app.selectQuickClient(this, '${c}')">${c}</button>`
+        ).join('')}
                         </div>
                      </div>
 
