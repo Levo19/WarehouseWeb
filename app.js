@@ -806,7 +806,26 @@ class App {
 
                     <!-- BACK -->
                     <div class="card-back">
-                        <h5 style="margin-bottom:1rem; border-bottom:1px solid #ddd; padding-bottom:0.5rem;">Detalles del Producto</h5>
+                        <div style="display:flex; justify-content:space-between; align-items:start; border-bottom:1px solid #ddd; padding-bottom:0.5rem; margin-bottom:1rem;">
+                            <h5 style="margin:0;">Detalles</h5>
+                            <button onclick="event.stopPropagation(); app.showProductHistory('${code}', '${product.desc.replace(/'/g, "")}')" 
+                                    style="
+                                        background: rgba(79, 70, 229, 0.1); 
+                                        color: var(--primary-color); 
+                                        border: none; 
+                                        border-radius: 20px; 
+                                        padding: 4px 10px; 
+                                        font-size: 0.75rem; 
+                                        cursor: pointer; 
+                                        font-weight: 600;
+                                        transition: all 0.3s ease;
+                                    "
+                                    onmouseover="this.style.background='var(--primary-color)'; this.style.color='white'; this.style.boxShadow='0 0 10px rgba(79, 70, 229, 0.4)';"
+                                    onmouseout="this.style.background='rgba(79, 70, 229, 0.1)'; this.style.color='var(--primary-color)'; this.style.boxShadow='none';"
+                                    title="Ver Historial">
+                                <i class="fa-solid fa-clock-rotate-left"></i> Historial
+                            </button>
+                        </div>
                         
                         <div class="back-label">Descripción Completa</div>
                         <div class="back-value">${product.desc}</div>
@@ -2930,14 +2949,9 @@ class App {
 
                             <!-- BACK -->
                             <div class="card-back">
-                                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:0.5rem; margin-bottom:0.5rem;">
-                                    <h5 style="margin:0;">
-                                        ${isPending ? 'Historial Solicitudes' : 'Ítem Separado'}
-                                    </h5>
-                                    <button class="btn-sm" style="font-size:0.8rem; padding: 4px 8px; background:#eff6ff; color:var(--primary-color); border:none; border-radius:4px; cursor:pointer;" onclick="event.stopPropagation(); app.showProductHistory('${item.code}', '${item.desc.replace(/'/g, "")}')" title="Ver Historial Completo">
-                                        <i class="fa-solid fa-clock-rotate-left"></i> Historial
-                                    </button>
-                                </div>
+                                <h5 style="margin-bottom:0.5rem; border-bottom:1px solid #eee; padding-bottom:0.5rem;">
+                                    ${isPending ? 'Historial Solicitudes' : 'Ítem Separado'}
+                                </h5>
                                 
                                 ${isPending ? `
                                     <div style="flex:1; overflow-y: auto; padding: 2px; max-height: 250px; scrollbar-width: thin;">
