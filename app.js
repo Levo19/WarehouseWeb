@@ -4755,6 +4755,7 @@ class App {
                     payload: { code, desc, client, qty, usuario: this.currentUser.username }
                 })
             });
+            const result = await response.json();
             if (result.status === 'success') {
                 this.closeModal();
                 this.showToast('Despacho Guardado (2do Plano)', 'success');
