@@ -2332,3 +2332,44 @@ h3 {
     font-size: 0.85rem;
     font-weight: 600;
 }
+
+/* DISPATCH FLOATING BUTTON */
+.fab-dispatch {
+    position: absolute;
+    bottom: 2rem;
+    right: 2rem;
+    width: 65px;
+    height: 65px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    /* Emerald 500-600 */
+    color: white;
+    border-radius: 50%;
+    border: none;
+    box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.5), 0 4px 6px -2px rgba(16, 185, 129, 0.3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 50;
+    /* Above card scroll */
+}
+
+.fab-dispatch:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.6), 0 8px 10px -6px rgba(16, 185, 129, 0.4);
+    background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+}
+
+.fab-dispatch:active {
+    transform: translateY(0) scale(0.95);
+}
+
+.fab-icon {
+    transition: transform 0.3s ease;
+}
+
+.fab-dispatch:hover .fab-icon {
+    transform: rotate(-15deg);
+}
