@@ -1266,66 +1266,24 @@ class App {
             return { ...d, descripcion: product ? product.desc : 'Desconocido' };
         });
 
-        const printWindow = window.open('', '_blank', 'width=400,height=600');
+        const printWindow = window.open('', '_blank', 'width=450,height=600');
         if (!printWindow) return alert('Bloqueo de ventanas emergentes activado.');
 
-        printWindow.document.write(`
-            <html>
-            <head>
-                <title>Ticket Guía ${id}</title>
-                <style>
-                    body { font-family: 'Arial', sans-serif; padding: 2px; max-width: 300px; margin: 0 auto; color: #000; }
-                    .header { text-align: center; margin-bottom: 10px; border-bottom: 2px solid black; padding-bottom: 5px; }
-                    h1 { margin: 0; font-size: 1.4rem; font-weight: 900; text-transform: uppercase; }
-                    h2 { margin: 2px 0; font-size: 1rem; font-weight: bold; }
-                    .meta { font-size: 0.9rem; margin-bottom: 5px; font-weight: bold; }
-                    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-                    th { text-align: left; border-bottom: 2px solid black; padding: 5px 0; font-weight: 900; }
-                    td { padding: 8px 0; border-bottom: 1px dashed #000; vertical-align: top; }
-                    .qty { text-align: right; width: 40px; font-weight: 900; font-size: 1.1rem; }
-                    .footer { margin-top: 15px; border-top: 2px solid black; padding-top: 5px; text-align: center; font-size: 0.8rem; font-weight: bold; }
-                    .p-name { font-weight: 900; font-size: 1rem; margin-bottom: 2px; display:block; }
-                    .p-code { font-weight: bold; font-size: 0.85rem; color: #000; }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <h1>${guiaInfo.proveedor || 'SIN PROVEEDOR'}</h1>
-                    <h2>ID: ${id.replace('undefined', '').slice(0, 8)}...</h2>
-                    <div class="meta">${guiaInfo.fecha}<br>Usuario: ${guiaInfo.usuario}</div>
-                </div>
-                
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Producto / Código</th>
-                            <th class="qty">Cant.</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${enriched.map(p => `
-                            <tr>
-                                <td>
-                                    <span class="p-name">${p.descripcion}</span>
-                                    <span class="p-code">${p.codigo}</span>
-                                </td>
-                                <td class="qty">${p.cantidad}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${id}`;
+        const tipoTitulo = `GUÍA DE ${guiaInfo.tipo || 'MOVIMIENTO'}`;
 
-                <div class="footer">
-                    <p>LEVO ERP<br>Control de Inventario</p>
-                </div>
-                
-                <script>
-                    window.onload = function() { window.print(); window.close(); }
-                </script>
-            </body>
-            </html>
-        `);
-        printWindow.document.close();
+        this.writeReceiptHtml(printWindow, {
+            title: 'LEVO ERP',
+            subtitle: tipoTitulo,
+            meta: {
+                'ID': id.substring(0, 13) + '...',
+                'Fecha': guiaInfo.fecha,
+                'Destino/Prov': guiaInfo.proveedor,
+                'Usuario': guiaInfo.usuario
+            },
+            items: enriched.map(e => ({ desc: e.descripcion, code: e.codigo, qty: e.cantidad })),
+            qr: qrUrl
+        });
     }
 
     openImageModal(url) {
@@ -4790,75 +4748,106 @@ class App {
     }
 
     printQuickTicket(data, existingWin) {
-        // Data contains: { idGuia, fecha, cliente, items: [{desc, qty, code}], qrData }
         let win = existingWin;
         if (!win || win.closed) {
-            win = window.open('', 'Imprimir Ticket', 'width=400,height=600');
+            win = window.open('', 'Imprimir Ticket', 'width=450,height=600');
         }
-        if (!win) {
-            alert('Por favor habilite las ventanas emergentes (Popups) para imprimir el ticket.');
-            return;
-        }
+        if (!win) return alert('Habilite Popups');
+
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${data.idGuia}`;
+
+        this.writeReceiptHtml(win, {
+            title: 'LEVO ERP',
+            subtitle: 'GUÍA DE SALIDA',
+            meta: {
+                'ID': data.idGuia.substring(0, 13) + '...',
+                'Fecha': data.fecha,
+                'Destino': data.cliente,
+                'Usuario': data.usuario || this.currentUser.username
+            },
+            items: data.items,
+            qr: qrUrl
+        });
+    }
+
+    // Shared Helper for Receipt HTML
+    writeReceiptHtml(win, data) {
+        // data: { title, subtitle, meta: {}, items: [{desc, code, qty}], qr }
         const itemsHtml = data.items.map(item => `
-            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:5px; border-bottom:1px dotted #ccc; padding-bottom:2px;">
-                <div style="width:75%; padding-right:5px;">
-                    <div style="font-weight:bold; font-size:12px; line-height:1.2;">${item.desc}</div>
-                    <div style="font-size:10px; font-family:monospace;">${item.code}</div>
+            <div class="item-row">
+                <div class="item-desc">
+                    <span class="desc-text">${item.desc}</span>
+                    <span class="code-text">${item.code || ''}</span>
                 </div>
-                <div style="font-size:14px; font-weight:bold;">${item.qty}</div>
+                <div class="item-qty">${item.qty}</div>
             </div>
         `).join('');
 
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(data.idGuia)}`;
+        const metaHtml = Object.entries(data.meta).map(([key, val]) => `
+            <div class="meta-row"><span class="label">${key}:</span> <span class="val">${val}</span></div>
+        `).join('');
 
         win.document.open();
         win.document.write(`
             <html>
-                <head>
-                    <title>Ticket de Salida</title>
-                    <style>
-                        @page { size: auto; margin: 0mm; }
-                        body { 
-                            font-family: 'Courier New', monospace; 
-                            margin: 5px; 
-                            padding: 0;
-                            width: calc(100% - 10px); 
-                            background: white;
-                        }
-                        .text-center { text-align: center; }
-                        .bold { font-weight: bold; }
-                        .dashed { border-top: 1px dashed #000; margin: 8px 0; }
-                        .qr { width: 120px; height: 120px; margin: 10px auto; display:block; }
-                        .ticket-container { width: 100%; max-width: 80mm; margin: 0 auto; }
-                    </style>
-                </head>
-                <body onload="setTimeout(function(){window.print();}, 500)">
-                    <div class="ticket-container">
-                        <div class="text-center bold" style="font-size:16px;">LEVO ERP</div>
-                        <div class="text-center bold" style="font-size:14px; margin-bottom:5px;">GUÍA DE SALIDA</div>
-                        
-                        <img src="${qrUrl}" class="qr" alt="QR Code" onerror="this.style.display='none'">
-                        
-                        <div class="text-center" style="font-size:10px;">ID: ${data.idGuia.substring(0, 8)}...</div>
+            <head>
+                <title>Ticket ${data.subtitle}</title>
+                <style>
+                    @page { size: 80mm auto; margin: 0; }
+                    body { 
+                        width: 76mm; /* Safe width for 80mm paper */
+                        margin: 0 auto; 
+                        padding: 5px 2px;
+                        font-family: 'Courier New', monospace; 
+                        color: #000;
+                        background: #fff;
+                    }
+                    .header { text-align: center; margin-bottom: 10px; }
+                    .title { font-size: 16px; font-weight: 900; margin: 0; }
+                    .subtitle { font-size: 14px; font-weight: bold; margin: 2px 0; border-bottom: 2px dashed #000; padding-bottom: 5px; }
+                    
+                    .qr-container { text-align: center; margin: 10px 0; }
+                    .qr-img { width: 100px; height: 100px; }
+                    
+                    .meta-info { font-size: 11px; margin-bottom: 10px; border-bottom: 1px dashed #000; padding-bottom: 5px; }
+                    .meta-row { display: flex; margin-bottom: 2px; }
+                    .label { font-weight: bold; width: 80px; flex-shrink: 0; }
+                    .val { white-space: normal; word-break: break-word; }
 
-                        <div class="dashed"></div>
-                        
-                        <div style="font-size:12px;"><span class="bold">Destino:</span> ${data.cliente}</div>
-                        <div style="font-size:12px;"><span class="bold">Fecha:</span> ${data.fecha}</div>
-                        
-                        <div class="dashed"></div>
-                        
-                        ${itemsHtml}
-                        
-                        <div class="dashed"></div>
-                        <div style="margin-top:5px; font-weight:bold; font-size:14px;">TOTAL ITEMS: ${data.items.length}</div>
-                        
-                        <br><br>
-                        <div class="dashed"></div>
-                        <div class="text-center" style="margin-top:5px;">Recibido Conforme</div>
-                        <br>
-                    </div>
-                </body>
+                    .items-container { margin-top: 5px; }
+                    .item-row { display: flex; align-items: flex-start; margin-bottom: 6px; border-bottom: 1px dotted #ccc; padding-bottom: 2px; }
+                    .item-desc { flex: 1; padding-right: 5px; overflow: hidden; }
+                    .desc-text { display: block; font-weight: bold; font-size: 12px; line-height: 1.1; margin-bottom: 2px; }
+                    .code-text { display: block; font-size: 10px; color: #333; }
+                    .item-qty { font-weight: 900; font-size: 14px; width: 40px; text-align: right; margin-top: 2px; }
+
+                    .footer { margin-top: 15px; text-align: center; font-size: 10px; border-top: 2px solid #000; padding-top: 10px; }
+                </style>
+            </head>
+            <body onload="setTimeout(function(){window.print();}, 500)">
+                <div class="header">
+                    <div class="title">${data.title}</div>
+                    <div class="subtitle">${data.subtitle}</div>
+                </div>
+
+                <div class="qr-container">
+                    <img src="${data.qr}" class="qr-img" alt="QR">
+                </div>
+
+                <div class="meta-info">
+                    ${metaHtml}
+                </div>
+
+                <div class="items-container">
+                    ${itemsHtml}
+                </div>
+
+                <div class="footer">
+                    <div>RECIBIDO CONFORME</div>
+                    <br><br>
+                    <div style="border-top:1px solid #000; width:60%; margin:0 auto; padding-top:2px;">Firma</div>
+                </div>
+            </body>
             </html>
         `);
         win.document.close();
