@@ -2478,6 +2478,14 @@ class App {
             btn.disabled = true;
         }
 
+        // PRE-OPEN WINDOW TO AVOID POPUP BLOCKER
+        const printWindow = window.open('', '_blank', 'width=450,height=600');
+        if (printWindow) {
+            printWindow.document.write('<html><body style="font-family:sans-serif; text-align:center; padding-top:50px;"><h3>Procesando Despacho...</h3><p>Por favor espere.</p></body></html>');
+        } else {
+            console.warn("Popup blocked");
+        }
+
         try {
             // Prepare unique items for receipt (aggregate by code)
             const receiptItems = {};
@@ -2494,7 +2502,7 @@ class App {
             // API Call
             const payload = {
                 zone: zone,
-                usuario: this.state.currentUser || 'Admin', // Fallback
+                usuario: this.currentUser ? this.currentUser.username : 'Admin',
                 items: itemsToDispatch.map(r => ({
                     idSolicitud: r.idSolicitud,
                     codigo: r.codigo,
@@ -2518,8 +2526,10 @@ class App {
             if (result.status === 'success') {
                 this.showToast('Despacho Exitoso', 'success');
 
-                // Print Receipt
-                this.printDispatchReceipt(zone, receiptArray, result.data.idGuia, result.data.date);
+                // Print Receipt (Using pre-opened window)
+                if (printWindow) {
+                    this.printDispatchReceipt(printWindow, zone, receiptArray, result.data.idGuia, result.data.date);
+                }
 
                 // Update Local Data (Mark as 'despachado')
                 itemsToDispatch.forEach(item => {
@@ -2533,6 +2543,7 @@ class App {
 
             } else {
                 alert('Error al despachar: ' + result.message);
+                if (printWindow) printWindow.close(); // Close empty window
                 if (btn) {
                     btn.innerHTML = '<i class="fa-solid fa-truck-fast fab-icon"></i>';
                     btn.disabled = false;
@@ -2541,7 +2552,8 @@ class App {
 
         } catch (e) {
             console.error(e);
-            alert('Error de conexión');
+            if (printWindow) printWindow.close(); // Close empty window on error
+            alert('Error de conexión: ' + e.message);
             if (btn) {
                 btn.innerHTML = '<i class="fa-solid fa-truck-fast fab-icon"></i>';
                 btn.disabled = false;
@@ -2549,10 +2561,15 @@ class App {
         }
     }
 
-    printDispatchReceipt(zone, items, guiaId, date) {
+    printDispatchReceipt(printWindow, zone, items, guiaId, date) {
+        if (!printWindow) {
+            console.error('Print window not provided or blocked');
+            return;
+        }
         const totalQty = items.reduce((acc, i) => acc + i.qty, 0);
 
-        const printWindow = window.open('', '_blank', 'width=400,height=600');
+        // printWindow is already opened, just write to it.
+        printWindow.document.open();
         printWindow.document.write(`
             <html>
             <head>
