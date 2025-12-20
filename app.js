@@ -2445,6 +2445,171 @@ class App {
         }
     }
 
+    async handleDispatchZone(zone) {
+        // 1. Filter Items to Dispatch
+        // Re-use logic: Same Day + User/Zone + Category 'separado'
+        const todayStr = new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }); // dd/mm/yyyy
+
+        // We need robust "today" check matching the server format if possible, 
+        // but local check is usually fine if we only care about what's visible.
+        // Let's assume the user sees what they should dispatch.
+
+        const itemsToDispatch = [];
+        const zoneLower = zone.toLowerCase();
+
+        this.data.requests.forEach(req => {
+            if (req.usuario.toLowerCase() !== zoneLower) return;
+            if (req.categoria !== 'separado') return;
+            // Date check passed implicitly if it's in the list? 
+            // Better to match what renderZonePickup does, but we can trust 'separado' status for the active view.
+            itemsToDispatch.push(req);
+        });
+
+        if (itemsToDispatch.length === 0) {
+            alert('No hay ítems separados para despachar.');
+            return;
+        }
+
+        if (!confirm(`¿Confirmar despacho de ${itemsToDispatch.length} ítems para ${zone.toUpperCase()}?`)) return;
+
+        const btn = document.querySelector('.fab-dispatch');
+        if (btn) {
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+        }
+
+        try {
+            // Prepare unique items for receipt (aggregate by code)
+            const receiptItems = {};
+            itemsToDispatch.forEach(req => {
+                const code = req.codigo;
+                if (!receiptItems[code]) {
+                    const prod = this.data.products[code] || { desc: 'Desconocido' };
+                    receiptItems[code] = { code, desc: prod.desc, qty: 0 };
+                }
+                receiptItems[code].qty += parseFloat(req.cantidad);
+            });
+            const receiptArray = Object.values(receiptItems);
+
+            // API Call
+            const payload = {
+                zone: zone,
+                usuario: this.state.currentUser || 'Admin', // Fallback
+                items: itemsToDispatch.map(r => ({
+                    idSolicitud: r.idSolicitud,
+                    codigo: r.codigo,
+                    cantidad: r.cantidad,
+                    desc: '' // optional
+                }))
+            };
+
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: 'processZoneDispatch',
+                    payload: payload
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                this.showToast('Despacho Exitoso', 'success');
+
+                // Print Receipt
+                this.printDispatchReceipt(zone, receiptArray, result.data.idGuia, result.data.date);
+
+                // Update Local Data (Mark as 'despachado')
+                itemsToDispatch.forEach(item => {
+                    const ref = this.data.requests.find(r => r.idSolicitud === item.idSolicitud);
+                    if (ref) ref.categoria = 'despachado';
+                });
+
+                // Re-render
+                const zoneContainer = document.getElementById('zone-content');
+                if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
+
+            } else {
+                alert('Error al despachar: ' + result.message);
+                if (btn) {
+                    btn.innerHTML = '<i class="fa-solid fa-truck-fast fab-icon"></i>';
+                    btn.disabled = false;
+                }
+            }
+
+        } catch (e) {
+            console.error(e);
+            alert('Error de conexión');
+            if (btn) {
+                btn.innerHTML = '<i class="fa-solid fa-truck-fast fab-icon"></i>';
+                btn.disabled = false;
+            }
+        }
+    }
+
+    printDispatchReceipt(zone, items, guiaId, date) {
+        const totalQty = items.reduce((acc, i) => acc + i.qty, 0);
+
+        const printWindow = window.open('', '_blank', 'width=400,height=600');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Ticket de Despacho</title>
+                <style>
+                    body { font-family: 'Courier New', monospace; padding: 20px; font-size: 12px; }
+                    .header { text-align: center; margin-bottom: 20px; border-bottom: 1px dashed black; padding-bottom: 10px; }
+                    .info { margin-bottom: 15px; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                    th { text-align: left; border-bottom: 1px solid black; }
+                    td { padding: 4px 0; }
+                    .footer { text-align: center; margin-top: 30px; border-top: 1px dashed black; padding-top: 10px; }
+                    .total { font-weight: bold; font-size: 14px; text-align: right; margin-top: 10px; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h2 style="margin:0;">LEVO ERP</h2>
+                    <div>GUÍA DE SALIDA</div>
+                    <div style="font-size:10px;">ID: ${guiaId}</div>
+                </div>
+                <div class="info">
+                    <div><strong>Cliente/Zona:</strong> ${zone.toUpperCase()}</div>
+                    <div><strong>Fecha:</strong> ${date}</div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Desc</th>
+                            <th style="text-align:right;">Cant</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${items.map(item => `
+                            <tr>
+                                <td>${item.desc.substring(0, 25)}<br><span style="font-size:10px;color:#666;">${item.code}</span></td>
+                                <td style="text-align:right;">${item.qty}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                <div class="total">TOTAL UNIDADES: ${totalQty}</div>
+                <div class="footer">
+                    <p>Recibido Conforme</p>
+                    <br><br>
+                    __________________________
+                </div>
+                <script>
+                    window.print();
+                    setTimeout(() => window.close(), 1000);
+                </script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    }
+
     renderZonePickup(zone, container) {
         // 0. PRESERVE SCROLL POSITION
         const pendingScrollDiv = container.querySelector('.column-pending .scroll-container');
