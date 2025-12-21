@@ -600,6 +600,24 @@ class App {
         }
     }
 
+    triggerBarcodeScan() {
+        // Feature: Focus search input for External Scanner or Mobile Keyboard Camera
+        const searchInput = document.getElementById('dispatch-search-input');
+        if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+            // Optional: visual feedback
+            const icon = document.querySelector('.search-bar-header .barcode-icon');
+            if (icon) {
+                icon.style.color = 'var(--primary-color)';
+                setTimeout(() => icon.style.color = '#333', 500);
+            }
+            // If we had a scanning library (QuaggaJS/Html5Qrcode), we would launch that overlay here.
+            // For now, we rely on Native Mobile Keyboard "Scan Text" or Hardware Scanners.
+            console.log('Barcode Scan Triggered - Input Focused');
+        }
+    }
+
     /**
      * DISPATCH MODULE - NEW HIERARCHY
      * Zone Selection -> Tabs (Requests | Pickup)
@@ -651,8 +669,8 @@ class App {
                 <div class="header-dispatch-toolbar">
                     <div class="search-bar-header">
                         <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                        <input type="text" id="dispatch-search-input" placeholder="Buscar producto o código..." onkeyup="app.filterDispatchView(this.value)">
-                        <i class="fa-solid fa-barcode barcode-icon" title="Escanear Código"></i>
+                        <input type="text" id="dispatch-search-input" placeholder="Buscar producto..." onkeyup="app.filterDispatchView(this.value)" inputmode="search" enterkeyhint="search">
+                        <i class="fa-solid fa-barcode barcode-icon" title="Escanear con Cámara" onclick="app.triggerBarcodeScan()"></i>
                     </div>
                     <div class="client-buttons-group">
                         ${buttonsHtml}
