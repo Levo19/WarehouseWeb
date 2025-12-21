@@ -32,21 +32,40 @@ class App {
         }
 
         // Background Auto-Refresh (Every 45s)
-        // Background Auto-Refresh (Disabled as per user request for Manual Control)
-        // setInterval(() => {
-        //     if (this.currentUser && this.state.currentModule === 'dispatch-view') {
-        //         console.log('🔄 Auto-refreshing Dispatch Data...');
-        //         this.fetchRequests().then(() => {
-        //             // Refresh Active Zone View
-        //             const activeBtn = document.querySelector('.zone-carousel .btn-secondary.active');
-        //             if (activeBtn) {
-        //                 const zone = activeBtn.innerText.toLowerCase().replace('zona ', 'zona');
-        //                 const zoneContainer = document.getElementById('zone-content');
-        //                 if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
-        //             }
-        //         });
-        //     }
-        // }, 45000);
+        // Background Auto-Refresh (Disabled per user request)
+        // ...
+
+        // MOBILE SIDEBAR LOGIC
+        const mobileBtn = document.getElementById('mobile-menu-btn');
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        function toggleSidebar() {
+            if (sidebar) sidebar.classList.toggle('active');
+            if (overlay) overlay.classList.toggle('active');
+        }
+
+        if (mobileBtn) {
+            mobileBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleSidebar();
+            });
+        }
+
+        if (overlay) {
+            overlay.addEventListener('click', toggleSidebar);
+        }
+
+        // Close sidebar when clicking a link on mobile
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    if (sidebar) sidebar.classList.remove('active');
+                    if (overlay) overlay.classList.remove('active');
+                }
+            });
+        });
     }
 
     cacheDOM() {
