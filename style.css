@@ -2718,6 +2718,8 @@ h3 {
     .top-bar {
         padding: 0 1rem;
         gap: 0.5rem;
+        z-index: 1001;
+        /* Ensure button is clicky above other elements */
     }
 
     #page-title {
@@ -2725,18 +2727,71 @@ h3 {
         margin-right: auto;
     }
 
+    /* REDESIGNED DISPATCH TOOLBAR FOR MOBILE */
     .header-dispatch-toolbar {
         margin-right: 0;
         gap: 0.5rem;
+        flex-direction: column;
+        /* Stack Search & Clients */
+        width: 100%;
+        align-items: stretch;
+        margin-top: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Row 1: Search */
+    .search-bar-header {
+        width: 100%;
     }
 
     .search-bar-header input {
-        width: 140px;
+        width: 100% !important;
+        /* Full width */
+        padding-right: 30px;
+        /* Space for barcode */
     }
 
-    .search-bar-header input:hover,
-    .search-bar-header input:focus {
-        width: 180px;
+    /* Barcode Icon - Ensure it looks tappable */
+    .search-bar-header .barcode-icon {
+        font-size: 1.2rem;
+        padding: 5px;
+        right: 1rem;
+        color: #333;
+    }
+
+    /* Row 2: Client/Zone Buttons (Horizontally Scrollable) */
+    .client-buttons-group {
+        width: 100%;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 5px;
+        /* Space for scrollbar */
+        gap: 0.8rem;
+        -webkit-overflow-scrolling: touch;
+        /* Smooth scroll iOS */
+        scrollbar-width: none;
+        /* Hide scrollbar Firefox */
+    }
+
+    .client-buttons-group::-webkit-scrollbar {
+        display: none;
+        /* Hide scrollbar Chrome/Safari */
+    }
+
+    .btn-zone {
+        flex-shrink: 0;
+        /* Prevent squishing */
+        padding: 0.6rem 1.2rem;
+        font-size: 0.9rem;
+        border-radius: 50px;
+        background: #F1F5F9;
+        border: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Animations */
+    .btn-zone:active {
+        transform: scale(0.95);
     }
 
     /* 3. SPLIT VIEWS TO STACKED (Guias, Preingresos) */
