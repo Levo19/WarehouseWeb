@@ -466,7 +466,7 @@ class App {
                 result.data.forEach(p => {
                     // Optimize the image URL immediately upon storage
                     const stableImg = this.getOptimizedImageUrl(p.imagen);
-                    this.data.products[p.codigo] = { desc: p.descripcion, stock: p.stock, img: stableImg, min: p.min };
+                    this.data.products[p.codigo] = { codigo: p.codigo, desc: p.descripcion, stock: p.stock, img: stableImg, min: p.min };
                 });
 
                 // DATA DEBUG
