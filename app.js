@@ -2661,8 +2661,6 @@ class App {
             return;
         }
 
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
-        btn.disabled = true;
 
         // 1. SEND DATA ONLY (Fast)
         const payload = {
