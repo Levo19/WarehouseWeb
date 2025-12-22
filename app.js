@@ -2840,7 +2840,7 @@ class App {
                 usuario: this.currentUser ? this.currentUser.username : 'Admin',
                 items: itemsToDispatch.map(r => ({
                     idSolicitud: r.idSolicitud,
-                    codigo: r.codigo,
+                    codigo: String(r.codigo),
                     cantidad: r.cantidad,
                     desc: '' // optional
                 }))
