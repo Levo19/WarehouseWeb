@@ -1974,75 +1974,224 @@ class App {
     }
 
     // MODALS & FORMS
+    // MODALS & FORMS
     openNewGuiaModal(type) {
         const title = type === 'INGRESO' ? 'Nueva Guía de Ingreso' : 'Nueva Guía de Salida';
-
-        // Providers Options
         const providers = this.data.providers || [];
-        const providerOptions = providers.map(p => `<option value="${p.nombre}"></option>`).join('');
-
-
+        const providerOptions = providers.map(p => `<option value="${p.nombre}">`).join('');
 
         const modalHtml = `
-                <div class="modal-header">
-            <h3>${title}</h3>
-            <button class="modal-close" onclick="app.closeModal()">&times;</button>
-        </div>
-            <div class="modal-body">
-                <form id="new-guia-form">
+            <div class="modern-modal-wrapper">
+                <!-- Header -->
+                <div class="modern-header">
+                    <button class="close-btn" onclick="app.closeModal()"><i class="fa-solid fa-xmark"></i></button>
+                    <h3>${title}</h3>
+                    <button class="save-mobile-btn" onclick="app.saveGuia('${type}')">
+                        Guardar <i class="fa-solid fa-check"></i>
+                    </button>
+                </div>
 
+                <!-- Body -->
+                <div class="modern-body">
                     
-                    <div class="input-group">
-                         <input type="text" id="guia-proveedor" list="provider-list" placeholder="${type === 'INGRESO' ? 'Proveedor' : 'Destino'}" required style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
-                         <datalist id="provider-list">
-                            ${providerOptions}
-                         </datalist>
-                    </div>
-                    
-                    <div class="input-group">
-                        <textarea id="guia-comentario" placeholder="Comentarios..." rows="2" style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:4px;"></textarea>
-                    </div>
+                    <!-- Section 1: Information -->
+                    <div class="form-section">
+                        <div class="section-header">
+                            <h4>Información General</h4>
+                        </div>
+                        
+                        <div class="input-group floating">
+                            <input type="text" id="guia-proveedor" placeholder=" " list="provider-list" required autocomplete="off">
+                            <label>${type === 'INGRESO' ? 'Proveedor' : 'Destino'}</label>
+                            <datalist id="provider-list">
+                                ${providerOptions}
+                            </datalist>
+                        </div>
 
-                    <!-- Photo Widget (One only for Guia main) -->
-                    <div class="photo-widget" id="guia-photo-widget">
-                        <input type="file" id="guia-file-input" accept="image/*" class="file-input-hidden" onchange="app.handlePhotoSelect(this, 'guia-preview')">
-                        <div id="guia-preview" class="photo-preview-grid"></div>
-                        <div class="photo-controls">
-                             <button type="button" class="btn-secondary" onclick="document.getElementById('guia-file-input').click()">
-                                <i class="fa-solid fa-camera"></i> Adjuntar Foto
-                             </button>
+                        <div class="input-group floating">
+                            <textarea id="guia-comentario" placeholder=" "></textarea>
+                            <label>Comentarios / Observaciones</label>
                         </div>
                     </div>
-                    
-                    <hr style="margin:1rem 0; border:0; border-top:1px solid #eee;">
-                    
-                    <!-- Product Adder -->
-                    <h4 style="margin-bottom:0.5rem;">Detalle de Productos</h4>
-                    <div style="margin-bottom:1rem; position:relative; width:100%;">
-                        <div class="search-neon-wrapper" style="flex:1; position:relative; width:100%;">
-                             <i class="fa-solid fa-barcode" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--primary-color);"></i>
-                             <input type="text" id="prod-search" placeholder="Buscar producto (Scan/Texto)..." 
-                                    style="width:100% !important; padding-left:35px; height:45px; box-sizing:border-box;" 
-                                    onkeyup="app.searchProductForGuia(this, event)">
-                        </div>
-                        <!-- Button removed as requested (Auto-add enabled) -->
-                        <button type="button" class="btn-primary" style="height:45px; width:45px; font-size:1.2rem; border-radius: 8px; display:none;" onclick="app.addProductToGuia()"><i class="fa-solid fa-plus"></i></button>
-                    </div>
-                    <div id="prod-search-results" style="background:white; border:1px solid #eee; position:absolute; z-index:10; width:60%; display:none;"></div>
-                    
-                    <div id="temp-prods-list" class="temp-product-list">
-                        <!-- Added Items -->
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" onclick="app.closeModal()">Cancelar</button>
-                <button class="btn-primary" onclick="app.saveGuia('${type}')">Guardar Guía</button>
-            </div>
-                `;
 
-        this.openModal(modalHtml);
-        this.tempGuiaProducts = []; // Reset temp list
+                    <!-- Section 2: Products -->
+                    <div class="form-section">
+                        <div class="section-header">
+                            <h4>Productos</h4>
+                            <button class="btn-neon-small" onclick="app.openGuiaSpotlight()">
+                                <i class="fa-solid fa-plus"></i> Agregar
+                            </button>
+                        </div>
+
+                        <!-- Empty State or List -->
+                        <div id="temp-prods-list" class="cards-list">
+                            <div style="text-align:center; padding:1rem; color:#999; font-size:0.9rem;">
+                                No hay productos agregados via modal.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Attachments -->
+                    <div class="form-section">
+                        <div class="section-header">
+                            <h4>Adjuntos</h4>
+                        </div>
+                        <div class="photo-upload-area" onclick="document.getElementById('guia-file-input').click()">
+                            <input type="file" id="guia-file-input" accept="image/*" class="file-input-hidden" onchange="app.handlePhotoSelect(this, 'guia-preview-area')" hidden>
+                            <div id="guia-preview-area">
+                                <i class="fa-solid fa-camera photo-upload-icon"></i>
+                                <p class="photo-upload-text">Toca para tomar/subir foto</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div> 
+
+                <!-- Desktop Footer -->
+                <div class="modern-footer">
+                    <button class="btn-secondary" onclick="app.closeModal()">Cancelar</button>
+                    <button class="btn-primary" onclick="app.saveGuia('${type}')">
+                        Guardar Guía <i class="fa-solid fa-save"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        this.openModal(modalHtml, 'modern-modal');
+        this.tempGuiaProducts = [];
+
+        setTimeout(() => {
+            const provInput = document.getElementById('guia-proveedor');
+            if (provInput) provInput.focus();
+        }, 300);
+    }
+
+    // SPOTLIGHT SEARCH LOGIC
+    openGuiaSpotlight() {
+        const overlay = document.createElement('div');
+        overlay.className = 'spotlight-overlay';
+        overlay.id = 'guia-spotlight';
+        overlay.innerHTML = `
+            <div class="spotlight-box">
+                <div class="spotlight-search-bar">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" class="spotlight-input" id="spotlight-input" placeholder="Buscar producto..." autocomplete="off">
+                    <button class="icon-btn" onclick="document.getElementById('guia-spotlight').remove()"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="spotlight-results" id="spotlight-results"></div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const input = document.getElementById('spotlight-input');
+        input.focus();
+
+        input.addEventListener('keyup', (e) => this.handleSpotlightSearch(e));
+
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.remove();
+        });
+
+        this.renderSpotlightResults(Object.values(this.data.products).slice(0, 20));
+    }
+
+    handleSpotlightSearch(e) {
+        const term = e.target.value.toLowerCase();
+        const products = Object.values(this.data.products);
+
+        if (!term) {
+            this.renderSpotlightResults(products.slice(0, 20));
+            return;
+        }
+
+        const filtered = products.filter(p =>
+            (p.desc && p.desc.toLowerCase().includes(term)) ||
+            (p.codigo && String(p.codigo).toLowerCase().includes(term))
+        ).slice(0, 50);
+
+        this.renderSpotlightResults(filtered);
+    }
+
+    renderSpotlightResults(products) {
+        const container = document.getElementById('spotlight-results');
+        if (!products.length) {
+            container.innerHTML = '<div style="padding:1rem; text-align:center; color:#999;">No se encontraron productos</div>';
+            return;
+        }
+
+        container.innerHTML = products.map(p => `
+            <div class="spotlight-item" onclick="app.addSpotlightProduct('${p.codigo}')">
+                <div style="flex:1;">
+                    <div class="spotlight-item-name">${p.desc}</div>
+                    <div class="spotlight-item-code">${p.codigo}</div>
+                </div>
+                <div class="spotlight-item-stock">Stock: ${p.stock || 0}</div>
+            </div>
+        `).join('');
+    }
+
+    addSpotlightProduct(code) {
+        // Find product by code (key or property)
+        let product = this.data.products[code];
+        // fallback if key mismatch (though it should matches key)
+        if (!product) product = Object.values(this.data.products).find(p => p.codigo === code);
+
+        if (!product) return;
+
+        const existing = this.tempGuiaProducts.find(p => p.codigo === code);
+        if (existing) {
+            existing.cantidad++;
+        } else {
+            this.tempGuiaProducts.push({
+                codigo: product.codigo,
+                nombre: product.desc,
+                cantidad: 1
+            });
+        }
+
+        this.renderTempGuiaProducts();
+        document.getElementById('guia-spotlight').remove();
+    }
+
+    renderTempGuiaProducts() {
+        const container = document.getElementById('temp-prods-list');
+        if (this.tempGuiaProducts.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:1rem; color:#999;">No hay productos agregados.</div>';
+            return;
+        }
+
+        container.innerHTML = this.tempGuiaProducts.map((p, index) => `
+            <div class="guia-prod-card">
+                <div class="guia-prod-icon">
+                    <i class="fa-solid fa-box"></i>
+                </div>
+                <div class="guia-prod-details">
+                    <div class="guia-prod-name">${p.nombre}</div>
+                    <div class="guia-prod-meta">${p.codigo}</div>
+                </div>
+                <div class="guia-prod-qty">
+                    <button class="qty-btn" onclick="app.updateTempGuiaQty(${index}, -1)">-</button>
+                    <input type="number" class="qty-input" value="${p.cantidad}" readonly>
+                    <button class="qty-btn" onclick="app.updateTempGuiaQty(${index}, 1)">+</button>
+                </div>
+                <button class="guia-prod-remove" onclick="app.removeTempGuiaProduct(${index})">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+        `).join('');
+    }
+
+    updateTempGuiaQty(index, delta) {
+        const p = this.tempGuiaProducts[index];
+        p.cantidad += delta;
+        if (p.cantidad < 1) p.cantidad = 1;
+        this.renderTempGuiaProducts();
+    }
+
+    removeTempGuiaProduct(index) {
+        this.tempGuiaProducts.splice(index, 1);
+        this.renderTempGuiaProducts();
     }
 
     openNewPreingresoModal() {
