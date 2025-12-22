@@ -2226,14 +2226,15 @@ class App {
         }
 
         resultsDiv.innerHTML = filtered.map(p => {
-            const displayCode = p.codigo || p.code || 'N/A';
+            const displayCode = p.codigo || 'N/A';
+            const safeDesc = (p.desc || '').replace(/'/g, "\\'"); // Escape quotes for onclick
             return `
-            <div class="spotlight-item" onclick="app.selectInlineProduct('${displayCode}')">
+            <div class="spotlight-item" onclick="app.selectInlineProduct('${displayCode}')" style="display:flex; justify-content:space-between; align-items:center; padding:0.5rem;">
                 <div style="flex:1;">
-                    <div class="spotlight-item-name">${p.desc}</div>
-                    <div class="spotlight-item-code">${displayCode}</div>
+                    <div class="spotlight-item-name" style="font-weight:bold;">${p.desc}</div>
+                    <div class="spotlight-item-code" style="color:#666; font-size:0.85rem;">Code: ${displayCode}</div>
                 </div>
-                <div class="spotlight-item-stock">Stock: ${p.stock || 0}</div>
+                <!-- Stock removed as requested -->
             </div>
             `;
         }).join('');
