@@ -2290,65 +2290,96 @@ class App {
         const datalistOpts = providers.map(p => `<option value="${p.nombre}">`).join('');
 
         const modalHtml = `
-                    <div class="modal-header">
-                <h3>Nuevo Preingreso</h3>
-                <button class="modal-close" onclick="app.closeModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                 <!-- Proveedor -->
-                 <div class="input-group">
-                     <label>Proveedor</label>
-                     <input type="text" id="pre-proveedor" placeholder="Buscar Proveedor..." list="pre-prov-list" style="width:100%; padding:0.5rem;" autocomplete="off">
-                     <datalist id="pre-prov-list">${datalistOpts}</datalist>
-                </div>
-
-                <!-- Etiquetas & Comprobante -->
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
-                    <div class="input-group">
-                        <label>Etiqueta</label>
-                        <select id="pre-etiqueta" style="width:100%; padding:0.5rem;" onchange="app.togglePreingresoMonto()">
-                            <option value="Pedido Incompleto">Pedido Incompleto</option>
-                            <option value="Pedido Completo">Pedido Completo</option>
-                        </select>
+            <div class="modal-card" style="width:95%; max-width:600px; height:85vh; display:flex; flex-direction:column; overflow:hidden;">
+                <div class="modern-modal-wrapper" style="height:100%; display:flex; flex-direction:column;">
+                    <!-- Header -->
+                    <div class="modern-header">
+                        <button class="close-btn" onclick="app.closeModal()"><i class="fa-solid fa-xmark"></i></button>
+                        <h3>Nuevo Preingreso</h3>
+                        <button class="save-mobile-btn" onclick="app.savePreingreso()" style="z-index:9999;">Guardar</button>
                     </div>
-                    <div class="input-group">
-                        <label>Comprobante</label>
-                        <select id="pre-comprobante" style="width:100%; padding:0.5rem;">
-                            <option value="Sin Comprobante">Sin Comprobante</option>
-                            <option value="Con Comprobante">Con Comprobante</option>
-                        </select>
-                    </div>
-                </div>
 
-                <!-- Monto (Condicional) -->
-                <div class="input-group" id="pre-monto-group" style="display:none;">
-                    <label>Monto (S/)</label>
-                    <input type="number" id="pre-monto" placeholder="0.00" step="0.01" style="width:100%; padding:0.5rem;">
-                </div>
+                    <div class="modern-body" style="flex:1; overflow-y:auto;">
+                        
+                        <!-- Section 1: General -->
+                        <div class="form-section">
+                            <div class="section-header">
+                                <h4>Información General</h4>
+                            </div>
+                            
+                            <div class="input-group floating">
+                                <input type="text" id="pre-proveedor" placeholder=" " list="pre-prov-list" autocomplete="off">
+                                <label>Proveedor</label>
+                                <datalist id="pre-prov-list">${datalistOpts}</datalist>
+                            </div>
 
-                 <div class="input-group">
-                    <label>Observaciones</label>
-                    <textarea id="pre-comentario" placeholder="Observaciones..." rows="2" style="width:100%; padding:0.5rem;"></textarea>
-                </div>
-                
-                 <!-- Multi Photo Widget -->
-                <div class="photo-widget">
-                    <label>Fotos (Máx 4)</label>
-                    <input type="file" id="pre-file-input" accept="image/*" multiple class="file-input-hidden" onchange="app.handlePreingresoPhotos(this)">
-                    <div id="pre-preview" class="photo-preview-grid"></div>
-                    <div class="photo-controls">
-                         <button type="button" class="btn-secondary" onclick="document.getElementById('pre-file-input').click()">
-                            <i class="fa-solid fa-camera"></i> Agregar Fotos
-                         </button>
+                            <div class="input-group floating">
+                                <textarea id="pre-comentario" placeholder=" " rows="2"></textarea>
+                                <label>Observaciones</label>
+                            </div>
+                        </div>
+
+                        <!-- Section 2: Details -->
+                        <div class="form-section">
+                            <div class="section-header">
+                                <h4>Detalles</h4>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                                <div class="input-group">
+                                    <label style="font-size:0.8rem; color:#666; margin-bottom:4px; display:block;">Etiqueta</label>
+                                    <select id="pre-etiqueta" class="modern-select" style="width:100%; padding:0.8rem; border-radius:8px; border:1px solid #ddd;" onchange="app.togglePreingresoMonto()">
+                                        <option value="Pedido Incompleto">Pedido Incompleto</option>
+                                        <option value="Pedido Completo">Pedido Completo</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label style="font-size:0.8rem; color:#666; margin-bottom:4px; display:block;">Comprobante</label>
+                                    <select id="pre-comprobante" class="modern-select" style="width:100%; padding:0.8rem; border-radius:8px; border:1px solid #ddd;">
+                                        <option value="Sin Comprobante">Sin Comprobante</option>
+                                        <option value="Con Comprobante">Con Comprobante</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Monto (Condicional) -->
+                            <div class="input-group floating" id="pre-monto-group" style="display:none; margin-top:1rem;">
+                                <input type="number" id="pre-monto" placeholder=" " step="0.01">
+                                <label>Monto (S/)</label>
+                            </div>
+                        </div>
+
+                        <!-- Section 3: Attachments -->
+                        <div class="form-section">
+                            <div class="section-header">
+                                <h4>Adjuntos (Máx 4)</h4>
+                            </div>
+                            
+                            <div class="photo-widget">
+                                <input type="file" id="pre-file-input" accept="image/*" multiple class="file-input-hidden" onchange="app.handlePreingresoPhotos(this)" hidden>
+                                
+                                <div class="photo-controls" style="margin-bottom:10px;">
+                                     <button type="button" class="btn-secondary" onclick="document.getElementById('pre-file-input').click()" style="width:100%;">
+                                        <i class="fa-solid fa-camera"></i> Agregar Fotos
+                                     </button>
+                                </div>
+                                <div id="pre-preview" class="photo-preview-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap:10px;"></div>
+                            </div>
+                        </div>
+
+                    </div> 
+
+                    <!-- Desktop Footer -->
+                    <div class="modern-footer">
+                        <button class="btn-secondary" onclick="app.closeModal()">Cancelar</button>
+                        <button class="btn-primary" onclick="app.savePreingreso()">
+                            Guardar <i class="fa-solid fa-save"></i>
+                        </button>
                     </div>
                 </div>
             </div>
-             <div class="modal-footer">
-                <button class="btn-secondary" onclick="app.closeModal()">Cancelar</button>
-                <button class="btn-primary" onclick="app.savePreingreso()">Guardar</button>
-            </div>
-                `;
-        this.openModal(modalHtml);
+        `;
+        this.openModal(modalHtml, 'modern-modal');
     }
 
     togglePreingresoMonto() {
