@@ -2605,6 +2605,7 @@ class App {
     }
 
     // SAVE LOGIC
+    // SAVE LOGIC
     async savePreingreso() {
         const provider = document.getElementById('pre-proveedor').value;
         const comment = document.getElementById('pre-comentario').value;
@@ -2621,9 +2622,37 @@ class App {
             return alert('Debe ingresar el Monto para Pedido Completo');
         }
 
-        const btn = document.querySelector('.modal-footer .btn-primary');
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
-        btn.disabled = true;
+        // Fix: Select correct buttons (Mobile + Desktop)
+        const buttons = document.querySelectorAll('.save-mobile-btn, .modern-footer .btn-primary');
+        buttons.forEach(b => {
+            b.disabled = true;
+            b.dataset.originalText = b.innerHTML;
+            b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        });
+
+        // 1. OPTIMISTIC UI: Create Temp Item
+        const tempId = 'TEMP-' + Date.now();
+        const now = new Date();
+        const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+        const tempItem = {
+            id: tempId,
+            fecha: dateStr,
+            proveedor: provider,
+            etiqueta: etiqueta, // PENDIENTE/PROCESADO typically comes from backend, but we act as PENDIENTE
+            estado: 'GUARDANDO...',
+            fotos: images || [],
+            comentario: comment,
+            isTemp: true
+        };
+
+        if (!this.data.movimientos) this.data.movimientos = { preingresos: [] };
+        if (!this.data.movimientos.preingresos) this.data.movimientos.preingresos = [];
+
+        this.data.movimientos.preingresos.unshift(tempItem);
+        this.filterPreingresosList();
+        this.closeModal();
+        this.showToast("Guardando preingreso en segundo plano...", "info");
 
         try {
             const response = await fetch(API_URL, {
@@ -2645,19 +2674,28 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                alert('Preingreso guardado');
-                this.closeModal();
-                this.loadMovimientosData(); // Refresh
+                // Update Temp Item
+                const realId = result.id || result.data?.id; // backend response might vary
+
+                const idx = this.data.movimientos.preingresos.findIndex(p => p.id === tempId);
+                if (idx !== -1) {
+                    this.data.movimientos.preingresos[idx].id = realId || 'NEW-' + Date.now();
+                    this.data.movimientos.preingresos[idx].estado = 'PENDIENTE'; // Default
+                    delete this.data.movimientos.preingresos[idx].isTemp;
+                }
+
+                this.filterPreingresosList();
+                this.showToast("Preingreso guardado.", "success");
+                this.loadMovimientosData(true); // Sync
             } else {
-                alert('Error: ' + result.message);
-                btn.disabled = false;
-                btn.innerHTML = 'Guardar';
+                throw new Error(result.message);
             }
         } catch (e) {
             console.error(e);
-            alert('Error de conexión');
-            btn.disabled = false;
-            btn.innerHTML = 'Guardar';
+            alert('Error al guardar: ' + e.message);
+            // Revert
+            this.data.movimientos.preingresos = this.data.movimientos.preingresos.filter(p => p.id !== tempId);
+            this.filterPreingresosList();
         }
     }
 
