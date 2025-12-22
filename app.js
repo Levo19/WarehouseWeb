@@ -1985,82 +1985,83 @@ class App {
         const providerOptions = providers.map(p => `<option value="${p.nombre}">`).join('');
 
         const modalHtml = `
-            <div class="modern-modal-wrapper">
-                <!-- Header -->
-                <div class="modern-header">
-                    <button class="close-btn" onclick="app.closeModal()"><i class="fa-solid fa-xmark"></i></button>
-                    <h3>${title}</h3>
-                    <button class="save-mobile-btn" onclick="app.saveGuia('${type}')" style="z-index:1002; position:relative;">
-                        Guardar <i class="fa-solid fa-check"></i>
-                    </button>
-                </div>
+            <div class="modal-card" style="width:95%; max-width:800px; height:90vh; display:flex; flex-direction:column; overflow:hidden;">
+                <div class="modern-modal-wrapper" style="height:100%; display:flex; flex-direction:column;">
+                    <!-- Header -->
+                    <div class="modern-header">
+                        <button class="close-btn" onclick="app.closeModal()"><i class="fa-solid fa-xmark"></i></button>
+                        <h3>${title}</h3>
+                        <button class="save-mobile-btn" onclick="app.saveGuia('${type}')" style="z-index:9999;">
+                            Guardar <i class="fa-solid fa-check"></i>
+                        </button>
+                    </div>
 
-                <!-- Body -->
-                <div class="modern-body">
-                    
-                    <!-- Section 1: Information -->
-                    <div class="form-section">
-                        <div class="section-header">
-                            <h4>Información General</h4>
-                        </div>
+                    <div class="modern-body" style="flex:1; overflow-y:auto;">
                         
-                        <div class="input-group floating">
-                            <input type="text" id="guia-proveedor" placeholder=" " list="provider-list" required autocomplete="off">
-                            <label>${type === 'INGRESO' ? 'Proveedor' : 'Destino'}</label>
-                            <datalist id="provider-list">
-                                ${providerOptions}
-                            </datalist>
-                        </div>
+                        <!-- Section 1: Information -->
+                        <div class="form-section">
+                            <div class="section-header">
+                                <h4>Información General</h4>
+                            </div>
+                            
+                            <div class="input-group floating">
+                                <input type="text" id="guia-proveedor" placeholder=" " list="provider-list" required autocomplete="off">
+                                <label>${type === 'INGRESO' ? 'Proveedor' : 'Destino'}</label>
+                                <datalist id="provider-list">
+                                    ${providerOptions}
+                                </datalist>
+                            </div>
 
-                        <div class="input-group floating">
-                            <textarea id="guia-comentario" placeholder=" "></textarea>
-                            <label>Comentarios / Observaciones</label>
-                        </div>
-                    </div>
-
-                    <!-- Section 2: Products -->
-                    <div class="form-section">
-                        <div class="section-header" style="flex-direction:column; align-items:start; gap:0.5rem;">
-                            <h4>Productos</h4>
-                            <div style="position:relative; width:100%;">
-                                <input type="text" id="guia-inline-search" class="neon-input" placeholder="Escanear código o buscar..." 
-                                       style="width:100%; padding:0.8rem 2.5rem 0.8rem 1rem; border-radius:8px;"
-                                       onkeyup="app.handleInlineProdSearch(this, event)" autocomplete="off">
-                                <i class="fa-solid fa-barcode" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:#aaa;"></i>
-                                <div id="guia-inline-results" class="spotlight-results" style="position:absolute; top:100%; left:0; right:0; max-height:200px; display:none; border:1px solid #eee; background:white; z-index:1000; box-shadow:0 10px 15px rgba(0,0,0,0.1);"></div>
+                            <div class="input-group floating">
+                                <textarea id="guia-comentario" placeholder=" "></textarea>
+                                <label>Comentarios / Observaciones</label>
                             </div>
                         </div>
 
-                        <!-- Empty State or List -->
-                        <div id="temp-prods-list" class="cards-list">
-                            <div style="text-align:center; padding:1rem; color:#999; font-size:0.9rem;">
-                                No hay productos agregados via modal.
+                        <!-- Section 2: Products -->
+                        <div class="form-section">
+                            <div class="section-header" style="flex-direction:column; align-items:start; gap:0.5rem;">
+                                <h4>Productos</h4>
+                                <div style="position:relative; width:100%;">
+                                    <input type="text" id="guia-inline-search" class="neon-input" placeholder="Escanear código o buscar..." 
+                                           style="width:100%; padding:0.8rem 2.5rem 0.8rem 1rem; border-radius:8px;"
+                                           onkeyup="app.handleInlineProdSearch(this, event)" autocomplete="off">
+                                    <i class="fa-solid fa-barcode" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:#aaa;"></i>
+                                    <div id="guia-inline-results" class="spotlight-results" style="position:absolute; top:100%; left:0; right:0; max-height:200px; display:none; border:1px solid #eee; background:white; z-index:1000; box-shadow:0 10px 15px rgba(0,0,0,0.1);"></div>
+                                </div>
+                            </div>
+
+                            <!-- Empty State or List -->
+                            <div id="temp-prods-list" class="cards-list">
+                                <div style="text-align:center; padding:1rem; color:#999; font-size:0.9rem;">
+                                    No hay productos agregados via modal.
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Section 3: Attachments -->
-                    <div class="form-section">
-                        <div class="section-header">
-                            <h4>Adjuntos</h4>
-                        </div>
-                        <div class="photo-upload-area" onclick="document.getElementById('guia-file-input').click()">
-                            <input type="file" id="guia-file-input" accept="image/*" class="file-input-hidden" onchange="app.handlePhotoSelect(this, 'guia-preview-area')" hidden>
-                            <div id="guia-preview-area">
-                                <i class="fa-solid fa-camera photo-upload-icon"></i>
-                                <p class="photo-upload-text">Toca para tomar/subir foto</p>
+                        <!-- Section 3: Attachments -->
+                        <div class="form-section">
+                            <div class="section-header">
+                                <h4>Adjuntos</h4>
+                            </div>
+                            <div class="photo-upload-area" onclick="document.getElementById('guia-file-input').click()">
+                                <input type="file" id="guia-file-input" accept="image/*" class="file-input-hidden" onchange="app.handlePhotoSelect(this, 'guia-preview-area')" hidden>
+                                <div id="guia-preview-area">
+                                    <i class="fa-solid fa-camera photo-upload-icon"></i>
+                                    <p class="photo-upload-text">Toca para tomar/subir foto</p>
+                                </div>
                             </div>
                         </div>
+
+                    </div> 
+
+                    <!-- Desktop Footer -->
+                    <div class="modern-footer">
+                        <button class="btn-secondary" onclick="app.closeModal()">Cancelar</button>
+                        <button class="btn-primary" onclick="app.saveGuia('${type}')">
+                            Guardar Guía <i class="fa-solid fa-save"></i>
+                        </button>
                     </div>
-
-                </div> 
-
-                <!-- Desktop Footer -->
-                <div class="modern-footer">
-                    <button class="btn-secondary" onclick="app.closeModal()">Cancelar</button>
-                    <button class="btn-primary" onclick="app.saveGuia('${type}')">
-                        Guardar Guía <i class="fa-solid fa-save"></i>
-                    </button>
                 </div>
             </div>
         `;
@@ -2630,6 +2631,10 @@ class App {
     }
 
     async saveGuia(type) {
+        console.log('saveGuia called with type:', type);
+        // Debug Alert
+        // alert('saveGuia Clicked! Type: ' + type);
+
         // if (this.tempGuiaProducts.length === 0) return alert('Agregue al menos un producto');
 
         const provider = document.getElementById('guia-proveedor').value;
