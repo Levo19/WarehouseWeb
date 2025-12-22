@@ -3674,25 +3674,185 @@ h3 {
     font-weight: 500;
 }
 
+/* --- MODERN MODAL SYSTEM --- */
+.modern-modal-wrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 85vh;
+    /* Fixed height for consistency */
+    max-height: 800px;
+    background: white;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Ensure Modal Card adapts */
+.modal-overlay .modal-card:has(.modern-modal-wrapper) {
+    padding: 0;
+    width: 90%;
+    max-width: 600px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.modern-header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    background: white;
+}
+
+.modern-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.modern-header .close-btn {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modern-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 1.5rem;
+    background: #f8fafc;
+}
+
+.modern-footer {
+    flex: 0 0 auto;
+    padding: 1.25rem 1.5rem;
+    background: white;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+/* Form Sections */
+.form-section {
+    background: white;
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.section-header h4 {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+}
+
+/* Mobile Header Button */
+.save-mobile-btn {
+    display: none;
+    /* Hidden on Desktop */
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3);
+}
+
+/* RESPONSIVE */
 @media (max-width: 768px) {
+
+    /* Full Screen Modal on Mobile */
+    .modal-overlay {
+        align-items: flex-end;
+        /* Sheet style or full? Let's do full for complex forms */
+    }
+
+    .modal-overlay .modal-card:has(.modern-modal-wrapper) {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        margin: 0;
+        border-radius: 0;
+    }
+
     .modern-modal-wrapper {
-        width: 100%;
         height: 100%;
-        max-width: none;
         max-height: none;
         border-radius: 0;
     }
 
+    .modern-header {
+        padding: 1rem;
+        border-bottom: 1px solid #eee;
+    }
+
     .modern-body {
         padding: 1rem;
+        /* Ensure content is not hidden behind fixed footer if we had one */
+        padding-bottom: 80px;
     }
 
-    .modern-footer {
-        display: none;
-        /* Use header button */
-    }
-
+    /* Mobile Save Button Visibility */
     .save-mobile-btn {
-        display: block;
+        display: inline-flex;
+    }
+
+    /* Hide desktop close button on mobile if redundant, but keep for X */
+
+    /* Adapt Footer */
+    .modern-footer {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        padding: 1rem;
+        background: white;
+        border-top: 1px solid #eee;
+        z-index: 10;
+        justify-content: space-between;
+        /* Spread buttons */
+        /* If we want to hide it completely and use header: display: none; */
+        /* User said "no se ven botones". Let's SHOW footer clearly. */
+    }
+
+    .modern-footer .btn-secondary {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .modern-footer .btn-primary {
+        display: none;
+        /* Hide primary save in footer, assume header save is main? */
+        /* Or keep both? Let's keep both but make them full width */
+    }
+
+    /* Make footer primary visible if header one is subtle */
+    .modern-footer .btn-primary {
+        display: flex;
+        flex: 2;
+        justify-content: center;
     }
 }
