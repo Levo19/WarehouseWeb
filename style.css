@@ -2386,7 +2386,9 @@ h3 {
     }
 
     .modern-footer {
-        display: none;
+        /* display: none; Removed to show buttons on mobile */
+        padding: 1rem;
+        /* Adjust padding for mobile if needed */
     }
 
     .spotlight-overlay {
