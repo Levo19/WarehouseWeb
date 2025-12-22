@@ -3780,12 +3780,38 @@ h3 {
     box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3);
 }
 
+/* NEON PULSE EFFECT */
+@keyframes neon-pulse {
+    0% {
+        box-shadow: 0 0 5px #39ff14, 0 0 10px #39ff14;
+        border-color: #39ff14;
+    }
+
+    50% {
+        box-shadow: 0 0 20px #39ff14, 0 0 30px #39ff14;
+        border-color: #39ff14;
+        transform: scale(1.01);
+    }
+
+    100% {
+        box-shadow: 0 0 5px #39ff14, 0 0 10px #39ff14;
+        border-color: #39ff14;
+    }
+}
+
+.neon-input {
+    animation: neon-pulse 1.2s infinite alternate;
+    border: 2px solid #39ff14 !important;
+    transition: all 0.3s ease;
+}
+
 /* RESPONSIVE */
 @media (max-width: 768px) {
 
     /* Full Screen Modal on Mobile */
     .modal-overlay {
-        align-items: flex-end;
+        align-items: center;
+        /* Centered for better visibility */
         /* Sheet style or full? Let's do full for complex forms */
     }
 
