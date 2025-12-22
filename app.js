@@ -1977,7 +1977,11 @@ class App {
     // MODALS & FORMS
     openNewGuiaModal(type) {
         const title = type === 'INGRESO' ? 'Nueva Guía de Ingreso' : 'Nueva Guía de Salida';
-        const providers = this.data.providers || [];
+        // Fix Provider Source: Use mov data or fallback
+        let providers = this.data.providers || [];
+        if (providers.length === 0 && this.data.movimientos && this.data.movimientos.proveedores) {
+            providers = this.data.movimientos.proveedores;
+        }
         const providerOptions = providers.map(p => `<option value="${p.nombre}">`).join('');
 
         const modalHtml = `
@@ -2016,14 +2020,14 @@ class App {
 
                     <!-- Section 2: Products -->
                     <div class="form-section">
-                        <div class="section-header">
+                        <div class="section-header" style="flex-direction:column; align-items:start; gap:0.5rem;">
                             <h4>Productos</h4>
-                            <div style="position:relative; flex:1;">
-                                <input type="text" id="guia-inline-search" placeholder="Escanear código o buscar..." 
+                            <div style="position:relative; width:100%;">
+                                <input type="text" id="guia-inline-search" class="neon-input" placeholder="Escanear código o buscar..." 
                                        style="width:100%; padding:0.5rem 2rem 0.5rem 0.5rem; border:1px solid #ddd; border-radius:6px;"
                                        onkeyup="app.handleInlineProdSearch(this, event)" autocomplete="off">
                                 <i class="fa-solid fa-barcode" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:#aaa;"></i>
-                                <div id="guia-inline-results" class="spotlight-results" style="position:absolute; top:100%; left:0; right:0; max-height:200px; display:none; border:1px solid #eee; background:white; z-index:100; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></div>
+                                <div id="guia-inline-results" class="spotlight-results" style="position:absolute; top:100%; left:0; right:0; max-height:200px; display:none; border:1px solid #eee; background:white; z-index:1000; box-shadow:0 10px 15px rgba(0,0,0,0.1);"></div>
                             </div>
                         </div>
 
@@ -2221,15 +2225,18 @@ class App {
             return;
         }
 
-        resultsDiv.innerHTML = filtered.map(p => `
-            <div class="spotlight-item" onclick="app.selectInlineProduct('${p.codigo}')">
+        resultsDiv.innerHTML = filtered.map(p => {
+            const displayCode = p.codigo || p.code || 'N/A';
+            return `
+            <div class="spotlight-item" onclick="app.selectInlineProduct('${displayCode}')">
                 <div style="flex:1;">
                     <div class="spotlight-item-name">${p.desc}</div>
-                    <div class="spotlight-item-code">${p.codigo}</div>
+                    <div class="spotlight-item-code">${displayCode}</div>
                 </div>
                 <div class="spotlight-item-stock">Stock: ${p.stock || 0}</div>
             </div>
-        `).join('');
+            `;
+        }).join('');
         resultsDiv.style.display = 'block';
     }
 
