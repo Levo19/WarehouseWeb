@@ -2632,10 +2632,6 @@ class App {
 
     async saveGuia(type) {
         console.log('saveGuia called with type:', type);
-        // Debug Alert
-        // alert('saveGuia Clicked! Type: ' + type);
-
-        // if (this.tempGuiaProducts.length === 0) return alert('Agregue al menos un producto');
 
         const provider = document.getElementById('guia-proveedor').value;
         const comment = document.getElementById('guia-comentario').value;
@@ -2655,14 +2651,33 @@ class App {
             b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         });
 
-        // DEBUG: Verify Photo
-        if (!photo && document.querySelector('#guia-preview img')) {
-            alert('Error: La imagen no se ha procesado correctamente. Intente adjuntar de nuevo.');
-            return;
-        }
+        // 1. OPTIMISTIC UI: Create Temp Item
+        const tempId = 'TEMP-' + Date.now();
+        const now = new Date();
+        const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
+        const tempGuia = {
+            id: tempId,
+            fecha: dateStr,
+            proveedor: provider,
+            usuario: this.currentUser.username,
+            tipo: type,
+            estado: 'GUARDANDO...', // Special status
+            total_items: this.tempGuiaProducts.length, // Approx?
+            comentario: comment,
+            isTemp: true // Flag
+        };
 
-        // 1. SEND DATA ONLY (Fast)
+        // Inject into current list
+        if (!this.data.movimientos) this.data.movimientos = { guias: [] };
+        if (!this.data.movimientos.guias) this.data.movimientos.guias = [];
+
+        this.data.movimientos.guias.unshift(tempGuia);
+        this.filterGuiasList(); // Update UI immediately
+        this.closeModal();
+        this.showToast("Guardando guía en segundo plano...", "info");
+
+        // 2. SEND DATA ONLY (Fast)
         const payload = {
             tipo: type,
             usuario: this.currentUser.username,
@@ -2686,32 +2701,41 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                // OPTIMISTIC UI: Close immediately
-                this.closeModal();
-                this.showToast("Guía guardada. Subiendo foto en segundo plano...", "info");
-                this.loadMovimientosData(true); // Refresh list for the text entry
+                // Success: Update Temp Item with Real Data
+                const realId = result.data.idGuia || result.id; // Just in case
+
+                // Find and update in list
+                const idx = this.data.movimientos.guias.findIndex(g => g.id === tempId);
+                if (idx !== -1) {
+                    this.data.movimientos.guias[idx].id = realId;
+                    this.data.movimientos.guias[idx].estado = 'EN PROGRESO'; // Or whatever default is
+                    delete this.data.movimientos.guias[idx].isTemp; // Remove flag
+                }
+
+                // Re-render to show real ID/Status
+                this.filterGuiasList();
+
+                this.showToast("Guía guardada exitosamente.", "success");
+                // Background refresh to be safe (syncs details etc)
+                this.loadMovimientosData(true);
 
                 // 2. UPLOAD PHOTO BACKGROUND
-                if (photo && result.data && result.data.idGuia) {
-                    this.uploadGuiaPhotoBackground(result.data.idGuia, photo);
-                } else {
-                    this.showToast("Guía completada exitosamente.", "success");
+                if (photo && realId) {
+                    this.uploadGuiaPhotoBackground(realId, photo);
                 }
 
             } else {
-                alert('Error: ' + result.message);
-                buttons.forEach(b => {
-                    b.disabled = false;
-                    b.innerHTML = b.dataset.originalText || 'Guardar Guía';
-                });
+                throw new Error(result.message);
             }
         } catch (e) {
             console.error(e);
-            alert('Error de conexión');
-            buttons.forEach(b => {
-                b.disabled = false;
-                b.innerHTML = b.dataset.originalText || 'Guardar Guía';
-            });
+            alert('Error al guardar: ' + e.message);
+
+            // Revert Optimistic Change
+            this.data.movimientos.guias = this.data.movimientos.guias.filter(g => g.id !== tempId);
+            this.filterGuiasList();
+
+            // Re-open modal? Ideally yes, but complex state restore. For now, alert is enough.
         }
     }
 
