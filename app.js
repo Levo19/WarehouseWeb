@@ -2018,9 +2018,13 @@ class App {
                     <div class="form-section">
                         <div class="section-header">
                             <h4>Productos</h4>
-                            <button class="btn-neon-small" onclick="app.openGuiaSpotlight()">
-                                <i class="fa-solid fa-plus"></i> Agregar
-                            </button>
+                            <div style="position:relative; flex:1;">
+                                <input type="text" id="guia-inline-search" placeholder="Escanear código o buscar..." 
+                                       style="width:100%; padding:0.5rem 2rem 0.5rem 0.5rem; border:1px solid #ddd; border-radius:6px;"
+                                       onkeyup="app.handleInlineProdSearch(this, event)" autocomplete="off">
+                                <i class="fa-solid fa-barcode" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:#aaa;"></i>
+                                <div id="guia-inline-results" class="spotlight-results" style="position:absolute; top:100%; left:0; right:0; max-height:200px; display:none; border:1px solid #eee; background:white; z-index:100; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></div>
+                            </div>
                         </div>
 
                         <!-- Empty State or List -->
@@ -2180,6 +2184,84 @@ class App {
                 </button>
             </div>
         `).join('');
+    }
+
+    // INLINE SEARCH LOGIC (REPLACES SPOTLIGHT)
+    handleInlineProdSearch(input, event) {
+        const term = input.value.toLowerCase().trim();
+        const resultsDiv = document.getElementById('guia-inline-results');
+
+        // SCANNER LOGIC (Enter Key)
+        if (event && event.key === 'Enter') {
+            event.preventDefault();
+            // Find exact match by CODE
+            const exactCode = Object.keys(this.data.products).find(k => k.toLowerCase() === term);
+            if (exactCode) {
+                this.selectInlineProduct(exactCode);
+                input.value = ''; // Clear after auto-add
+                resultsDiv.style.display = 'none';
+                return;
+            }
+        }
+
+        if (term.length < 2) {
+            resultsDiv.style.display = 'none';
+            return;
+        }
+
+        const products = Object.values(this.data.products);
+        const filtered = products.filter(p =>
+            (p.desc && p.desc.toLowerCase().includes(term)) ||
+            (p.codigo && String(p.codigo).toLowerCase().includes(term))
+        ).slice(0, 50);
+
+        if (filtered.length === 0) {
+            resultsDiv.innerHTML = '<div style="padding:0.5rem; color:#999; text-align:center;">No encontrado</div>';
+            resultsDiv.style.display = 'block';
+            return;
+        }
+
+        resultsDiv.innerHTML = filtered.map(p => `
+            <div class="spotlight-item" onclick="app.selectInlineProduct('${p.codigo}')">
+                <div style="flex:1;">
+                    <div class="spotlight-item-name">${p.desc}</div>
+                    <div class="spotlight-item-code">${p.codigo}</div>
+                </div>
+                <div class="spotlight-item-stock">Stock: ${p.stock || 0}</div>
+            </div>
+        `).join('');
+        resultsDiv.style.display = 'block';
+    }
+
+    selectInlineProduct(code) {
+        // Reuse addSpotlightProduct logic structure
+        let product = this.data.products[code];
+        if (!product) product = Object.values(this.data.products).find(p => p.codigo === code);
+
+        if (!product) return;
+
+        const existing = this.tempGuiaProducts.find(p => p.codigo === code);
+        if (existing) {
+            existing.cantidad++;
+            this.showToast(`Cantidad aumentada: ${product.desc}`, 'success');
+        } else {
+            this.tempGuiaProducts.push({
+                codigo: product.codigo,
+                nombre: product.desc,
+                cantidad: 1
+            });
+            this.showToast(`Agregado: ${product.desc}`, 'success');
+        }
+
+        this.renderTempGuiaProducts();
+
+        // Clear Search
+        const input = document.getElementById('guia-inline-search');
+        if (input) {
+            input.value = '';
+            input.focus();
+        }
+        document.getElementById('guia-inline-results').style.display = 'none';
     }
 
     updateTempGuiaQty(index, delta) {
