@@ -1990,7 +1990,7 @@ class App {
                 <div class="modern-header">
                     <button class="close-btn" onclick="app.closeModal()"><i class="fa-solid fa-xmark"></i></button>
                     <h3>${title}</h3>
-                    <button class="save-mobile-btn" onclick="app.saveGuia('${type}')">
+                    <button class="save-mobile-btn" onclick="app.saveGuia('${type}')" style="z-index:1002; position:relative;">
                         Guardar <i class="fa-solid fa-check"></i>
                     </button>
                 </div>
@@ -2024,7 +2024,7 @@ class App {
                             <h4>Productos</h4>
                             <div style="position:relative; width:100%;">
                                 <input type="text" id="guia-inline-search" class="neon-input" placeholder="Escanear código o buscar..." 
-                                       style="width:100%; padding:0.5rem 2rem 0.5rem 0.5rem; border:1px solid #ddd; border-radius:6px;"
+                                       style="width:100%; padding:0.8rem 2.5rem 0.8rem 1rem; border-radius:8px;"
                                        onkeyup="app.handleInlineProdSearch(this, event)" autocomplete="off">
                                 <i class="fa-solid fa-barcode" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:#aaa;"></i>
                                 <div id="guia-inline-results" class="spotlight-results" style="position:absolute; top:100%; left:0; right:0; max-height:200px; display:none; border:1px solid #eee; background:white; z-index:1000; box-shadow:0 10px 15px rgba(0,0,0,0.1);"></div>
