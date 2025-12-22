@@ -2642,7 +2642,13 @@ class App {
 
         if (!provider) return alert('Proveedor/Destino requerido');
 
-        const btn = document.querySelector('.modal-footer .btn-primary');
+        // Disable ALL save buttons to prevent double-click
+        const buttons = document.querySelectorAll('.save-mobile-btn, .modal-footer .btn-primary');
+        buttons.forEach(b => {
+            b.disabled = true;
+            b.dataset.originalText = b.innerHTML;
+            b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        });
 
         // DEBUG: Verify Photo
         if (!photo && document.querySelector('#guia-preview img')) {
@@ -2691,14 +2697,18 @@ class App {
 
             } else {
                 alert('Error: ' + result.message);
-                btn.disabled = false;
-                btn.innerHTML = 'Guardar Guía';
+                buttons.forEach(b => {
+                    b.disabled = false;
+                    b.innerHTML = b.dataset.originalText || 'Guardar Guía';
+                });
             }
         } catch (e) {
             console.error(e);
             alert('Error de conexión');
-            btn.disabled = false;
-            btn.innerHTML = 'Guardar Guía';
+            buttons.forEach(b => {
+                b.disabled = false;
+                b.innerHTML = b.dataset.originalText || 'Guardar Guía';
+            });
         }
     }
 
