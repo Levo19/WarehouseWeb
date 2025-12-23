@@ -3338,7 +3338,6 @@ class App {
                     lastTs: 0     // Track latest timestamp for sorting
                 };
             }
-
             // Update Last Timestamp (Max) logic
             if (reqTs > aggregator[codeKey].lastTs) {
                 aggregator[codeKey].lastTs = reqTs;
@@ -4386,17 +4385,29 @@ class App {
                 icon = '<i class="fa-solid fa-industry" title="Producto Derivado/Envasado" style="font-size:0.7rem; margin-left:4px;"></i>';
             }
 
+            // Pedido Calculation
+            const factor = parseFloat(p.factorCompras) || 1;
+            const aComprar = parseFloat(p.falta) || 0;
+            const pedidoQty = Math.ceil(aComprar / factor);
+
             return `
         <tr class="${rowClass}">
             <td style="text-align:center;">
-                <input type="checkbox" class="history-select-check" value="${p.codigo}" data-desc="${p.nombre}" data-cost="${p.costo}">
+                <input type="checkbox" class="history-select-check" value="${p.codigo}" data-desc="${p.nombre}" data-cost="${p.costo}" data-pedido="${pedidoQty}">
             </td>
             <td style="font-family:monospace; color:${codeColor}; white-space: nowrap;">
                 ${p.codigo} ${icon}
             </td>
+            <td style="text-align:center; width:80px;">
+                <input type="number" class="qty-input-small" value="${pedidoQty}" min="0" 
+                       style="width:60px; text-align:center; padding:2px; border:1px solid #ccc; border-radius:4px;"
+                       onchange="this.closest('tr').querySelector('.history-select-check').dataset.pedido = this.value">
+            </td>
             <td style="font-weight:600;">${p.nombre}</td>
              <td style="text-align:center; color:#555;">${p.min} - ${p.stock}</td>
-            <td style="text-align:center; font-weight:bold; color:${p.falta > 0 ? '#d9534f' : '#28a745'};">${p.falta}</td>
+            <td style="text-align:center; font-weight:bold; color:${p.falta > 0 ? '#d9534f' : '#28a745'};">
+                ${aComprar.toFixed(2)}
+            </td>
             <td>${p.costo ? 'S/ ' + parseFloat(p.costo).toFixed(2) : '-'}</td>
             <td style="font-size:0.8rem; color:#888;">${p.fecha ? new Date(p.fecha).toLocaleDateString() : '-'}</td>
         </tr>
@@ -4411,6 +4422,7 @@ class App {
             <div class="modal-body" style="padding: 1rem;">
                 <div class="alert-info" style="font-size:0.9rem; color:#666; margin-bottom:1rem;">
                     <i class="fa-solid fa-info-circle"></i> Seleccione los productos. <span style="color:#d9534f; font-weight:bold;">A Comprar = Min - Stock</span>.
+                     <span style="color:#007bff; font-weight:bold; margin-left:10px;">Pedido = Ceil(A Comprar / Factor)</span>.
                 </div>
                 
                 <div class="history-table-wrapper">
@@ -4419,6 +4431,7 @@ class App {
                             <tr>
                                 <th width="40" style="text-align:center;"><input type="checkbox" onclick="app.toggleHistoryAll(this)"></th>
                                 <th>Código</th>
+                                <th style="width:80px; text-align:center;">Pedido</th>
                                 <th>Producto</th>
                                 <th style="text-align:center;">Min - Stock</th>
                                 <th style="text-align:center;">A Comprar</th>
