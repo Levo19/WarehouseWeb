@@ -2149,7 +2149,7 @@ h3 {
 }
 
 .qty-input {
-    width: 32px;
+    /* Width handled by later rule */
     text-align: center;
     border: none;
     background: transparent;
@@ -3888,7 +3888,8 @@ h3 {
 
 /* QUANTITY INPUT STYLE */
 .qty-input {
-    width: 120px !important;
+    width: 180px !important;
+    /* Increased to 180px to safely fit 5+ digits */
     /* Significantly wider for 5 digits + decimals */
     text-align: center;
     border: 1px solid #ddd;
