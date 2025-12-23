@@ -4367,10 +4367,23 @@ class App {
 
         const rows = products.map(p => {
             let rowClass = '';
+            let codeColor = '#666';
+            let icon = '';
+
             if (p.falta > 0) {
                 rowClass = 'row-needed';
-            } else if (p.isRelated) {
-                rowClass = 'row-substitute';
+            }
+
+            if (p.isRelated) {
+                // rowClass = 'row-substitute'; // Keep row-needed if falta > 0? Priority? 
+                // Let's keep existing logic priority: Needed > Related
+                if (rowClass === '') rowClass = 'row-substitute';
+                codeColor = '#d35400';
+                icon = '<i class="fa-solid fa-link" title="Producto Relacionado/Sustituto" style="font-size:0.7rem; margin-left:4px;"></i>';
+            } else if (p.isDerived) {
+                if (rowClass === '') rowClass = 'row-derived';
+                codeColor = '#8e44ad'; // Purple for Derived
+                icon = '<i class="fa-solid fa-industry" title="Producto Derivado/Envasado" style="font-size:0.7rem; margin-left:4px;"></i>';
             }
 
             return `
@@ -4378,8 +4391,8 @@ class App {
             <td style="text-align:center;">
                 <input type="checkbox" class="history-select-check" value="${p.codigo}" data-desc="${p.nombre}" data-cost="${p.costo}">
             </td>
-            <td style="font-family:monospace; color:${p.isRelated ? '#d35400' : '#666'}; white-space: nowrap;">
-                ${p.codigo} ${p.isRelated ? '<i class="fa-solid fa-link" title="Producto Relacionado/Sustituto" style="font-size:0.7rem; margin-left:4px;"></i>' : ''}
+            <td style="font-family:monospace; color:${codeColor}; white-space: nowrap;">
+                ${p.codigo} ${icon}
             </td>
             <td style="font-weight:600;">${p.nombre}</td>
              <td style="text-align:center; color:#555;">${p.min} - ${p.stock}</td>
