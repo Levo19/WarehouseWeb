@@ -4305,8 +4305,11 @@ class App {
     }
 
     async openProviderOrderModal(providerName) {
-        // Find provider data to get phone
-        const providerData = this.providersData ? this.providersData.find(p => p.nombre === providerName) : null;
+        // Find provider data to get phone - Robust Lookup
+        const providerData = this.providersData ? this.providersData.find(p => p.nombre.trim().toUpperCase() === providerName.trim().toUpperCase()) : null;
+
+        console.log(`[WhatsApp Debug] Lookup for "${providerName}":`, providerData ? `Found T: ${providerData.telefono}` : 'Not Found');
+
         const providerPhone = providerData ? providerData.telefono : '';
 
         // 1. Show Loading Modal
