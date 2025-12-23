@@ -4512,6 +4512,7 @@ class App {
                     data-desc="${p.nombre}" 
                     data-cost="${p.costo}" 
                     data-pedido="${p._displayPedido}" 
+                    data-factor="${p.factorCompras || 1}"
                     ${p._displayPedido === '' ? 'disabled' : ''}
                     ${isPositiveOrder ? 'checked' : ''}>
             </td>
@@ -4609,31 +4610,96 @@ class App {
     generatePrepedidoFromHistory() {
         const selected = [];
         document.querySelectorAll('.history-select-check:checked').forEach(c => {
-            selected.push({
-                codigo: c.value,
-                desc: c.dataset.desc,
-                cantidad: 1 // Default quantity
-            });
+            const qty = parseFloat(c.dataset.pedido);
+            if (qty > 0) {
+                selected.push({
+                    codigo: c.value,
+                    desc: c.dataset.desc,
+                    cantidad: qty,
+                    factor: c.dataset.factor
+                });
+            }
         });
 
-        if (selected.length === 0) return alert('Seleccione al menos un producto.');
+        if (selected.length === 0) return alert('Seleccione al menos un producto con cantidad válida.');
 
         // Close History Modal
         this.closeModal();
 
-        // HERE IS WHERE YOU WOULD NAVIGATE TO THE PREPEDIDO CREATION LOGIC
-        // For now, let's just show an alert or a simple confirmation that data was captured.
-        // User asked: "Start prepedido with these products".
-        // Assuming we have a "New Prepedido" flow?
-        // Let's reuse 'openNewRequestModal' but pre-fill it? Or is this different?
-        // "Generar Prepedido" usually means creating a PDF or Logic.
-        // The prompt says: "Start the prepedido... showing the list".
-        // I will implement a placeholder or reuse 'openNewRequestModal' if applicable.
-        // But 'openNewRequestModal' is for generic requests.
-        // Let's create a specific 'Prepedido Summary' modal for now.
+        // PRINT TICKET LOGIC (80mm)
+        this.printPrepedidoTicket(selected);
+    }
 
-        console.log("Selected products for prepedido:", selected);
-        alert(`Generando prepedido con ${selected.length} productos... (Lógica de PDF/Envío pendiente)`);
+    printPrepedidoTicket(items) {
+        const dateStr = new Date().toLocaleString();
+
+        let rowsHtml = items.map(item => `
+            <tr>
+                <td style="text-align:center; font-weight:bold; font-size:1.1rem;">${item.cantidad}</td>
+                <td style="padding-left:5px;">
+                    <div style="font-weight:bold; font-size:0.95rem;">${item.desc}</div>
+                </td>
+                <td style="text-align:center; font-size:0.85rem; color:#555;">${item.factor}</td>
+            </tr>
+            <tr style="height:5px;"></tr>
+        `).join('');
+
+        const printWindow = window.open('', '', 'width=400,height=600');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Ticket Prepedido</title>
+                    <style>
+                        @page { size: 80mm auto; margin: 0; }
+                        body { 
+                            width: 72mm; /* Printable width approx */
+                            margin: 0 auto;
+                            padding: 10px 5px;
+                            font-family: 'Courier New', monospace; /* Monospace for ticket feel */
+                            background: #fff;
+                            color: #000;
+                        }
+                        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px dashed #000; padding-bottom: 10px; }
+                        .title { font-size: 1.2rem; font-weight: bold; text-transform: uppercase; }
+                        .meta { font-size: 0.85rem; margin-top: 5px; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                        th { text-align: left; border-bottom: 1px solid #000; padding-bottom: 5px; font-size: 0.8rem; }
+                        td { vertical-align: top; padding-top: 5px; }
+                        .footer { margin-top: 20px; text-align: center; font-size: 0.8rem; border-top: 1px dashed #000; padding-top: 10px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div class="title">PREPEDIDO SUGERIDO</div>
+                        <div class="meta">Fecha: ${dateStr}</div>
+                    </div>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:15%; text-align:center;">CANT</th>
+                                <th style="width:65%;">PRODUCTO</th>
+                                <th style="width:20%; text-align:center;">FACTOR</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+
+                    <div class="footer">
+                        --- FIN DEL TICKET ---
+                    </div>
+                    <script>
+                        setTimeout(() => {
+                            window.print();
+                            window.close();
+                        }, 500);
+                    <\/script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
     }
 
     filterPrepedidos(input) {
