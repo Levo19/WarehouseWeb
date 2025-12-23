@@ -4365,30 +4365,36 @@ class App {
         products.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
         const rows = products.map(p => {
-            let rowClass = '';
+            let rowClass = ''; // No background highlights as requested
             let codeColor = '#666';
             let icon = '';
 
-            if (p.falta > 0) {
-                rowClass = 'row-needed';
-            }
+            // if (p.falta > 0) rowClass = 'row-needed'; // Removing highlight
 
             if (p.isRelated) {
-                // rowClass = 'row-substitute'; // Keep row-needed if falta > 0? Priority? 
-                // Let's keep existing logic priority: Needed > Related
-                if (rowClass === '') rowClass = 'row-substitute';
+                // rowClass = 'row-substitute';
                 codeColor = '#d35400';
                 icon = '<i class="fa-solid fa-link" title="Producto Relacionado/Sustituto" style="font-size:0.7rem; margin-left:4px;"></i>';
             } else if (p.isDerived) {
-                if (rowClass === '') rowClass = 'row-derived';
-                codeColor = '#8e44ad'; // Purple for Derived
+                // rowClass = 'row-derived'; // Removing highlight
+                codeColor = '#8e44ad'; // Purple code for distinction is okay? User said "resaltado rojo". Code color is localized.
                 icon = '<i class="fa-solid fa-industry" title="Producto Derivado/Envasado" style="font-size:0.7rem; margin-left:4px;"></i>';
             }
 
             // Pedido Calculation
             const factor = parseFloat(p.factorCompras) || 1;
             const aComprar = parseFloat(p.falta) || 0;
-            const pedidoQty = Math.ceil(aComprar / factor);
+
+            let pedidoQty = Math.ceil(aComprar / factor);
+            let pedidoInputAttr = '';
+            let pedidoStyle = 'width:60px; text-align:center; padding:2px; border:1px solid #ccc; border-radius:4px;';
+
+            // Derived products: Empty and Disabled Pedido
+            if (p.isDerived) {
+                pedidoQty = '';
+                pedidoInputAttr = 'disabled readonly';
+                pedidoStyle += 'background:#f5f5f5; color:#aaa; border-color:#eee;';
+            }
 
             return `
         <tr class="${rowClass}">
@@ -4399,13 +4405,13 @@ class App {
                 ${p.codigo} ${icon}
             </td>
             <td style="text-align:center; width:80px;">
-                <input type="number" class="qty-input-small" value="${pedidoQty}" min="0" 
-                       style="width:60px; text-align:center; padding:2px; border:1px solid #ccc; border-radius:4px;"
+                <input type="number" class="qty-input-small" value="${pedidoQty}" min="0" ${pedidoInputAttr}
+                       style="${pedidoStyle}"
                        onchange="this.closest('tr').querySelector('.history-select-check').dataset.pedido = this.value">
             </td>
             <td style="font-weight:600;">${p.nombre}</td>
              <td style="text-align:center; color:#555;">${p.min} - ${p.stock}</td>
-            <td style="text-align:center; font-weight:bold; color:${p.falta > 0 ? '#d9534f' : '#28a745'};">
+            <td style="text-align:center; font-weight:bold; color:#333;">
                 ${aComprar.toFixed(2)}
             </td>
             <td>${p.costo ? 'S/ ' + parseFloat(p.costo).toFixed(2) : '-'}</td>
