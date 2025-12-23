@@ -2181,7 +2181,11 @@ class App {
                 </div>
                 <div class="guia-prod-qty">
                     <button class="qty-btn" onclick="app.updateTempGuiaQty(${index}, -1)">-</button>
-                    <input type="number" class="qty-input" value="${p.cantidad}" readonly>
+                    <input type="number" step="0.01" class="qty-input" value="${p.cantidad}" readonly 
+                           ondblclick="app.unlockQtyInput(this)" 
+                           onchange="app.setManualQty(${index}, this.value)"
+                           onblur="app.setManualQty(${index}, this.value)"
+                           onkeydown="if(event.key==='Enter') this.blur()">
                     <button class="qty-btn" onclick="app.updateTempGuiaQty(${index}, 1)">+</button>
                 </div>
                 <button class="guia-prod-remove" onclick="app.removeTempGuiaProduct(${index})">
@@ -2189,6 +2193,27 @@ class App {
                 </button>
             </div>
         `).join('');
+    }
+
+    unlockQtyInput(el) {
+        el.removeAttribute('readonly');
+        el.focus();
+        el.select();
+    }
+
+    setManualQty(index, val) {
+        // Prevent re-trigger if already readonly
+        const input = document.activeElement;
+
+        // Small delay to ensure we capture the value before re-rendering
+        // validation
+        let qty = parseFloat(val);
+        if (isNaN(qty) || qty <= 0) qty = 1;
+
+        if (this.tempGuiaProducts[index]) {
+            this.tempGuiaProducts[index].cantidad = qty;
+        }
+        this.renderTempGuiaProducts();
     }
 
     // INLINE SEARCH LOGIC (REPLACES SPOTLIGHT)
