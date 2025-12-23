@@ -4456,8 +4456,6 @@ class App {
             const stock = parseFloat(p.stock) || 0;
             const factor = parseFloat(p.factorCompras) || 1;
 
-            // Visual A Comprar (Row specific)
-            p._displayAComprar = (parseFloat(p.falta) || Math.max(0, min - stock)).toFixed(2);
             p._displayPedido = '';
             p._inputAttr = '';
             p._rowStyle = '';
@@ -4465,23 +4463,12 @@ class App {
             if (p.isDerived) {
                 p._inputAttr = 'disabled readonly';
                 p._rowStyle = 'background:#f5f5f5; color:#aaa; border-color:#eee;';
-                p._displayAComprar = Math.max(0, min - stock).toFixed(2);
-
             } else if (p.isSubstituteSlave) {
-                p._displayAComprar = '-';
                 p._inputAttr = 'disabled readonly';
                 p._rowStyle = 'background:#f5f5f5; color:#aaa; border-color:#eee;';
-
             } else if (p.isSubstituteLeader) {
-                // Formula: [ (Min - AggStock) + Sum(ChildNeed*Conversion) ] / FactorCompra
-                // Which is: [ Min - AggStock + _childDemand ] / Factor
-
                 const childDemand = p._childDemand || 0;
                 const aggStock = p._aggregatedStock !== undefined ? p._aggregatedStock : stock;
-
-                // Numerator: (Min + ChildDemand) - AggStock
-                // Note: user wrote [ min-stock + sum(...) ]. Order of ops same. 
-                // Using Max(0, ...) for the final result to clamp negatives.
 
                 const numerator = (min + childDemand) - aggStock;
                 const pedidoVal = Math.max(0, Math.ceil(numerator / factor));
@@ -4503,6 +4490,17 @@ class App {
                 icon = '<i class="fa-solid fa-industry" title="Producto Derivado/Envasado" style="font-size:0.7rem; margin-left:4px;"></i>';
             }
 
+            // Logic for Highlight & Auto-Selection
+            const pedidoVal = parseFloat(p._displayPedido);
+            let isPositiveOrder = false;
+            if (!isNaN(pedidoVal) && pedidoVal > 0) {
+                isPositiveOrder = true;
+                rowClass += ' row-neon-pulse'; // Custom class for animation
+            }
+
+            // Reduced width for input (approx half of 60px -> 35px)
+            let pedidoStyle = `width:35px; text-align:center; padding:2px; border:1px solid #ccc; border-radius:4px; ${p._rowStyle || ''}`;
+
             return `
         <tr class="${rowClass}">
             <td style="text-align:center;">
@@ -4510,27 +4508,40 @@ class App {
                     data-desc="${p.nombre}" 
                     data-cost="${p.costo}" 
                     data-pedido="${p._displayPedido}" 
-                    ${p._displayPedido === '' ? 'disabled' : ''}>
+                    ${p._displayPedido === '' ? 'disabled' : ''}
+                    ${isPositiveOrder ? 'checked' : ''}>
             </td>
             <td style="font-family:monospace; color:${codeColor}; white-space: nowrap;">
                 ${p.codigo} ${icon}
             </td>
-            <td style="text-align:center; width:80px;">
+            <td style="text-align:center; width:60px;"> <!-- Slight adjustment to cell width -->
                 <input type="number" class="qty-input-small" value="${p._displayPedido}" min="0" ${p._inputAttr}
-                       style="${p._rowStyle}"
+                       style="${pedidoStyle}"
                        onchange="this.closest('tr').querySelector('.history-select-check').dataset.pedido = this.value">
             </td>
             <td style="font-weight:600;">${p.nombre}</td>
-             <td style="text-align:center; color:#555;">${p.min} - ${p.stock}</td>
-            <td style="text-align:center; font-weight:bold; color:#333;">
-                ${p._displayAComprar}
-            </td>
+             <td style="text-align:center; color:#555;">${min} - ${stock}</td>
+            <!-- 'A Comprar' Column Hidden as requested -->
             <td>${p.costo ? 'S/ ' + parseFloat(p.costo).toFixed(2) : '-'}</td>
             <td style="font-size:0.8rem; color:#888;">${p.fecha ? new Date(p.fecha).toLocaleDateString() : '-'}</td>
         </tr>
     `}).join('');
 
         const modalHtml = `
+        <style>
+            @keyframes neonGreenPulse {
+                0% { background-color: rgba(57, 255, 20, 0.05); box-shadow: inset 0 0 2px rgba(57, 255, 20, 0.2); }
+                50% { background-color: rgba(57, 255, 20, 0.2); box-shadow: inset 0 0 8px rgba(57, 255, 20, 0.6); }
+                100% { background-color: rgba(57, 255, 20, 0.05); box-shadow: inset 0 0 2px rgba(57, 255, 20, 0.2); }
+            }
+            .row-neon-pulse {
+                animation: neonGreenPulse 2s infinite ease-in-out;
+                border: 1px solid #39ff14 !important;
+            }
+            .row-neon-pulse td {
+                color: #000 !important; /* Ensure text is readable */
+            }
+        </style>
         <div class="modal-card" style="max-width: 900px;">
             <div class="modal-header">
                 <h3>Historial: ${providerName}</h3>
@@ -4538,8 +4549,8 @@ class App {
             </div>
             <div class="modal-body" style="padding: 1rem;">
                 <div class="alert-info" style="font-size:0.9rem; color:#666; margin-bottom:1rem;">
-                    <i class="fa-solid fa-info-circle"></i> Seleccione los productos. <span style="color:#d9534f; font-weight:bold;">A Comprar = Min - Stock</span>.
-                     <span style="color:#007bff; font-weight:bold; margin-left:10px;">Pedido = Ceil(A Comprar / Factor)</span>.
+                    <i class="fa-solid fa-info-circle"></i> Productos con pedido sugerido están resaltados.
+                     <span style="color:#007bff; font-weight:bold; margin-left:10px;">Pedido = Calculado (Origen + Hijos)</span>.
                      <br><i class="fa-solid fa-layer-group" style="margin-right:5px;"></i> Los productos repetidos suman su stock total.
                 </div>
                 
@@ -4547,12 +4558,12 @@ class App {
                     <table class="history-table">
                         <thead>
                             <tr>
-                                <th width="40" style="text-align:center;"><input type="checkbox" onclick="app.toggleHistoryAll(this)"></th>
+                                <th style="width:30px;"><i class="fa-solid fa-check-double"></i></th>
                                 <th>Código</th>
-                                <th style="width:80px; text-align:center;">Pedido</th>
+                                <th style="width:50px;">Pedido</th> <!-- Reduced width -->
                                 <th>Producto</th>
-                                <th style="text-align:center;">Min - Stock</th>
-                                <th style="text-align:center;">A Comprar</th>
+                                <th style="width:80px;">Min - Stock</th>
+                                <!-- 'A Comprar' Hidden -->
                                 <th>Costo Ref.</th>
                                 <th>Últ. Compra</th>
                             </tr>
