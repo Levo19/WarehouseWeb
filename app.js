@@ -4364,39 +4364,98 @@ class App {
         // Sort by Name to ensure substitutes are adjacent (visually helpful)
         products.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-        // --- NEW LOGIC: SUBSTITUTE AGGREGATION ---
-        // Group NON-DERIVED products by Name
-        const groups = {};
+        // --- NEW LOGIC: SUBSTITUTE AGGREGATION & DERIVED LINKING ---
+
+        // 1. Group Substitutes (Same Name, Not Derived)
+        const subGroups = {};
         products.forEach(p => {
-            if (p.isDerived) return; // Skip derived from grouping
+            if (p.isDerived) return;
             const name = p.nombre.trim().toLowerCase();
-            if (!groups[name]) groups[name] = [];
-            groups[name].push(p);
+            if (!subGroups[name]) subGroups[name] = [];
+            subGroups[name].push(p);
         });
 
-        // Calculate Order for Substitute Groups
-        Object.values(groups).forEach(group => {
+        Object.values(subGroups).forEach(group => {
             if (group.length > 0) {
-                // Use First Instance as the "Master" for Min and Factor
-                const first = group[0];
-                const min = parseFloat(first.min) || 0;
-                const factor = parseFloat(first.factorCompras) || 1;
+                const master = group[0];
+                master.isSubstituteLeader = true;
+                master._aggregatedStock = group.reduce((sum, item) => sum + (parseFloat(item.stock) || 0), 0);
 
-                // Sum Stock of ALL variants
-                const totalStock = group.reduce((sum, item) => sum + (parseFloat(item.stock) || 0), 0);
-
-                // Formula: (Min - TotalStock) / Factor
-                const needed = Math.max(0, min - totalStock);
-                const orderQty = Math.ceil(needed / factor);
-
-                // Assign to First Instance
-                first.customOrderQty = orderQty;
-                first.isSubstituteLeader = true;
-
-                // Mark others as "Slaves" (Hidden/Disabled)
                 for (let i = 1; i < group.length; i++) {
                     group[i].isSubstituteSlave = true;
                 }
+            }
+        });
+
+        // 2. Link Derived Products to their Origin (Fuzzy Match)
+        const origins = products.filter(p => !p.isDerived && p.isSubstituteLeader);
+        const derived = products.filter(p => p.isDerived);
+
+        derived.forEach(child => {
+            const childNameClean = child.nombre.toUpperCase();
+            let bestMatch = null;
+            let maxScore = 0;
+
+            origins.forEach(origin => {
+                // Remove generic words to find "Root"
+                const originName = origin.nombre.toUpperCase().replace(/\b(GRANEL|PREMIUM|SACO|BOLSA|CJA|EXO)\b/g, '').trim();
+                const originWords = originName.split(/\s+/).filter(w => w.length > 2);
+                let hitCount = 0;
+
+                originWords.forEach(w => {
+                    if (childNameClean.includes(w)) hitCount++;
+                });
+
+                // Threshold: at least 70% of words match
+                if (hitCount > 0 && hitCount >= originWords.length * 0.7) {
+                    if (hitCount > maxScore) {
+                        maxScore = hitCount;
+                        bestMatch = origin;
+                    }
+                }
+            });
+
+            if (bestMatch) {
+                if (!bestMatch._childDemand) bestMatch._childDemand = 0;
+                // Accumulate Child Need (Min - Stock)
+                const childNeed = Math.max(0, (parseFloat(child.min) || 0) - (parseFloat(child.stock) || 0));
+                bestMatch._childDemand += childNeed;
+            }
+        });
+
+        // 3. Final Per-Row Calculation
+        products.forEach(p => {
+            const min = parseFloat(p.min) || 0;
+            const stock = parseFloat(p.stock) || 0;
+            const factor = parseFloat(p.factorCompras) || 1;
+
+            // Visuals
+            p._displayAComprar = (parseFloat(p.falta) || Math.max(0, min - stock)).toFixed(2);
+            p._displayPedido = '';
+            p._inputAttr = '';
+            p._rowStyle = '';
+
+            if (p.isDerived) {
+                p._inputAttr = 'disabled readonly';
+                p._rowStyle = 'background:#f5f5f5; color:#aaa; border-color:#eee;';
+                // Recalculate A Comprar visually
+                p._displayAComprar = Math.max(0, min - stock).toFixed(2);
+
+            } else if (p.isSubstituteSlave) {
+                p._displayAComprar = '-';
+                p._inputAttr = 'disabled readonly';
+                p._rowStyle = 'background:#f5f5f5; color:#aaa; border-color:#eee;';
+
+            } else if (p.isSubstituteLeader) {
+                // Origin Formula: (Min + ChildNeeds) - AggregatedStock
+                const childDemand = p._childDemand || 0;
+                const aggStock = p._aggregatedStock !== undefined ? p._aggregatedStock : stock;
+
+                // Total Need = (Min + ChildDemands)
+                const totalNeed = (min + childDemand) - aggStock;
+                const pedidoVal = Math.ceil(Math.max(0, totalNeed) / factor);
+
+                p._displayPedido = pedidoVal;
             }
         });
 
@@ -4413,58 +4472,27 @@ class App {
                 icon = '<i class="fa-solid fa-industry" title="Producto Derivado/Envasado" style="font-size:0.7rem; margin-left:4px;"></i>';
             }
 
-            // Default Calculation (Use Backend 'falta' as source of truth)
-            const factor = parseFloat(p.factorCompras) || 1;
-            const stock = parseFloat(p.stock) || 0;
-            const min = parseFloat(p.min) || 0;
-
-            // Backend calculates 'falta' considering dependencies/derived logic. Use it.
-            let aComprar = (p.falta !== undefined && p.falta !== null) ? parseFloat(p.falta) : Math.max(0, min - stock);
-            let pedidoQty = Math.ceil(aComprar / factor);
-
-            // --- APPLY NEW LOGIC STATES ---
-            let pedidoInputAttr = '';
-            let pedidoStyle = 'width:60px; text-align:center; padding:2px; border:1px solid #ccc; border-radius:4px;';
-            let showValues = true;
-
-            if (p.isDerived) {
-                // CASE 1: DERIVED -> Disabled Pedido, BUT SHOW 'A Comprar'
-                pedidoQty = '';
-                pedidoInputAttr = 'disabled readonly';
-                pedidoStyle += 'background:#f5f5f5; color:#aaa; border-color:#eee;';
-                // showValues remains TRUE so we see 'A Comprar'
-            } else if (p.isSubstituteSlave) {
-                // CASE 2: SUBSTITUTE SLAVE -> Disabled & Hidden
-                pedidoQty = '';
-                pedidoInputAttr = 'disabled readonly';
-                pedidoStyle += 'background:#f5f5f5; color:#aaa; border-color:#eee;';
-                showValues = false; // Hide 'A Comprar' for slaves
-            } else if (p.isSubstituteLeader) {
-                // CASE 3: SUBSTITUTE LEADER -> Use Aggregated Calculation
-                pedidoQty = p.customOrderQty;
-                // 'A Comprar' here is for the specific item (or we could show aggregated need, but let's stick to item row context)
-            }
-
-            // Format A Comprar display
-            let displayAComprar = (showValues && typeof aComprar === 'number') ? aComprar.toFixed(2) : '-';
-
             return `
         <tr class="${rowClass}">
             <td style="text-align:center;">
-                <input type="checkbox" class="history-select-check" value="${p.codigo}" data-desc="${p.nombre}" data-cost="${p.costo}" data-pedido="${pedidoQty}" ${pedidoQty === '' ? 'disabled' : ''}>
+                <input type="checkbox" class="history-select-check" value="${p.codigo}" 
+                    data-desc="${p.nombre}" 
+                    data-cost="${p.costo}" 
+                    data-pedido="${p._displayPedido}" 
+                    ${p._displayPedido === '' ? 'disabled' : ''}>
             </td>
             <td style="font-family:monospace; color:${codeColor}; white-space: nowrap;">
                 ${p.codigo} ${icon}
             </td>
             <td style="text-align:center; width:80px;">
-                <input type="number" class="qty-input-small" value="${pedidoQty}" min="0" ${pedidoInputAttr}
-                       style="${pedidoStyle}"
+                <input type="number" class="qty-input-small" value="${p._displayPedido}" min="0" ${p._inputAttr}
+                       style="${p._rowStyle}"
                        onchange="this.closest('tr').querySelector('.history-select-check').dataset.pedido = this.value">
             </td>
             <td style="font-weight:600;">${p.nombre}</td>
-             <td style="text-align:center; color:#555;">${min} - ${stock}</td>
+             <td style="text-align:center; color:#555;">${p.min} - ${p.stock}</td>
             <td style="text-align:center; font-weight:bold; color:#333;">
-                ${displayAComprar}
+                ${p._displayAComprar}
             </td>
             <td>${p.costo ? 'S/ ' + parseFloat(p.costo).toFixed(2) : '-'}</td>
             <td style="font-size:0.8rem; color:#888;">${p.fecha ? new Date(p.fecha).toLocaleDateString() : '-'}</td>
