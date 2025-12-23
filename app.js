@@ -4361,45 +4361,113 @@ class App {
             return;
         }
 
-        // Sort by Name
+        // Sort by Name to ensure substitutes are adjacent (visually helpful)
         products.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
+        // --- NEW LOGIC: SUBSTITUTE AGGREGATION ---
+        // Group NON-DERIVED products by Name
+        const groups = {};
+        products.forEach(p => {
+            if (p.isDerived) return; // Skip derived from grouping
+            const name = p.nombre.trim().toLowerCase();
+            if (!groups[name]) groups[name] = [];
+            groups[name].push(p);
+        });
+
+        // Calculate Order for Substitute Groups
+        Object.values(groups).forEach(group => {
+            if (group.length > 0) {
+                // Use First Instance as the "Master" for Min and Factor
+                const first = group[0];
+                const min = parseFloat(first.min) || 0;
+                const factor = parseFloat(first.factorCompras) || 1;
+
+                // Sum Stock of ALL variants
+                const totalStock = group.reduce((sum, item) => sum + (parseFloat(item.stock) || 0), 0);
+
+                // Formula: (Min - TotalStock) / Factor
+                const needed = Math.max(0, min - totalStock);
+                const orderQty = Math.ceil(needed / factor);
+
+                // Assign to First Instance
+                first.customOrderQty = orderQty;
+                first.isSubstituteLeader = true;
+
+                // Mark others as "Slaves" (Hidden/Disabled)
+                for (let i = 1; i < group.length; i++) {
+                    group[i].isSubstituteSlave = true;
+                }
+            }
+        });
+
         const rows = products.map(p => {
-            let rowClass = ''; // No background highlights as requested
+            let rowClass = '';
             let codeColor = '#666';
             let icon = '';
 
-            // if (p.falta > 0) rowClass = 'row-needed'; // Removing highlight
-
             if (p.isRelated) {
-                // rowClass = 'row-substitute';
                 codeColor = '#d35400';
                 icon = '<i class="fa-solid fa-link" title="Producto Relacionado/Sustituto" style="font-size:0.7rem; margin-left:4px;"></i>';
             } else if (p.isDerived) {
-                // rowClass = 'row-derived'; // Removing highlight
-                codeColor = '#8e44ad'; // Purple code for distinction is okay? User said "resaltado rojo". Code color is localized.
+                codeColor = '#8e44ad';
                 icon = '<i class="fa-solid fa-industry" title="Producto Derivado/Envasado" style="font-size:0.7rem; margin-left:4px;"></i>';
             }
 
-            // Pedido Calculation
+            // Default Calculation (fallback)
             const factor = parseFloat(p.factorCompras) || 1;
-            const aComprar = parseFloat(p.falta) || 0;
-
+            const stock = parseFloat(p.stock) || 0;
+            const min = parseFloat(p.min) || 0;
+            let aComprar = Math.max(0, min - stock);
             let pedidoQty = Math.ceil(aComprar / factor);
+
+            // --- APPLY NEW LOGIC STATES ---
             let pedidoInputAttr = '';
             let pedidoStyle = 'width:60px; text-align:center; padding:2px; border:1px solid #ccc; border-radius:4px;';
+            let showValues = true;
 
-            // Derived products: Empty and Disabled Pedido
             if (p.isDerived) {
+                // CASE 1: DERIVED -> Disabled & Empty
                 pedidoQty = '';
+                aComprar = ''; // Optional: hide 'A Comprar' too or show calc? User said: "disable... no editing". 
+                // Previous code showed 'aComprar' for derived? 
+                // Lines 4415 in original showed 'aComprar'.
+                // Line 4394 set pedidoQty = ''.
                 pedidoInputAttr = 'disabled readonly';
                 pedidoStyle += 'background:#f5f5f5; color:#aaa; border-color:#eee;';
+                showValues = false; // Flag to hide 'A Comprar' text if desired, or keep it.
+                // Original code kept AComprar display (Ln 4415). We'll keep it but ensure Pedido is empty.
+            } else if (p.isSubstituteSlave) {
+                // CASE 2: SUBSTITUTE SLAVE -> Disabled & Empty (as requested)
+                pedidoQty = '';
+                // Hide 'A Comprar' too? "solo debe aparecer el pedido en el primero".
+                // "en los que restean debes inhabilitar y que no se pueda editar para no causar confusion"
+                pedidoInputAttr = 'disabled readonly';
+                pedidoStyle += 'background:#f5f5f5; color:#aaa; border-color:#eee;';
+                showValues = false; // Let's hide calculations for slaves to be clean
+            } else if (p.isSubstituteLeader) {
+                // CASE 3: SUBSTITUTE LEADER -> Use Aggregated Calculation
+                pedidoQty = p.customOrderQty;
+                // 'A Comprar' column usually shows raw need. Let's show the aggregated need context? 
+                // Or just the raw value for *this* item?
+                // Visual consistency: If we changed Pedido, maybe we should show why.
+                // But the column is 'Min - Stock'.
+                // If we show 'Min - Stock' of THIS item, it might confuse why Pedido is lower.
+                // But 'A Comprar' column corresponds to row.
+                // Let's stick to showing the calculated Pedido Order.
             }
+
+            // Format A Comprar display
+            let displayAComprar = (showValues && typeof aComprar === 'number') ? aComprar.toFixed(2) : '-';
+            if (p.isSubstituteLeader) {
+                // Maybe add a tooltip or visual cue?
+                // displayAComprar += ' (Agrupado)';
+            }
+            if (!showValues) displayAComprar = '-';
 
             return `
         <tr class="${rowClass}">
             <td style="text-align:center;">
-                <input type="checkbox" class="history-select-check" value="${p.codigo}" data-desc="${p.nombre}" data-cost="${p.costo}" data-pedido="${pedidoQty}">
+                <input type="checkbox" class="history-select-check" value="${p.codigo}" data-desc="${p.nombre}" data-cost="${p.costo}" data-pedido="${pedidoQty}" ${pedidoQty === '' ? 'disabled' : ''}>
             </td>
             <td style="font-family:monospace; color:${codeColor}; white-space: nowrap;">
                 ${p.codigo} ${icon}
@@ -4412,7 +4480,7 @@ class App {
             <td style="font-weight:600;">${p.nombre}</td>
              <td style="text-align:center; color:#555;">${p.min} - ${p.stock}</td>
             <td style="text-align:center; font-weight:bold; color:#333;">
-                ${aComprar.toFixed(2)}
+                ${displayAComprar}
             </td>
             <td>${p.costo ? 'S/ ' + parseFloat(p.costo).toFixed(2) : '-'}</td>
             <td style="font-size:0.8rem; color:#888;">${p.fecha ? new Date(p.fecha).toLocaleDateString() : '-'}</td>
@@ -4429,6 +4497,7 @@ class App {
                 <div class="alert-info" style="font-size:0.9rem; color:#666; margin-bottom:1rem;">
                     <i class="fa-solid fa-info-circle"></i> Seleccione los productos. <span style="color:#d9534f; font-weight:bold;">A Comprar = Min - Stock</span>.
                      <span style="color:#007bff; font-weight:bold; margin-left:10px;">Pedido = Ceil(A Comprar / Factor)</span>.
+                     <br><i class="fa-solid fa-layer-group" style="margin-right:5px;"></i> Los productos repetidos suman su stock total.
                 </div>
                 
                 <div class="history-table-wrapper">
@@ -4462,7 +4531,7 @@ class App {
 
         // Bind Checkbox events for counter
         setTimeout(() => {
-            const checks = document.querySelectorAll('.history-select-check');
+            const checks = document.querySelectorAll('.history-select-check:not([disabled])');
             checks.forEach(c => {
                 c.addEventListener('change', () => this.updateHistoryCounter());
             });
