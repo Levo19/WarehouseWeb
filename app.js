@@ -4305,6 +4305,10 @@ class App {
     }
 
     async openProviderOrderModal(providerName) {
+        // Find provider data to get phone
+        const providerData = this.providersData ? this.providersData.find(p => p.nombre === providerName) : null;
+        const providerPhone = providerData ? providerData.telefono : '';
+
         // 1. Show Loading Modal
         const loadingHtml = `
             <div class="modal-card">
@@ -4330,7 +4334,7 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                this.renderProviderHistoryTable(providerName, result.data);
+                this.renderProviderHistoryTable(providerName, result.data, providerPhone);
             } else {
                 alert('Error: ' + result.message);
                 this.closeModal();
@@ -4342,7 +4346,7 @@ class App {
         }
     }
 
-    renderProviderHistoryTable(providerName, products) {
+    renderProviderHistoryTable(providerName, products, providerPhone) {
         if (!products || products.length === 0) {
             const emptyHtml = `
             <div class="modal-card">
@@ -4581,12 +4585,18 @@ class App {
             </div>
                 <div class="modal-footer">
                      <span id="history-selected-count" style="margin-right:auto; font-weight:bold; color:var(--primary-color);">0 seleccionados</span>
+                     <button class="btn-success" style="background:#25D366; border:none; margin-right:10px;" onclick="app.sendPrepedidoWhatsApp('${providerPhone || ''}')">
+                        <i class="fa-brands fa-whatsapp"></i> Enviar WhatsApp
+                     </button>
                      <button class="btn-secondary" onclick="app.closeModal()">Cancelar</button>
                      <button class="btn-primary" onclick="app.generatePrepedidoFromHistory()">Generar Prepedido</button>
                 </div>
             </div>`;
 
         this.openModal(modalHtml);
+
+        // IMMEDIATE UPDATE to set counter based on auto-checked items
+        this.updateHistoryCounter();
 
         // Bind Checkbox events for counter
         setTimeout(() => {
@@ -4628,6 +4638,49 @@ class App {
 
         // PRINT TICKET LOGIC (80mm)
         this.printPrepedidoTicket(selected);
+    }
+
+    sendPrepedidoWhatsApp(phone) {
+        if (!phone) {
+            return alert('Este proveedor no tiene registrado un número de teléfono para WhatsApp.');
+        }
+
+        const selected = [];
+        document.querySelectorAll('.history-select-check:checked').forEach(c => {
+            const qty = parseFloat(c.dataset.pedido);
+            if (qty > 0) {
+                selected.push({
+                    desc: c.dataset.desc,
+                    cantidad: qty
+                });
+            }
+        });
+
+        if (selected.length === 0) return alert('Seleccione al menos un producto con cantidad válida para enviar.');
+
+        // Time-based Greeting
+        const hour = new Date().getHours();
+        let greeting = 'Buenos días';
+        if (hour >= 12 && hour < 19) greeting = 'Buenas tardes';
+        else if (hour >= 19) greeting = 'Buenas noches';
+
+        // Format Message
+        let msg = `${greeting}, le envío esta lista para que me despache:\n\n`;
+        selected.forEach(item => {
+            msg += `${item.cantidad} - ${item.desc}\n`;
+        });
+        msg += `\nSoy de Inversiones MOS por favor me despacha.`;
+
+        // Clean phone (remove spaces, etc) and append prefix
+        const cleanPhone = phone.replace(/\D/g, '');
+        // Assuming database numbers are local (9 Digits), add +51
+        // If they already have 51, handle it? User said "add +51 and the number". 
+        // Safer to just add 51 if length is 9.
+        let finalPhone = cleanPhone;
+        if (cleanPhone.length === 9) finalPhone = '51' + cleanPhone;
+
+        const url = `https://wa.me/${finalPhone}?text=${encodeURIComponent(msg)}`;
+        window.open(url, '_blank');
     }
 
     printPrepedidoTicket(items) {
