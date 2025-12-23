@@ -3888,19 +3888,25 @@ h3 {
 
 /* QUANTITY INPUT STYLE */
 .qty-input {
-    width: 80px !important;
-    /* Wider for 5 chars + decimals (aaa.aa) */
+    width: 120px !important;
+    /* Significantly wider for 5 digits + decimals */
     text-align: center;
     border: 1px solid #ddd;
     border-radius: 4px;
-    padding: 2px;
+    padding: 4px;
+    /* More padding */
+    font-size: 1rem;
+    /* readable size */
     -moz-appearance: textfield;
+    appearance: none;
 }
 
 .qty-input::-webkit-outer-spin-button,
 .qty-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
+    -webkit-appearance: none !important;
+    margin: 0 !important;
+    display: none !important;
+    /* Force hide */
 }
 
 .qty-input:read-only {
