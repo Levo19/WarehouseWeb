@@ -3886,6 +3886,26 @@ h3 {
 }
 }
 
+/* Table Row Styles */
+.row-needed {
+    background-color: #fff1f2;
+    /* Light red/pink */
+}
+
+.row-substitute {
+    background-color: #fff7ed;
+    /* Light orange */
+}
+
+.row-derived {
+    background-color: #fce7f3;
+    /* Light purple/pink */
+}
+
+.row-derived:hover {
+    background-color: #fbcfe8 !important;
+}
+
 /* QUANTITY INPUT STYLE */
 .qty-input {
     width: 180px !important;
