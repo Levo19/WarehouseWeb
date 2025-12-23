@@ -4413,11 +4413,13 @@ class App {
                 icon = '<i class="fa-solid fa-industry" title="Producto Derivado/Envasado" style="font-size:0.7rem; margin-left:4px;"></i>';
             }
 
-            // Default Calculation (fallback)
+            // Default Calculation (Use Backend 'falta' as source of truth)
             const factor = parseFloat(p.factorCompras) || 1;
             const stock = parseFloat(p.stock) || 0;
             const min = parseFloat(p.min) || 0;
-            let aComprar = Math.max(0, min - stock);
+
+            // Backend calculates 'falta' considering dependencies/derived logic. Use it.
+            let aComprar = (p.falta !== undefined && p.falta !== null) ? parseFloat(p.falta) : Math.max(0, min - stock);
             let pedidoQty = Math.ceil(aComprar / factor);
 
             // --- APPLY NEW LOGIC STATES ---
@@ -4426,43 +4428,25 @@ class App {
             let showValues = true;
 
             if (p.isDerived) {
-                // CASE 1: DERIVED -> Disabled & Empty
+                // CASE 1: DERIVED -> Disabled Pedido, BUT SHOW 'A Comprar'
                 pedidoQty = '';
-                aComprar = ''; // Optional: hide 'A Comprar' too or show calc? User said: "disable... no editing". 
-                // Previous code showed 'aComprar' for derived? 
-                // Lines 4415 in original showed 'aComprar'.
-                // Line 4394 set pedidoQty = ''.
                 pedidoInputAttr = 'disabled readonly';
                 pedidoStyle += 'background:#f5f5f5; color:#aaa; border-color:#eee;';
-                showValues = false; // Flag to hide 'A Comprar' text if desired, or keep it.
-                // Original code kept AComprar display (Ln 4415). We'll keep it but ensure Pedido is empty.
+                // showValues remains TRUE so we see 'A Comprar'
             } else if (p.isSubstituteSlave) {
-                // CASE 2: SUBSTITUTE SLAVE -> Disabled & Empty (as requested)
+                // CASE 2: SUBSTITUTE SLAVE -> Disabled & Hidden
                 pedidoQty = '';
-                // Hide 'A Comprar' too? "solo debe aparecer el pedido en el primero".
-                // "en los que restean debes inhabilitar y que no se pueda editar para no causar confusion"
                 pedidoInputAttr = 'disabled readonly';
                 pedidoStyle += 'background:#f5f5f5; color:#aaa; border-color:#eee;';
-                showValues = false; // Let's hide calculations for slaves to be clean
+                showValues = false; // Hide 'A Comprar' for slaves
             } else if (p.isSubstituteLeader) {
                 // CASE 3: SUBSTITUTE LEADER -> Use Aggregated Calculation
                 pedidoQty = p.customOrderQty;
-                // 'A Comprar' column usually shows raw need. Let's show the aggregated need context? 
-                // Or just the raw value for *this* item?
-                // Visual consistency: If we changed Pedido, maybe we should show why.
-                // But the column is 'Min - Stock'.
-                // If we show 'Min - Stock' of THIS item, it might confuse why Pedido is lower.
-                // But 'A Comprar' column corresponds to row.
-                // Let's stick to showing the calculated Pedido Order.
+                // 'A Comprar' here is for the specific item (or we could show aggregated need, but let's stick to item row context)
             }
 
             // Format A Comprar display
             let displayAComprar = (showValues && typeof aComprar === 'number') ? aComprar.toFixed(2) : '-';
-            if (p.isSubstituteLeader) {
-                // Maybe add a tooltip or visual cue?
-                // displayAComprar += ' (Agrupado)';
-            }
-            if (!showValues) displayAComprar = '-';
 
             return `
         <tr class="${rowClass}">
@@ -4478,7 +4462,7 @@ class App {
                        onchange="this.closest('tr').querySelector('.history-select-check').dataset.pedido = this.value">
             </td>
             <td style="font-weight:600;">${p.nombre}</td>
-             <td style="text-align:center; color:#555;">${p.min} - ${p.stock}</td>
+             <td style="text-align:center; color:#555;">${min} - ${stock}</td>
             <td style="text-align:center; font-weight:bold; color:#333;">
                 ${displayAComprar}
             </td>
