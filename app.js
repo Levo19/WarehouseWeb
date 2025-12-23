@@ -4364,7 +4364,27 @@ class App {
         // Sort by Name to ensure substitutes are adjacent (visually helpful)
         products.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-        // --- NEW LOGIC: SUBSTITUTE AGGREGATION & DERIVED LINKING ---
+        // Helper to parse factor from name (e.g. "250GR" -> 0.25, "1KG" -> 1)
+        const getApproxFactor = (name) => {
+            const n = name.toUpperCase().replace(/\s/g, '');
+            // regex for weights
+            const matchKg = n.match(/(\d+(?:\.\d+)?)KG/);
+            if (matchKg) return parseFloat(matchKg[1]);
+
+            const matchGr = n.match(/(\d+(?:\.\d+)?)GR/);
+            if (matchGr) return parseFloat(matchGr[1]) / 1000;
+
+            const matchG = n.match(/(\d+(?:\.\d+)?)G\b/); // 'G' word boundary
+            if (matchG) return parseFloat(matchG[1]) / 1000;
+
+            const matchL = n.match(/(\d+(?:\.\d+)?)L\b/);
+            if (matchL) return parseFloat(matchL[1]);
+
+            const matchMl = n.match(/(\d+(?:\.\d+)?)ML/);
+            if (matchMl) return parseFloat(matchMl[1]) / 1000;
+
+            return 1; // Default
+        };
 
         // 1. Group Substitutes (Same Name, Not Derived)
         const subGroups = {};
@@ -4375,6 +4395,7 @@ class App {
             subGroups[name].push(p);
         });
 
+        // 2. Aggregate Stock for Substitutes
         Object.values(subGroups).forEach(group => {
             if (group.length > 0) {
                 const master = group[0];
@@ -4387,7 +4408,7 @@ class App {
             }
         });
 
-        // 2. Link Derived Products to their Origin (Fuzzy Match)
+        // 3. Link Derived Products & Sum Demand
         const origins = products.filter(p => !p.isDerived && p.isSubstituteLeader);
         const derived = products.filter(p => p.isDerived);
 
@@ -4403,7 +4424,7 @@ class App {
                 let hitCount = 0;
 
                 originWords.forEach(w => {
-                    if (childNameClean.includes(w)) hitCount++;
+                    if (childNameClean.includes(w)) hitCount++; // Simple word inclusion
                 });
 
                 // Threshold: at least 70% of words match
@@ -4417,19 +4438,25 @@ class App {
 
             if (bestMatch) {
                 if (!bestMatch._childDemand) bestMatch._childDemand = 0;
-                // Accumulate Child Need (Min - Stock)
-                const childNeed = Math.max(0, (parseFloat(child.min) || 0) - (parseFloat(child.stock) || 0));
-                bestMatch._childDemand += childNeed;
+
+                // Child Basic Need = (Min - Stock)
+                const childBasicNeed = Math.max(0, (parseFloat(child.min) || 0) - (parseFloat(child.stock) || 0));
+
+                // Apply Factor (Parsed from Name)
+                const conversionFactor = getApproxFactor(child.nombre);
+
+                // Add to Parent Demand in Parent Units
+                bestMatch._childDemand += (childBasicNeed * conversionFactor);
             }
         });
 
-        // 3. Final Per-Row Calculation
+        // 4. Final Calculation per Row
         products.forEach(p => {
             const min = parseFloat(p.min) || 0;
             const stock = parseFloat(p.stock) || 0;
             const factor = parseFloat(p.factorCompras) || 1;
 
-            // Visuals
+            // Visual A Comprar (Row specific)
             p._displayAComprar = (parseFloat(p.falta) || Math.max(0, min - stock)).toFixed(2);
             p._displayPedido = '';
             p._inputAttr = '';
@@ -4438,7 +4465,6 @@ class App {
             if (p.isDerived) {
                 p._inputAttr = 'disabled readonly';
                 p._rowStyle = 'background:#f5f5f5; color:#aaa; border-color:#eee;';
-                // Recalculate A Comprar visually
                 p._displayAComprar = Math.max(0, min - stock).toFixed(2);
 
             } else if (p.isSubstituteSlave) {
@@ -4447,13 +4473,18 @@ class App {
                 p._rowStyle = 'background:#f5f5f5; color:#aaa; border-color:#eee;';
 
             } else if (p.isSubstituteLeader) {
-                // Origin Formula: (Min + ChildNeeds) - AggregatedStock
+                // Formula: [ (Min - AggStock) + Sum(ChildNeed*Conversion) ] / FactorCompra
+                // Which is: [ Min - AggStock + _childDemand ] / Factor
+
                 const childDemand = p._childDemand || 0;
                 const aggStock = p._aggregatedStock !== undefined ? p._aggregatedStock : stock;
 
-                // Total Need = (Min + ChildDemands)
-                const totalNeed = (min + childDemand) - aggStock;
-                const pedidoVal = Math.ceil(Math.max(0, totalNeed) / factor);
+                // Numerator: (Min + ChildDemand) - AggStock
+                // Note: user wrote [ min-stock + sum(...) ]. Order of ops same. 
+                // Using Max(0, ...) for the final result to clamp negatives.
+
+                const numerator = (min + childDemand) - aggStock;
+                const pedidoVal = Math.max(0, Math.ceil(numerator / factor));
 
                 p._displayPedido = pedidoVal;
             }
