@@ -286,6 +286,9 @@ class App {
         if (viewName === 'dispatch') {
             this.state.currentModule = 'dispatch';
             this.renderDispatchModule();
+        } else if (viewName === 'dashboard') {
+            this.state.currentModule = 'dashboard';
+            this.renderDashboard();
         } else if (viewName === 'prepedidos') {
             this.state.currentModule = 'prepedidos';
             this.loadPrepedidos();
@@ -616,6 +619,179 @@ class App {
             // For now, we rely on Native Mobile Keyboard "Scan Text" or Hardware Scanners.
             console.log('Barcode Scan Triggered - Input Focused');
         }
+    }
+
+    /* --- DASHBOARD LOGIC --- */
+
+    renderDashboard() {
+        // Check container
+        const container = document.getElementById('main-content'); // Main view container
+        if (!container) return;
+
+        // Reset Header
+        this.restoreDefaultHeader();
+
+        // Dashboard HTML Structure
+        container.innerHTML = `
+            <div style="padding: 1.5rem;">
+                <!-- Header -->
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+                   <div>
+                        <h2 style="font-size:1.5rem; font-weight:700; color:#1e293b;">Dashboard</h2>
+                        <p style="color:#64748b; font-size:0.9rem;">Resumen de actividad e inventario</p>
+                   </div>
+                   <button class="btn-primary" onclick="app.updateCurrentView()">
+                        <i class="fa-solid fa-rotate-right"></i> Actualizar
+                   </button>
+                </div>
+
+                <div class="dashboard-grid">
+                    <!-- Widget 1: Random Audit -->
+                    <div id="widget-audit" class="widget-card">
+                        <div style="text-align:center; padding:2rem; color:#999;">
+                            <i class="fa-solid fa-spinner fa-spin"></i> Cargando Auditoría...
+                        </div>
+                    </div>
+
+                    <!-- Widget 2: Expiration Alerts -->
+                    <div id="widget-expiration" class="widget-card">
+                        <div style="text-align:center; padding:2rem; color:#999;">
+                            <i class="fa-solid fa-spinner fa-spin"></i> Buscando vencimientos...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Load Widgets
+        this.renderRandomAuditWidget();
+        this.renderExpirationWidget();
+    }
+
+    renderRandomAuditWidget() {
+        const container = document.getElementById('widget-audit');
+        if (!container) return;
+
+        // Logic: Pick 5 random products
+        const products = Object.values(this.data.products || {});
+        if (products.length === 0) {
+            container.innerHTML = '<div style="padding:1rem; text-align:center; color:#666;">Sin productos para auditar.</div>';
+            return;
+        }
+
+        const sampleSize = 5;
+        const shuffled = products.sort(() => 0.5 - Math.random());
+        const selected = shuffled.slice(0, sampleSize);
+
+        const listHtml = selected.map(p => `
+            <div class="audit-item">
+                <input type="checkbox" class="audit-checkbox" title="Marcar como verificado">
+                <div style="flex:1;">
+                    <div style="font-size:0.9rem; font-weight:600; color:#333;">${p.desc}</div>
+                    <div style="font-size:0.8rem; color:#666;">Stock Sistema: <strong>${p.stock}</strong></div>
+                </div>
+                <button class="icon-btn" style="font-size:0.8rem;" onclick="app.openQuickDispatchModal('${p.codigo}', '${p.desc.replace(/'/g, "\\'")}')">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+            </div>
+        `).join('');
+
+        container.innerHTML = `
+            <div class="widget-header">
+                <div class="widget-title"><i class="fa-solid fa-clipboard-check"></i> Auditoría Aleatoria</div>
+                <div style="font-size:0.8rem; color:#888;">${new Date().toLocaleDateString()}</div>
+            </div>
+            <div class="audit-list">
+                ${listHtml}
+            </div>
+        `;
+    }
+
+    renderExpirationWidget() {
+        const container = document.getElementById('widget-expiration');
+        if (!container) return;
+
+        // Logic: Find closest expirations from MOVIMIENTOS DETALLES (Ingresos only)
+        // We need 'detalles' which contains { fechaVencimiento, codigo, idGuia ... }
+        // We assume loadMovimientosData populates this.data.movimientos.detalles
+
+        const detalles = this.data.movimientos?.detalles || [];
+
+        // Filter valid dates and sorted
+        const validItems = detalles
+            .filter(d => d.fechaVencimiento && d.fechaVencimiento.length > 5) // Simple check for "YYYY-MM-DD" or "DD/MM/YYYY" content
+            .map(d => {
+                // Parse Date. Formats could be "2025-12-31" or "31/12/2025" depending on input
+                // Input type="date" returns YYYY-MM-DD
+                let dateObj = new Date(d.fechaVencimiento);
+
+                // Fallback for different formats if needed?
+                // Assuming standard ISO from input type="date" or stored formatted string.
+
+                return {
+                    ...d,
+                    dateObj: dateObj,
+                    daysLeft: Math.ceil((dateObj - new Date()) / (1000 * 60 * 60 * 24))
+                };
+            })
+            .sort((a, b) => a.dateObj - b.dateObj)
+            .slice(0, 10); // Check top 10 closest
+
+        if (validItems.length === 0) {
+            container.innerHTML = `
+                <div class="widget-header">
+                    <div class="widget-title"><i class="fa-solid fa-calendar-xmark"></i> Próximos Vencimientos</div>
+                </div>
+                <div style="padding:1rem; text-align:center; color:#22c55e;">
+                    <i class="fa-solid fa-check-circle" style="font-size:2rem; margin-bottom:0.5rem; display:block;"></i>
+                    Todo en orden
+                </div>
+            `;
+            return;
+        }
+
+        const listHtml = validItems.map(item => {
+            const product = this.data.products[item.codigo] || { desc: 'Desconocido' };
+            const days = item.daysLeft;
+
+            let alertClass = 'alert-info';
+            let icon = 'fa-clock';
+            let label = `${days} días`;
+
+            if (days < 0) {
+                alertClass = 'alert-critical';
+                icon = 'fa-triangle-exclamation';
+                label = `Vencido (${Math.abs(days)}d)`;
+            } else if (days <= 7) {
+                alertClass = 'alert-critical';
+                icon = 'fa-triangle-exclamation';
+            } else if (days <= 30) {
+                alertClass = 'alert-warning';
+                icon = 'fa-circle-exclamation';
+            }
+
+            return `
+                <div class="expiration-item ${alertClass}">
+                    <div style="overflow:hidden;">
+                        <div style="font-size:0.9rem; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${product.desc}</div>
+                        <div style="font-size:0.8rem; opacity:0.8;">Code: ${item.codigo}</div>
+                    </div>
+                    <div style="text-align:right; min-width:80px;">
+                        <div style="font-size:0.85rem; font-weight:bold;"><i class="fa-solid ${icon}"></i> ${label}</div>
+                        <div style="font-size:0.75rem;">${item.fechaVencimiento}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = `
+            <div class="widget-header">
+                <div class="widget-title"><i class="fa-solid fa-calendar-xmark"></i> Próximos Vencimientos</div>
+            </div>
+            <div class="expiration-list">
+                ${listHtml}
+            </div>
+        `;
     }
 
     /**
@@ -2070,6 +2246,10 @@ class App {
 
         this.openModal(modalHtml, 'modern-modal');
         this.tempGuiaProducts = [];
+        this.tempGuiaType = type; // STORE TYPE FOR RENDER LOGIC
+
+        // Store Preingreso ID if passed (optional, logic might be elsewhere but safe to init)
+        this.tempPreingresoId = null;
 
         setTimeout(() => {
             const provInput = document.getElementById('guia-proveedor');
@@ -2594,22 +2774,41 @@ class App {
             return;
         }
 
+        const isIngreso = this.tempGuiaType === 'INGRESO';
+
         container.innerHTML = this.tempGuiaProducts.map((p, index) => `
-                    <div class="temp-item" style="padding: 0.75rem; align-items: center;">
-                <div style="flex:1;">
+            <div class="temp-item" style="padding: 0.75rem; align-items: start; display: flex; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid #f0f0f0;">
+                <div style="flex:1; min-width: 200px;">
                     <div style="font-weight:bold; font-size:1rem; color: #333;">${p.codigo}</div>
                     <div style="font-size:0.85rem; color:#666;">${p.descripcion}</div>
+                    
+                    ${isIngreso ? `
+                        <div style="margin-top: 0.5rem;">
+                            <label style="font-size: 0.75rem; color: #888; display: block; margin-bottom: 2px;">Vencimiento</label>
+                            <input type="date" value="${p.fechaVencimiento || ''}" 
+                                   onchange="app.updateTempProp(${index}, 'fechaVencimiento', this.value)"
+                                   style="border: 1px solid #ddd; border-radius: 6px; padding: 4px; font-size: 0.85rem; color: #333;" />
+                        </div>
+                    ` : ''}
                 </div>
                 
-                <div style="display:flex; align-items:center; gap:0.5rem; margin:0 1rem; background: #f3f4f6; padding: 4px; border-radius: 6px;">
+                <div style="display:flex; align-items:center; gap:0.5rem; background: #f3f4f6; padding: 4px; border-radius: 6px; align-self: center;">
                     <button type="button" onclick="app.updateTempProductQty(${index}, -1)" style="width:30px; height:30px; border:none; background:white; border-radius:4px; font-weight:bold; cursor:pointer; color:#666;">-</button>
                     <span style="font-weight:bold; min-width:30px; text-align:center; font-size:1rem;">${p.cantidad}</span>
                     <button type="button" onclick="app.updateTempProductQty(${index}, 1)" style="width:30px; height:30px; border:none; background:white; border-radius:4px; font-weight:bold; cursor:pointer; color:var(--primary-color);">+</button>
                 </div>
 
-                <button onclick="app.removeTempProduct(${index})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1.1rem; padding: 0.5rem;"><i class="fa-solid fa-trash"></i></button>
+                <button onclick="app.removeTempProduct(${index})" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1.1rem; padding: 0.5rem; align-self: center;">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
             </div>
-                    `).join('');
+        `).join('');
+    }
+
+    updateTempProp(index, prop, value) {
+        if (this.tempGuiaProducts[index]) {
+            this.tempGuiaProducts[index][prop] = value;
+        }
     }
 
     updateTempProductQty(index, change) {
