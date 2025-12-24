@@ -2359,7 +2359,7 @@ class App {
             this.sendAuditResult(idAudit, 'OK', systemStock)
                 .then(() => this.updateDashboardCount()); // Refresh Widget Count
 
-
+        } else if (action === 'REJECT') {
             // Show Adjustment Input
             // Replace actions with input form
             const actionsDiv = card.querySelector('.audit-actions');
