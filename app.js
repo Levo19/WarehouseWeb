@@ -2300,12 +2300,18 @@ class App {
                         Stock Sistema: <span>${p.stock}</span>
                     </div>
                     <div class="audit-actions">
+                        ${item.estado === 'PENDIENTE' ? `
                         <button class="btn-audit-reject" onclick="app.handleAuditAction('${item.id}', 'REJECT', ${p.stock}, '${item.codigo}')">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                         <button class="btn-audit-approve" onclick="app.handleAuditAction('${item.id}', 'OK', ${p.stock})">
                             <i class="fa-solid fa-check"></i>
                         </button>
+                        ` : `
+                        <div style="color:#22c55e; font-weight:bold; font-size:1.1rem; width:100%; text-align:center; padding:0.8rem; background:#dcfce7; border-radius:8px;">
+                            <i class="fa-solid fa-check-circle"></i> ${item.estado}
+                        </div>
+                        `}
                     </div>
                 </div>
             </div>
@@ -2333,15 +2339,27 @@ class App {
     async handleAuditAction(idAudit, action, systemStock, code) {
         const card = document.getElementById(`audit-card-${idAudit}`);
 
+        // 1. UPDATE LOCAL STATE
+        const itemIndex = this.auditList.findIndex(i => i.id == idAudit);
+        if (itemIndex > -1) {
+            this.auditList[itemIndex].estado = action === 'OK' ? 'AUDITADO' : 'AJUSTADO';
+        }
+
         if (action === 'OK') {
             // Optimistic UI
             if (card) {
                 card.classList.add('audit-verified');
-                card.querySelector('.audit-actions').innerHTML = '<div style="color:#22c55e; font-weight:bold; font-size:1.1rem;"><i class="fa-solid fa-check-circle"></i> Verificado</div>';
+                card.querySelector('.audit-actions').innerHTML = `
+                    <div style="color:#22c55e; font-weight:bold; font-size:1.1rem; width:100%; text-align:center; padding:0.8rem; background:#dcfce7; border-radius:8px;">
+                        <i class="fa-solid fa-check-circle"></i> AUDITADO
+                    </div>`;
             }
 
             // Sync with Backend
-            this.sendAuditResult(idAudit, 'OK', systemStock);
+            this.sendAuditResult(idAudit, 'OK', systemStock)
+                .then(() => this.updateDashboardCount()); // Refresh Widget Count
+
+        } else if (action === 'REJECT') {
 
         } else if (action === 'REJECT') {
             // Show Adjustment Input
@@ -2366,15 +2384,41 @@ class App {
         const realQty = parseFloat(input.value);
         if (isNaN(realQty)) return alert('Cantidad inválida');
 
+        // UPDATE LOCAL STATE
+        const itemIndex = this.auditList.findIndex(i => i.id == idAudit);
+        if (itemIndex > -1) {
+            this.auditList[itemIndex].estado = 'AJUSTADO';
+        }
+
         // UI Feedback
         const card = document.getElementById(`audit-card-${idAudit}`);
         if (card) {
             card.classList.add('audit-verified');
-            card.innerHTML += '<div style="position:absolute; inset:0; background:rgba(255,255,255,0.8); display:flex; justify-content:center; align-items:center; color:#22c55e; font-weight:bold; font-size:1.2rem;"><i class="fa-solid fa-file-pen"></i> Ajustado</div>';
+            card.querySelector('.audit-actions').innerHTML = `
+                    <div style="color:#22c55e; font-weight:bold; font-size:1.1rem; width:100%; text-align:center; padding:0.8rem; background:#dcfce7; border-radius:8px;">
+                        <i class="fa-solid fa-file-pen"></i> AJUSTADO
+                    </div>`;
         }
 
         // Sync
-        this.sendAuditResult(idAudit, 'ADJUST', realQty, systemStock);
+        this.sendAuditResult(idAudit, 'ADJUST', realQty, systemStock)
+            .then(() => this.updateDashboardCount());
+    }
+
+    /* Helper to refresh Widget Count without full reload */
+    updateDashboardCount() {
+        // Recalculate pending based on local list
+        const pendingCount = this.auditList.filter(i => i.estado === 'PENDIENTE').length;
+        const widget = document.getElementById('widget-audit');
+        if (widget) {
+            const countEl = widget.querySelector('div[style*="font-size:2.5rem"]');
+            if (countEl) countEl.innerText = pendingCount;
+
+            // If count is 0, we might want to show success message.
+            if (pendingCount === 0) {
+                this.renderRandomAuditWidget(); // Reload full widget state
+            }
+        }
     }
 
     async sendAuditResult(idAudit, status, realQty, systemStock) {
