@@ -853,10 +853,12 @@ class App {
 
             // Searchable Text for Performance
             const searchText = `${code} ${product.desc}`.toLowerCase();
+            const isNegative = product.stock < 0;
 
             return `
-            <div class="product-card" data-search="${searchText}" onclick="this.classList.toggle('flipped')">
+            <div class="product-card ${isNegative ? 'negative-stock' : ''}" data-search="${searchText}" onclick="this.classList.toggle('flipped')">
                 <div class="product-card-inner">
+                    ${isNegative ? '<i class="fa-solid fa-bomb stock-bomb-icon"></i>' : ''}
                     <!-- FRONT -->
                     <div class="card-front">
                         <button class="btn-quick-dispatch" 
