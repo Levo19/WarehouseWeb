@@ -668,43 +668,70 @@ class App {
         this.renderExpirationWidget();
     }
 
-    renderRandomAuditWidget() {
+    async renderRandomAuditWidget() {
         const container = document.getElementById('widget-audit');
         if (!container) return;
 
-        // Logic: Pick 5 random products
-        const products = Object.values(this.data.products || {});
-        if (products.length === 0) {
-            container.innerHTML = '<div style="padding:1rem; text-align:center; color:#666;">Sin productos para auditar.</div>';
-            return;
-        }
-
-        const sampleSize = 5;
-        const shuffled = products.sort(() => 0.5 - Math.random());
-        const selected = shuffled.slice(0, sampleSize);
-
-        const listHtml = selected.map(p => `
-            <div class="audit-item">
-                <input type="checkbox" class="audit-checkbox" title="Marcar como verificado">
-                <div style="flex:1;">
-                    <div style="font-size:0.9rem; font-weight:600; color:#333;">${p.desc}</div>
-                    <div style="font-size:0.8rem; color:#666;">Stock Sistema: <strong>${p.stock}</strong></div>
-                </div>
-                <button class="icon-btn" style="font-size:0.8rem;" onclick="app.openQuickDispatchModal('${p.codigo}', '${p.desc.replace(/'/g, "\\'")}')">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </button>
-            </div>
-        `).join('');
+        // Fetch Data from Backend
+        // We use a small cache or just fetch? Let's fetch to be accurate on page load.
+        // To avoid await issues in synchronous render chain, we render a placeholder then fetch.
 
         container.innerHTML = `
-            <div class="widget-header">
-                <div class="widget-title"><i class="fa-solid fa-clipboard-check"></i> Auditoría Aleatoria</div>
-                <div style="font-size:0.8rem; color:#888;">${new Date().toLocaleDateString()}</div>
-            </div>
-            <div class="audit-list">
-                ${listHtml}
+            <div style="text-align:center; padding:2rem; color:#999;">
+                <i class="fa-solid fa-spinner fa-spin"></i> Cargando Auditoría...
             </div>
         `;
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: 'getDailyAuditList' })
+            });
+            const result = await response.json();
+
+            if (result.status !== 'success') throw new Error(result.message);
+
+            this.auditList = result.data || []; // Store globally for Modal
+
+            // RENDER WIDGET SUMMARY
+            const pendingCount = this.auditList.length;
+            const completedToday = 0; // TODO: Maybe fetch completed count too? For now just show pending.
+
+            if (pendingCount === 0) {
+                container.innerHTML = `
+                    <div class="widget-header">
+                        <div class="widget-title"><i class="fa-solid fa-clipboard-check"></i> Auditoría Diaria</div>
+                    </div>
+                    <div style="padding:1.5rem; text-align:center; color:#22c55e;">
+                         <i class="fa-solid fa-check-double" style="font-size:2rem; margin-bottom:0.5rem;"></i>
+                         <p>¡Todo al día!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="widget-header">
+                    <div class="widget-title"><i class="fa-solid fa-clipboard-check"></i> Auditoría Diaria</div>
+                    <div style="font-size:0.8rem; color:#888;">${new Date().toLocaleDateString()}</div>
+                </div>
+                <div style="padding:1rem; text-align:center;">
+                    <div style="font-size:2.5rem; font-weight:800; color:var(--primary-color);">${pendingCount}</div>
+                    <div style="color:#666; font-size:0.9rem; margin-bottom:1rem;">Productos Pendientes</div>
+                    
+                    <button class="btn-primary" style="width:100%;" onclick="app.openAuditModal()">
+                        <i class="fa-solid fa-magnifying-glass"></i> Auditar Ahora
+                    </button>
+                </div>
+            `;
+
+
+        } catch (e) {
+            console.error(e);
+            container.innerHTML = '<div style="padding:1rem; color:red;">Error al cargar auditoría</div>';
+        }
     }
 
     renderExpirationWidget() {
@@ -2250,11 +2277,128 @@ class App {
 
         // Store Preingreso ID if passed (optional, logic might be elsewhere but safe to init)
         this.tempPreingresoId = null;
+    }
 
-        setTimeout(() => {
-            const provInput = document.getElementById('guia-proveedor');
-            if (provInput) provInput.focus();
-        }, 300);
+    /* --- AUDIT MODAL --- */
+    openAuditModal() {
+        if (!this.auditList || this.auditList.length === 0) return;
+
+        // Generate Cards Grid
+        const cardsHtml = this.auditList.map(item => {
+            const p = this.data.products[item.codigo] || { desc: 'Desconocido', stock: 0 };
+            const imgSrc = this.getOptimizedImageUrl(p.img || '');
+
+            return `
+            <div class="audit-card-large" id="audit-card-${item.id}">
+                <div class="audit-img-container">
+                    <img src="${imgSrc || 'recursos/defaultImageProduct.png'}" loading="lazy" onerror="this.src='recursos/defaultImageProduct.png'">
+                </div>
+                <div class="audit-info">
+                    <div class="audit-code">${item.codigo}</div>
+                    <div class="audit-desc">${p.desc}</div>
+                    <div class="audit-stock">
+                        Stock Sistema: <span>${p.stock}</span>
+                    </div>
+                    <div class="audit-actions">
+                        <button class="btn-audit-reject" onclick="app.handleAuditAction('${item.id}', 'REJECT', ${p.stock}, '${item.codigo}')">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                        <button class="btn-audit-approve" onclick="app.handleAuditAction('${item.id}', 'OK', ${p.stock})">
+                            <i class="fa-solid fa-check"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            `;
+        }).join('');
+
+        const modalHtml = `
+            <div class="modal-card" style="width:95%; max-width:1200px; height:90vh; display:flex; flex-direction:column; overflow:hidden;">
+                <div class="modern-header">
+                    <button class="close-btn" onclick="app.closeModal()"><i class="fa-solid fa-xmark"></i></button>
+                    <h3><i class="fa-solid fa-clipboard-check"></i> Auditoría Diaria</h3>
+                    <span style="background:var(--primary-light); color:var(--primary-color); padding:0.2rem 0.6rem; border-radius:12px; font-size:0.8rem; font-weight:bold;">${this.auditList.length} Pendientes</span>
+                </div>
+                <div class="modern-body" style="background:#f3f4f6; padding:1.5rem;">
+                    <div class="audit-grid">
+                        ${cardsHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.openModal(modalHtml, 'audit-modal-wrapper');
+    }
+
+    async handleAuditAction(idAudit, action, systemStock, code) {
+        const card = document.getElementById(`audit-card-${idAudit}`);
+
+        if (action === 'OK') {
+            // Optimistic UI
+            if (card) {
+                card.classList.add('audit-verified');
+                card.querySelector('.audit-actions').innerHTML = '<div style="color:#22c55e; font-weight:bold; font-size:1.1rem;"><i class="fa-solid fa-check-circle"></i> Verificado</div>';
+            }
+
+            // Sync with Backend
+            this.sendAuditResult(idAudit, 'OK', systemStock);
+
+        } else if (action === 'REJECT') {
+            // Show Adjustment Input
+            // Replace actions with input form
+            const actionsDiv = card.querySelector('.audit-actions');
+            actionsDiv.innerHTML = `
+                <div style="display:flex; flex-direction:column; gap:0.5rem; width:100%;">
+                    <label style="font-size:0.8rem; text-align:left;">Stock Real Encontrado:</label>
+                    <div style="display:flex; gap:0.5rem;">
+                        <input type="number" id="audit-qty-${idAudit}" placeholder="${systemStock}" style="width:80px; padding:0.3rem; border:1px solid #ddd; border-radius:4px;">
+                        <button class="btn-sm btn-primary" onclick="app.submitAuditAdjustment('${idAudit}', ${systemStock})">Guardar</button>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    async submitAuditAdjustment(idAudit, systemStock) {
+        const input = document.getElementById(`audit-qty-${idAudit}`);
+        if (!input || input.value === '') return alert('Ingrese la cantidad real');
+
+        const realQty = parseFloat(input.value);
+        if (isNaN(realQty)) return alert('Cantidad inválida');
+
+        // UI Feedback
+        const card = document.getElementById(`audit-card-${idAudit}`);
+        if (card) {
+            card.classList.add('audit-verified');
+            card.innerHTML += '<div style="position:absolute; inset:0; background:rgba(255,255,255,0.8); display:flex; justify-content:center; align-items:center; color:#22c55e; font-weight:bold; font-size:1.2rem;"><i class="fa-solid fa-file-pen"></i> Ajustado</div>';
+        }
+
+        // Sync
+        this.sendAuditResult(idAudit, 'ADJUST', realQty, systemStock);
+    }
+
+    async sendAuditResult(idAudit, status, realQty, systemStock) {
+        try {
+            await fetch(API_URL, {
+                method: 'POST',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: 'processAudit',
+                    payload: {
+                        idAudit,
+                        status,
+                        realQty,
+                        systemStock
+                    }
+                })
+            });
+            // Update local count? 
+            // Better to just refresh dashboard if modal closes?
+            // For now, let it be.
+        } catch (e) {
+            console.error('Audit Error', e);
+            alert('Error al guardar auditoría');
+        }
     }
 
     // SPOTLIGHT SEARCH LOGIC
@@ -4420,7 +4564,7 @@ class App {
             `;
             // Insert before the grid
             mainContainer.parentNode.insertBefore(controlsContainer, mainContainer);
-
+ 
             // Add Event Listener
             document.getElementById('provider-search-input').addEventListener('input', (e) => {
                 this.filterProviders(e.target.value);
