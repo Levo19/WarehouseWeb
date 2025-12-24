@@ -625,7 +625,7 @@ class App {
 
     renderDashboard() {
         // Check container
-        const container = document.getElementById('main-content'); // Main view container
+        const container = document.getElementById('view-dashboard'); // Fixed: Target the correct sub-view
         if (!container) return;
 
         // Reset Header
