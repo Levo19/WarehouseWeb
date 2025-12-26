@@ -1455,54 +1455,134 @@ class App {
         this.renderZonePickup(zone, document.getElementById('zone-content'));
     }
 
-    // --- MISSING DISPATCH FUNCTION ---
     addProductToDispatch(code) {
+        // Deprecated by Quick Dispatch, but kept if needed for other flows? 
+        // User requested replacing cart with lightning, so this might be unused.
+        // Let's keep it safe.
+    }
+
+    /* --- QUICK DISPATCH (Despacho Rápido) --- */
+    openQuickDispatchModal(code) {
         const product = this.data.products[code];
-        if (!product) return alert('Producto no encontrado');
+        if (!product) return;
 
-        const qty = prompt(`Agregar "${product.desc}" al Despacho.\nIngrese cantidad:`, "1");
-        if (qty === null) return; // Cancelled
-        const quantity = parseInt(qty);
-        if (isNaN(quantity) || quantity <= 0) return alert("Cantidad inválida");
+        // Common Clients / Zones
+        const quickClients = ['ZONA1', 'ZONA2', 'TIENDA', 'PERSONAL', 'OFICINA', 'MUESTRA'];
+        const clientOptions = quickClients.map(c => `<option value="${c}">${c}</option>`).join('');
 
-        if (quantity > product.stock) {
-            if (!confirm(`Stock insuficiente (${product.stock}). ¿Desea solicitarlo igual?`)) return;
+        const modalHtml = `
+            <div class="modal-card" style="width:90%; max-width:400px; text-align:center; border-top: 5px solid #f59e0b;">
+                <div style="position:absolute; top:-25px; left:50%; transform:translateX(-50%); background:#f59e0b; color:white; width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(245, 158, 11, 0.3); font-size:1.5rem;">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+                
+                <h3 style="margin-top:1.5rem; color:#d97706;">Despacho Rápido</h3>
+                
+                <div style="margin:1rem 0; text-align:left; background:#fffbeb; padding:1rem; border-radius:8px; border:1px solid #fcd34d;">
+                    <div style="font-weight:bold; color:#92400e; font-size:1.1rem;">${product.desc}</div>
+                    <div style="font-size:0.9rem; color:#b45309;">Code: ${code} | Stock: ${product.stock}</div>
+                </div>
+
+                <div class="form-group" style="text-align:left; margin-bottom:1rem;">
+                    <label style="font-size:0.8rem; font-weight:bold; color:#555;">Cantidad</label>
+                    <input type="number" id="qd-qty" value="1" min="1" class="modern-input" 
+                           style="font-size:1.5rem; font-weight:bold; text-align:center; color:#333;">
+                </div>
+
+                <div class="form-group" style="text-align:left; margin-bottom:1.5rem;">
+                    <label style="font-size:0.8rem; font-weight:bold; color:#555;">Destino / Cliente</label>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-top:0.5rem;">
+                        ${quickClients.map(c => `
+                            <button onclick="app.setQuickClient('${c}')" class="btn-sm" style="border:1px solid #ddd; background:white; color:#555;">${c}</button>
+                        `).join('')}
+                    </div>
+                    <input type="text" id="qd-client" placeholder="O escribe aquí..." class="modern-input" style="margin-top:0.5rem;" list="list-clients-qd">
+                    <datalist id="list-clients-qd">
+                        ${this.data.clients ? this.data.clients.map(c => `<option value="${c}">`).join('') : ''}
+                    </datalist>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; gap:1rem;">
+                    <button class="btn-secondary" onclick="app.closeModal()">Cancelar</button>
+                    <button class="btn-primary" onclick="app.confirmQuickDispatch('${code}')" style="background:#f59e0b; border-color:#f59e0b; flex:1; justify-content:center;">
+                        DESPACHAR <i class="fa-solid fa-paper-plane" style="margin-left:5px;"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        this.openModal(modalHtml, 'qd-modal');
+        setTimeout(() => document.getElementById('qd-qty').select(), 100);
+    }
+
+    setQuickClient(client) {
+        document.getElementById('qd-client').value = client;
+    }
+
+    async confirmQuickDispatch(code) {
+        const qtyInput = document.getElementById('qd-qty');
+        const clientInput = document.getElementById('qd-client');
+
+        const qty = parseInt(qtyInput.value);
+        const client = clientInput.value.trim();
+
+        if (isNaN(qty) || qty <= 0) return alert('Cantidad inválida');
+        if (!client) return alert('Debes seleccionar o escribir un destino');
+
+        // Check Stock
+        const product = this.data.products[code];
+        if (product.stock < qty) {
+            if (!confirm(`Stock insuficiente (${product.stock}). ¿Despachar igualmente?`)) return;
         }
 
-        // Optimistic UI could go here
-        this.showToast("Guardando solicitud...", "info");
+        // Show Loading
+        const btn = document.querySelector('.btn-primary'); // Should be the Dispatch btn
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ...';
+        }
 
-        // Send to Backend
-        // We reuse 'saveRequest' or 'saveDispatchRequest' 
-        // Based on Code.gs: 'saveRequest' -> saveDispatchRequest(payload)
-        const payload = {
-            codigo: code,
-            cantidad: quantity,
-            usuario: this.currentUser ? this.currentUser.username : 'User'
-        };
+        // --- OPTIMISTIC UPDATE ---
+        product.stock -= qty;
+        if (this.currentView === 'products') this.renderProductMasterList();
 
-        fetch(API_URL, {
-            method: 'POST',
-            redirect: 'follow', // FIXED: Required for GAS
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify({ action: 'saveRequest', payload: payload })
-        })
-            .then(r => r.json())
-            .then(res => {
-                if (res.status === 'success') {
-                    this.showToast("Solicitud agregada", "success");
-                    // Refresh Request List if we are in Dispatch view?
-                    // Or just let background sync handle it? 
-                    // Better to refresh immediate if we have a view for it.
-                    this.fetchRequests({ isBackground: false });
-                } else {
-                    alert('Error: ' + res.message);
-                }
-            })
-            .catch(e => {
-                console.error(e);
-                alert("Error de red");
+        try {
+            const payload = {
+                code: code,
+                desc: product.desc,
+                client: client,
+                qty: qty,
+                usuario: this.currentUser.username
+            };
+
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: 'saveQuickDispatch', payload: payload })
             });
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                this.showToast('¡Despacho Rápido Exitoso!', 'success');
+                this.closeModal();
+                // Optionally reload guides in background
+                this.loadMovimientosData(true);
+            } else {
+                alert('Error: ' + result.message);
+                // Rollback Stock
+                product.stock += qty;
+                if (this.currentView === 'products') this.renderProductMasterList();
+                this.closeModal();
+            }
+
+        } catch (e) {
+            console.error(e);
+            alert('Error de red');
+            product.stock += qty;
+            this.renderProductMasterList();
+            this.closeModal();
+        }
     }
 
     renderProductMasterList() {
@@ -1560,12 +1640,13 @@ class App {
                         </div>
 
                         <!-- Add to Dispatch Button (Top Left) -->
-                        <button onclick="event.stopPropagation(); app.addProductToDispatch('${code}')" 
-                                style="position:absolute; top:10px; left:10px; background:var(--primary-color); color:white; border:none; width:32px; height:32px; border-radius:50%; box-shadow:0 4px 6px -1px rgba(79, 70, 229, 0.4); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.2s;"
+                        <!-- Quick Dispatch Button (Top Left) -->
+                        <button onclick="event.stopPropagation(); app.openQuickDispatchModal('${code}')" 
+                                style="position:absolute; top:10px; left:10px; background:#f59e0b; color:white; border:none; width:32px; height:32px; border-radius:50%; box-shadow:0 4px 6px -1px rgba(245, 158, 11, 0.4); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.2s;"
                                 onmouseover="this.style.transform='scale(1.1)'"
                                 onmouseout="this.style.transform='scale(1)'"
-                                title="Agregar al Despacho">
-                            <i class="fa-solid fa-cart-shopping"></i>
+                                title="Despacho Rápido">
+                            <i class="fa-solid fa-bolt"></i>
                         </button>
 
                         <div class="card-img-container">
