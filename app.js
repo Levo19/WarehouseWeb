@@ -1499,45 +1499,70 @@ class App {
                     <div style="font-weight:bold; font-size:0.9rem;">${p.descripcion}</div>
                     <div style="font-size:0.8rem; color:#666;">Code: ${p.codigo}</div>
                 </div>
+                ${p.fechaVencimiento ? `<div style="font-size:0.8rem; color:#d97706; margin-right:1rem;"><i class="fa-regular fa-calendar"></i> ${p.fechaVencimiento}</div>` : ''}
                 <div style="font-weight:bold;">x${p.cantidad}</div>
             </div>
         `).join('') : '<div style="padding:1rem; text-align:center; color:#999;">Sin productos registrados</div>';
 
-        // Photo Logic
-        let photoHtml = '';
-        if (info.foto) {
-            const displayUrl = this.getOptimizedImageUrl(info.foto);
-            photoHtml = `
-                <div style="margin-top:1rem; cursor:pointer;" onclick="app.openImageModal('${displayUrl}')">
-                    <img src="${displayUrl}" style="width:100%; height:150px; object-fit:cover; border-radius:8px; border:1px solid #ddd;" title="Click para ampliar">
-                    <div style="text-align:center; font-size:0.8rem; color:var(--primary-color); margin-top:0.25rem;"><i class="fa-solid fa-magnifying-glass"></i> Ampliar</div>
-                </div>
-             `;
-        }
+        // Helper for enriched details logic inside template
+        const enrichedDetails = products;
 
         panel.innerHTML = `
-            <div style="padding:1.5rem; border-bottom:1px solid #eee; background:#f9fafb;">
-                <div style="display:flex; justify-content:space-between; align-items:start;">
-                    <h3 style="margin:0 0 0.5rem 0; color:var(--primary-color);">Detalle de Guía</h3>
-                    ${canEdit ? `<button onclick="app.showGuiaEditMode('${info.id}')" class="btn-sm primary"><i class="fa-solid fa-pen-to-square"></i> Editar</button>` : ''}
+            <div style="padding:1.5rem; background:#f9fafb; min-height:100%; display:flex; flex-direction:column;">
+                <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:1rem;">
+                    <div>
+                        <h3 style="color:var(--primary-color); margin:0;">Detalle de Guía</h3>
+                        <div style="font-size:0.9rem; color:#666;">
+                            <span style="font-weight:bold; color:#333;">${info.tipo}</span> | ${info.fecha}
+                        </div>
+                        <div style="margin-top:0.25rem;">
+                            <strong>Proveedor:</strong> ${info.proveedor || info.destino || '-'}
+                        </div>
+                        <div>
+                            <strong>Usuario:</strong> ${info.usuario}
+                        </div>
+                    </div>
+                     <div style="display:flex; flex-direction:column; gap:0.5rem; align-items:flex-end;">
+                        ${canEdit ? `<button onclick="app.showGuiaEditMode('${info.id}')" class="btn-sm primary"><i class="fa-solid fa-pen-to-square"></i> Editar</button>` : ''}
+                        
+                        <!-- Photo Upload Button -->
+                        <div style="position:relative;">
+                             <input type="file" id="guia-photo-upload-${info.id}" accept="image/*" style="display:none;" onchange="app.handleGuiaPhotoUpload('${info.id}', this)">
+                             <button onclick="document.getElementById('guia-photo-upload-${info.id}').click()" 
+                                     style="background:white; border:1px solid #ddd; padding:0.25rem 0.5rem; border-radius:4px; cursor:pointer; font-size:0.8rem; color:#666;">
+                                <i class="fa-solid fa-camera"></i> ${info.foto ? 'Cambiar Foto' : 'Agregar Foto'}
+                             </button>
+                        </div>
+                    </div>
                 </div>
-                <div style="font-size:0.9rem; color:#555;"><strong>${info.tipo}</strong> | ${info.fecha}</div>
-                <div style="margin-top:0.5rem; font-size:0.95rem;"><strong>Proveedor:</strong> ${info.proveedor}</div>
-                <div style="margin-top:0.25rem; font-size:0.95rem;"><strong>Usuario:</strong> ${info.usuario}</div>
+
+                <!-- Photo Display Section -->
+                ${info.foto ? `
+                <div style="margin-bottom:1rem; border-radius:8px; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <img src="${this.getOptimizedImageUrl(info.foto)}" 
+                         onclick="app.openImageModal('${this.getOptimizedImageUrl(info.foto)}')"
+                         style="width:100%; height:auto; display:block; cursor:pointer;" 
+                         alt="Evidencia Guía">
+                </div>
+                ` : ''}
                 
-                ${info.comentario ? `<div style="margin-top:1rem; background:#fff; padding:0.5rem; border-radius:4px; border:1px solid #eee; font-style:italic;">"${info.comentario}"</div>` : ''}
-                
-                ${photoHtml}
-            </div>
-            
-            <div style="flex:1; overflow-y:auto; padding:1.5rem;">
-                <h4 style="margin-bottom:1rem;">Productos (${products.length})</h4>
-                ${productsHtml}
-            </div>
-            
-            <div style="padding:1rem; display:flex; gap:1rem; justify-content:center;">
-                 <button onclick="app.printGuiaTicket('${info.id}')" style="padding:0.75rem 1.5rem; background:#333; color:white; border:none; border-radius:8px; cursor:pointer;"><i class="fa-solid fa-print"></i> Imprimir</button>
-                 <button onclick="app.closeGuiaDetails()" style="padding:0.75rem 1.5rem; background:#eee; border:none; border-radius:8px; cursor:pointer;">Cerrar Panel</button>
+                ${info.comentario ? `<div style="margin-bottom:1rem; background:#fff; padding:0.5rem; border-radius:4px; border:1px solid #eee; font-style:italic; color:#555;">"${info.comentario}"</div>` : ''}
+
+                <div style="background:white; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.05); overflow:hidden; margin-bottom:1rem; flex:1;">
+                    <div style="padding:0.75rem 1rem; border-bottom:1px solid #eee; background:#fff; font-weight:bold; color:#444;">
+                        Productos (${enrichedDetails.length})
+                    </div>
+                    <div style="padding:0.5rem;">
+                        ${productsHtml}
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; margin-top:auto;">
+                    <button onclick="app.printGuiaTicket('${info.id}')" class="btn-secondary" style="background:#333; color:white;">
+                        <i class="fa-solid fa-print"></i> Imprimir
+                    </button>
+                    <button onclick="app.closeGuiaDetails()" class="btn-secondary">Cerrar Panel</button>
+                </div>
             </div>
         `;
     }
