@@ -547,7 +547,7 @@ class App {
 
         // Switch View
         this.subViews.forEach(view => view.classList.remove('active'));
-        const targetView = document.getElementById(`view - ${viewName} `);
+        const targetView = document.getElementById(`view-${viewName}`);
         if (targetView) targetView.classList.add('active');
 
         // Restore Default Header Layout (Clears Dynamic Actions)
