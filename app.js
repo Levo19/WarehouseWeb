@@ -1702,8 +1702,10 @@ class App {
         // Helper for enriched details logic inside template
         const enrichedDetails = products;
 
-        // NEW PRODUCTS (PENDING)
-        const pendingProducts = this.data.nuevosProductos ? this.data.nuevosProductos.filter(p => p.idGuia === info.id) : [];
+        // NEW PRODUCTS (PENDING) - EXCLUDE PROCESSED
+        const pendingProducts = this.data.nuevosProductos
+            ? this.data.nuevosProductos.filter(p => p.idGuia === info.id && p.estado !== 'PROCESADO')
+            : [];
         const pendingHtml = pendingProducts.length > 0 ? pendingProducts.map(p => `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #fcd34d; background:#fffbeb;">
                 <div style="flex:1; padding-left:0.5rem;">
@@ -1792,9 +1794,9 @@ class App {
             return { ...d, descripcion: product ? product.desc : 'Desconocido' };
         });
 
-        // New Products (Pending)
+        // New Products (Pending) - EXCLUDE PROCESSED from Ticket
         const newProds = this.data.nuevosProductos
-            ? this.data.nuevosProductos.filter(np => np.idGuia === id)
+            ? this.data.nuevosProductos.filter(np => np.idGuia === id && np.estado !== 'PROCESADO')
             : [];
 
         const printWindow = window.open('', '_blank', 'width=450,height=600');
