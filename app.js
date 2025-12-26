@@ -269,43 +269,103 @@ class App {
     }
 
     updateNotifications() {
+        // Fix: Use correct ID
         const badge = document.getElementById('notification-badge');
         const list = document.getElementById('notification-list');
-        const bell = document.querySelector('#notification-bell i');
+        const bell = document.querySelector('#header-notification-bell i');
+
+        // Sidebar Badge Logic
+        const dashboardLink = document.querySelector('.nav-link[data-target="dashboard"]');
+        let sidebarBadge = document.getElementById('sidebar-dashboard-badge');
+
+        // Create Sidebar Badge if missing
+        if (dashboardLink && !sidebarBadge) {
+            sidebarBadge = document.createElement('span');
+            sidebarBadge.id = 'sidebar-dashboard-badge';
+            sidebarBadge.style.cssText = `
+                position: absolute;
+                top: 10px;
+                right: 15px;
+                width: 8px;
+                height: 8px;
+                background: #ef4444;
+                border-radius: 50%;
+                display: none;
+                box-shadow: 0 0 5px #ef4444;
+            `;
+            dashboardLink.style.position = 'relative'; // Ensure relative
+            dashboardLink.appendChild(sidebarBadge);
+        }
 
         if (!badge || !list) return;
 
         // Filter: PROCESADO products
-        // We only care about PROCESADO logic here for the operator to dispatch
         const prods = this.data.nuevosProductos
             ? this.data.nuevosProductos.filter(p => p.estado === 'PROCESADO')
             : [];
 
         const count = prods.length;
+        const lastCount = this.lastNotificationCount || 0;
+
+        // TOAST ALERT for NEW notifications
+        if (count > lastCount) {
+            // Only show if explicitly increased (avoid annoyance on first load if we want?)
+            // Actually, usually good to know on load.
+            // But let's avoid it on init if user just logged in? 
+            // Logic: If lastCount was 0 and now > 0, SHOW.
+
+            // Use a specialized toast
+            const diff = count - lastCount;
+            this.showToast(`¡${diff} Producto(s) Procesado(s)!`, 'success');
+
+            // Audio Alert (Optional, might be blocked by browser policy)
+            // const audio = new Audio('notification.mp3'); audio.play().catch(e=>{});
+        }
+
+        this.lastNotificationCount = count;
 
         if (count > 0) {
             badge.style.display = 'block';
             badge.textContent = count > 99 ? '99+' : count;
-            bell.classList.remove('fa-regular');
-            bell.classList.add('fa-solid'); // Filled bell
-            bell.style.color = '#f59e0b'; // Amber color
+
+            if (bell) {
+                bell.classList.remove('fa-regular');
+                bell.classList.add('fa-solid'); // Filled bell
+                bell.style.color = '#f59e0b'; // Amber color
+                bell.classList.add('fa-shake'); // Animation
+            }
+
+            // Show Sidebar Badge
+            if (sidebarBadge) sidebarBadge.style.display = 'block';
 
             list.innerHTML = prods.map(p => `
-                <div style="padding:10px; border-bottom:1px solid #f1f5f9; hover:bg-slate-50;">
-                    <div style="font-size:0.85rem; font-weight:bold; color:#1e293b;">¡Producto Listo!</div>
-                    <div style="font-size:0.8rem; color:#475569;">
+                <div style="padding:10px; border-bottom:1px solid #f1f5f9; cursor:pointer;" 
+                     onclick="app.handleNotificationClick('${p.id}')"
+                     onmouseover="this.style.backgroundColor='#f8fafc'"
+                     onmouseout="this.style.backgroundColor='white'">
+                    <div style="font-size:0.85rem; font-weight:bold; color:#1e293b;">
+                        <i class="fa-solid fa-check-circle" style="color:#16a34a; margin-right:4px;"></i> ¡Producto Listo!
+                    </div>
+                    <div style="font-size:0.8rem; color:#475569; padding-left:1.2rem;">
                         <strong>${p.descripcion}</strong> (${p.cantidad} un.)<br>
-                        Marca: ${p.marca}<br>
-                        <span style="font-size:0.75rem; color:#16a34a;">Ya fue validado. Proceder al despacho.</span>
+                        <span style="font-size:0.75rem; color:#16a34a;">Validado. Toca para ver.</span>
                     </div>
                 </div>
             `).join('');
 
         } else {
             badge.style.display = 'none';
-            bell.classList.add('fa-regular');
-            bell.classList.remove('fa-solid');
-            bell.style.color = '#64748b';
+
+            if (bell) {
+                bell.classList.add('fa-regular');
+                bell.classList.remove('fa-solid');
+                bell.classList.remove('fa-shake');
+                bell.style.color = ''; // Reset
+            }
+
+            // Hide Sidebar Badge
+            if (sidebarBadge) sidebarBadge.style.display = 'none';
+
             list.innerHTML = '<div style="padding:10px; color:#999; font-size:0.85rem; text-align:center;">Sin notificaciones</div>';
         }
     }
