@@ -1568,6 +1568,8 @@ class App {
 
         // Clone for editing state
         this.editingDetails = details.map(d => ({ ...d })); // Deep copy enough? Yes flat structure.
+        this.editingGuiaType = guiaInfo.tipo; // Store type for rendering
+
 
         // Enrich for display (FIXED Lookup & Property)
         this.editingDetails = this.editingDetails.map(d => {
@@ -1598,6 +1600,7 @@ class App {
                         <thead style="background:#f3f4f6; position:sticky; top:0;">
                             <tr>
                                 <th style="padding:0.5rem; text-align:left;">Producto</th>
+                                ${this.editingGuiaType === 'INGRESO' ? '<th style="padding:0.5rem; width:110px;">Vencimiento</th>' : ''}
                                 <th style="padding:0.5rem; width:80px;">Cant.</th>
                                 <th style="padding:0.5rem; width:40px;"></th>
                             </tr>
@@ -1757,9 +1760,16 @@ class App {
         tbody.innerHTML = this.editingDetails.map((d, index) => `
             <tr style="border-bottom:1px solid #f9f9f9;">
                 <td style="padding:0.5rem;">
-                    <div style="font-weight:bold; color:#333;">${d.descripcion}</div>
-                    <div style="font-size:0.8rem; color:#666;">Code: ${d.codigo}</div>
+                    <div style="font-weight:bold; color:#333; font-size: 0.85rem;">${d.descripcion}</div>
+                    <div style="font-size:0.75rem; color:#666;">${d.codigo}</div>
                 </td>
+                ${this.editingGuiaType === 'INGRESO' ? `
+                <td style="padding:0.5rem;">
+                    <input type="date" value="${d.fechaVencimiento || ''}" 
+                           onchange="app.updateEditExpiration(${index}, this.value)"
+                           style="width:100%; padding:0.25rem; border:1px solid #ddd; border-radius:4px; font-size:0.8rem;">
+                </td>
+                ` : ''}
                 <td style="padding:0.5rem;">
                     <input type="number" value="${d.cantidad}" min="1" 
                            onchange="app.updateEditQuantity(${index}, this.value)"
@@ -1770,6 +1780,10 @@ class App {
                 </td>
             </tr>
         `).join('');
+    }
+
+    updateEditExpiration(index, val) {
+        this.editingDetails[index].fechaVencimiento = val;
     }
 
     updateEditQuantity(index, val) {
@@ -1859,7 +1873,7 @@ class App {
                 idGuia: id,
                 comentario: comment,
                 proveedor: provider,
-                productos: this.editingDetails.map(d => ({ kode: d.codigo, cantidad: d.cantidad, codigo: d.codigo }))
+                productos: this.editingDetails.map(d => ({ codigo: d.codigo, cantidad: d.cantidad, fechaVencimiento: d.fechaVencimiento }))
             };
 
             const response = await fetch(API_URL, {
@@ -4620,7 +4634,7 @@ class App {
             `;
             // Insert before the grid
             mainContainer.parentNode.insertBefore(controlsContainer, mainContainer);
- 
+     
             // Add Event Listener
             document.getElementById('provider-search-input').addEventListener('input', (e) => {
                 this.filterProviders(e.target.value);
