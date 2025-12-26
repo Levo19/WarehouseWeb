@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 71 - FIX: RETRY BADGE CREATION");
+        console.log("🚀 APP VERSION 72 - FIX: FORCE BADGE CREATION");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -230,12 +230,12 @@ class App {
         const bellBtn = document.getElementById('header-notification-bell');
         if (!bellBtn) return;
 
-        // FIXED: Create BADGE if missing (v71)
+        // FIXED: Create BADGE if missing (v72)
         if (!document.getElementById('notification-badge')) {
-            console.log("✅ BADGE CREATED (v71)");
+            console.log("✅ BADGE CREATED (v72) - FORCE INJECT");
             const badge = document.createElement('span');
             badge.id = 'notification-badge';
-            badge.style.cssText = `position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; padding: 2px 5px; font-size: 10px; display: none;`;
+            badge.style.cssText = `position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border-radius: 50%; padding: 2px 5px; font-size: 10px; display: none;`;
             bellBtn.appendChild(badge);
             bellBtn.style.position = 'relative';
         }
@@ -336,9 +336,9 @@ class App {
         // Fix: Use correct ID
         const badge = document.getElementById('notification-badge');
         const list = document.getElementById('notification-list');
-        const bell = document.querySelector('#header-notification-bell i');
+        const bell = document.querySelector('#header-notification-bell'); // CHANGED: check button itself, not icon
 
-        console.log("🔔 DOM CHECK:", { badge: !!badge, list: !!list, bell: !!bell });
+        console.log("🔔 DOM CHECK v72:", { badge: !!badge, list: !!list, bell: !!bell });
 
         // Sidebar Badge Logic
         const dashboardLink = document.querySelector('.nav-link[data-target="dashboard"]');
