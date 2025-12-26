@@ -218,72 +218,53 @@ class App {
     }
 
     renderNotificationIcon() {
-        // Only if it doesn't exist
-        if (document.getElementById('notification-bell')) return;
+        const bellBtn = document.getElementById('header-notification-bell');
+        if (!bellBtn) return;
 
-        // Try to find a header container.
-        // Assuming there is a .user-info or similar in the header where User Initials are.
-        // We will insert it before the user info.
-        const userInfo = document.querySelector('.user-info');
-        if (userInfo) {
-            const bellContainer = document.createElement('div');
-            bellContainer.id = 'notification-bell';
-            bellContainer.style.position = 'relative';
-            bellContainer.style.marginRight = '1.5rem';
-            bellContainer.style.cursor = 'pointer';
-            bellContainer.style.fontSize = '1.2rem';
-            bellContainer.style.color = '#64748b';
-
-            bellContainer.innerHTML = `
-                <i class="fa-regular fa-bell"></i>
-                <span id="notification-badge" style="
-                    display:none; 
-                    position:absolute; 
-                    top:-5px; 
-                    right:-5px; 
-                    background:red; 
-                    color:white; 
-                    font-size:0.7rem; 
-                    padding:2px 5px; 
-                    border-radius:10px;
-                    font-weight:bold;">0</span>
-                <div id="notification-dropdown" style="
-                    display:none;
-                    position:absolute;
-                    top:100%;
-                    right:0;
-                    width:300px;
-                    background:white;
-                    box-shadow:0 4px 12px rgba(0,0,0,0.15);
-                    border-radius:8px;
-                    z-index:1000;
-                    margin-top:10px;
-                    overflow:hidden;
-                ">
-                    <div style="padding:10px; border-bottom:1px solid #eee; font-weight:bold; font-size:0.9rem;">Notificaciones</div>
-                    <div id="notification-list" style="max-height:300px; overflow-y:auto;">
-                        <div style="padding:10px; color:#999; font-size:0.85rem; text-align:center;">Sin notificaciones</div>
+        // Ensure dropdown container exists (append to body or keep inline if relative)
+        if (!document.getElementById('notification-dropdown')) {
+            const dropdown = document.createElement('div');
+            dropdown.id = 'notification-dropdown';
+            dropdown.style.cssText = `
+                display: none;
+                position: absolute;
+                top: 60px; /* Below header */
+                right: 20px;
+                width: 320px;
+                background: white;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+                border-radius: 12px;
+                z-index: 2000;
+                overflow: hidden;
+                border: 1px solid #e2e8f0;
+            `;
+            dropdown.innerHTML = `
+                <div style="padding:15px; border-bottom:1px solid #f1f5f9; font-weight:bold; font-size:1rem; display:flex; justify-content:space-between; align-items:center;">
+                    <span>Notificaciones</span>
+                    <span id="notif-count-header" style="font-size:0.7rem; background:#eff6ff; color:#3b82f6; padding:2px 8px; border-radius:10px;">0 nuevas</span>
+                </div>
+                <div id="notification-list" style="max-height:350px; overflow-y:auto;">
+                    <div style="padding:20px; color:#94a3b8; font-size:0.9rem; text-align:center;">
+                        <i class="fa-regular fa-bell-slash" style="font-size:1.5rem; margin-bottom:0.5rem; display:block;"></i>
+                        Sin notificaciones nuevas
                     </div>
                 </div>
             `;
+            document.body.appendChild(dropdown);
 
             // Toggle Logic
-            bellContainer.addEventListener('click', (e) => {
-                const drop = document.getElementById('notification-dropdown');
-                if (drop) {
-                    const isVisible = drop.style.display === 'block';
-                    drop.style.display = isVisible ? 'none' : 'block';
-                    e.stopPropagation();
-                }
+            bellBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isVisible = dropdown.style.display === 'block';
+                dropdown.style.display = isVisible ? 'none' : 'block';
             });
 
             // Close when clicking outside
-            document.addEventListener('click', () => {
-                const drop = document.getElementById('notification-dropdown');
-                if (drop) drop.style.display = 'none';
+            document.addEventListener('click', (e) => {
+                if (!dropdown.contains(e.target) && !bellBtn.contains(e.target)) {
+                    dropdown.style.display = 'none';
+                }
             });
-
-            userInfo.parentNode.insertBefore(bellContainer, userInfo);
         }
     }
 
