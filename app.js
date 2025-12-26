@@ -705,17 +705,17 @@ class App {
 
             if (result.status === 'success') {
                 const rows = result.data.map(req => `
-            < tr >
+            <tr>
                         <td style="padding: 1rem;">${req.codigo}</td>
                         <td style="padding: 1rem;">${req.cantidad}</td>
                         <td style="padding: 1rem;">${req.fecha}</td>
                         <td style="padding: 1rem;">${req.usuario}</td>
                         <td style="padding: 1rem;"><span style="color: orange; font-weight:bold;">${req.categoria.toUpperCase()}</span></td>
-                    </tr >
+                    </tr>
             `).join('');
 
                 container.innerHTML = `
-            < h4 > Solicitudes de Despacho</h4 >
+            <h4> Solicitudes de Despacho</h4>
                     <div style="margin-top: 1rem; padding: 2rem; background: #f9fafb; border-radius: 8px; text-align: center;">
                         <button class="btn-primary" onclick="app.openNewRequestModal()">
                             <i class="fa-solid fa-plus"></i> Nueva Solicitud
@@ -739,10 +739,10 @@ class App {
                     </div>
         `;
             } else {
-                container.innerHTML = `< p style = "color:red;" > Error al cargar: ${result.message}</p > `;
+                container.innerHTML = `<p style="color:red;"> Error al cargar: ${result.message}</p> `;
             }
         } catch (error) {
-            container.innerHTML = `< p style = "color:red;" > Error de conexión: ${error.message}</p > `;
+            container.innerHTML = `<p style="color:red;"> Error de conexión: ${error.message}</p> `;
         }
     }
 
@@ -1659,10 +1659,10 @@ class App {
         if (document.getElementById('btn-mov-guias')) return;
 
         headerActions.innerHTML = `
-            < div class="header-tab-group" >
+            <div class="header-tab-group">
                 <button id="btn-mov-guias" class="btn-header-tab active" onclick="app.switchMovTab('guias')">Guías</button>
                 <button id="btn-mov-preingresos" class="btn-header-tab" onclick="app.switchMovTab('preingresos')">Preingresos</button>
-            </div >
+            </div>
             `;
     }
 
@@ -1682,7 +1682,7 @@ class App {
 
         // Toggle Content Views
         document.querySelectorAll('.mov-tab-content').forEach(c => c.classList.remove('active'));
-        const target = document.getElementById(`tab - ${tab} `);
+        const target = document.getElementById(`tab-${tab}`);
         if (target) target.classList.add('active');
 
         // Close Detail Panels for Fresh Start
@@ -2016,14 +2016,14 @@ class App {
         const canEdit = (todayStr === guideDateStr);
 
         const productsHtml = products.length > 0 ? products.map(p => `
-            < div style = "display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #f9f9f9;" >
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #f9f9f9;">
                 <div style="flex:1;">
                     <div style="font-weight:bold; font-size:0.9rem;">${p.descripcion}</div>
                     <div style="font-size:0.8rem; color:#666;">Code: ${p.codigo}</div>
                 </div>
                 ${p.fechaVencimiento ? `<div style="font-size:0.8rem; color:#d97706; margin-right:1rem;"><i class="fa-regular fa-calendar"></i> ${p.fechaVencimiento}</div>` : ''}
         <div style="font-weight:bold;">x${p.cantidad}</div>
-            </div >
+            </div>
             `).join('') : '<div style="padding:1rem; text-align:center; color:#999;">Sin productos registrados</div>';
 
         // Helper for enriched details logic inside template
@@ -2034,19 +2034,19 @@ class App {
             ? this.data.nuevosProductos.filter(p => p.idGuia === info.id && p.estado !== 'PROCESADO')
             : [];
         const pendingHtml = pendingProducts.length > 0 ? pendingProducts.map(p => `
-            < div style = "display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #fcd34d; background:#fffbeb;" >
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #fcd34d; background:#fffbeb;">
                 <div style="flex:1; padding-left:0.5rem;">
                     <div style="font-weight:bold; font-size:0.9rem; color:#92400e;">${p.descripcion} <span style="font-size:0.7rem; background:#fcd34d; padding:2px 4px; border-radius:4px;">NUEVO</span></div>
                     <div style="font-size:0.8rem; color:#b45309;">Marca: ${p.marca} | Venc: ${p.fechaVencimiento || '-'}</div>
                 </div>
                 <div style="font-weight:bold; color:#92400e; padding-right:0.5rem;">x${p.cantidad}</div>
-            </div >
+            </div>
             `).join('') : '';
 
         const totalItems = products.length + pendingProducts.length;
 
         panel.innerHTML = `
-            < div style = "padding:1.5rem; background:#f9fafb; min-height:100%; display:flex; flex-direction:column;" >
+            <div style="padding:1.5rem; background:#f9fafb; min-height:100%; display:flex; flex-direction:column;">
                 <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:1rem;">
                     <div>
                         <h3 style="color:var(--primary-color); margin:0;">Detalle de Guía</h3>
