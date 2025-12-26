@@ -423,37 +423,70 @@ h3 {
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 1rem;
-    /* Uniform padding */
+    padding: 1rem 1.5rem;
+    /* More padding */
+    margin-bottom: 0.5rem;
+    /* Add spacing between items */
     color: rgba(255, 255, 255, 0.7);
     text-decoration: none;
-    transition: var(--transition);
-    border-left: 3px solid transparent;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Smoother transition */
+    border-left: 4px solid transparent;
+    /* Thicker border */
     justify-content: center;
-    /* Center icon when collapsed */
+    /* Centered when collapsed */
+    position: relative;
+    overflow: hidden;
 }
 
 .sidebar:hover .nav-link {
     justify-content: flex-start;
-    /* Left align when expanded */
-    padding: 0.85rem 1.5rem;
+    padding-left: 1.5rem;
 }
 
 .nav-link i {
-    font-size: 1.25rem;
+    font-size: 1.35rem;
+    /* Slightly larger icons */
     min-width: 24px;
-    /* Ensure icon doesn't shift */
     text-align: center;
+    z-index: 2;
+    transition: transform 0.3s ease;
 }
 
-.nav-link:hover,
-.nav-link.active {
-    background: rgba(255, 255, 255, 0.05);
+.nav-link span {
+    z-index: 2;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+
+/* Hover Effect */
+.nav-link:hover {
+    background: rgba(255, 255, 255, 0.08);
     color: white;
+    transform: translateX(4px);
+    /* Slid movement */
 }
 
+.nav-link:hover i {
+    transform: scale(1.1);
+}
+
+/* Active State - Professional & Striking */
 .nav-link.active {
+    background: linear-gradient(90deg, rgba(79, 70, 229, 0.2) 0%, rgba(79, 70, 229, 0) 100%);
+    /* Subtle gradient fade */
+    color: white;
     border-left-color: var(--primary-color);
+    box-shadow: inset 4px 0 0 0 var(--primary-color),
+        inset 20px 0 20px -10px rgba(79, 70, 229, 0.3);
+    /* Inner glow */
+}
+
+/* Neon Glow for Active Icon */
+.nav-link.active i {
+    color: #818cf8;
+    /* Lighter indigo */
+    text-shadow: 0 0 10px rgba(129, 140, 248, 0.6);
 }
 
 .sidebar-footer {
