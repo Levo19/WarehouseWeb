@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 73 - FIX: SELF-HEALING NOTIFICATIONS");
+        console.log("🚀 APP VERSION 74 - DEBUG: DOM INVESTIGATION");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -333,6 +333,15 @@ class App {
 
     updateNotifications(forceAlert = false) {
         console.log("🔔 UPDATE NOTIFICATIONS ENTERED");
+
+        // DIAGNOSTIC v74: What is in the header?
+        const header = document.querySelector('.top-bar');
+        if (header) {
+            console.log("🔍 HEADER HTML:", header.innerHTML);
+            console.log("🔍 ALL BUTTON IDS:", Array.from(document.querySelectorAll('button')).map(b => b.id));
+        } else {
+            console.error("❌ HEADER .top-bar NOT FOUND!");
+        }
 
         let badge = document.getElementById('notification-badge');
         let bell = document.getElementById('header-notification-bell');
