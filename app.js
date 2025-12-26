@@ -1598,6 +1598,11 @@ class App {
             return { ...d, descripcion: product ? product.desc : 'Desconocido' };
         });
 
+        // New Products (Pending)
+        const newProds = this.data.nuevosProductos
+            ? this.data.nuevosProductos.filter(np => np.idGuia === id)
+            : [];
+
         // ... (Printing logic will be updated separately)
 
         const printWindow = window.open('', '_blank', 'width=450,height=600');
