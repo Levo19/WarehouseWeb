@@ -2546,6 +2546,14 @@ class App {
                 <div class="guia-prod-details">
                     <div class="guia-prod-name">${p.nombre}</div>
                     <div class="guia-prod-meta">${p.codigo}</div>
+                    ${this.tempGuiaType === 'INGRESO' ? `
+                    <div class="guia-prod-meta" style="margin-top:2px;">
+                       <i class="fa-regular fa-calendar" style="font-size:0.8rem; margin-right:4px;"></i>
+                       <input type="date" value="${p.fechaVencimiento || ''}" 
+                              onchange="app.setManualExpiration(${index}, this.value)"
+                              style="border:none; background:transparent; font-size:0.8rem; color:#666; font-family:inherit; width:110px;">
+                    </div>
+                    ` : ''}
                 </div>
                 <div class="guia-prod-qty">
                     <button class="qty-btn" onclick="app.updateTempGuiaQty(${index}, -1)">-</button>
@@ -2561,6 +2569,12 @@ class App {
                 </button>
             </div>
         `).join('');
+    }
+
+    setManualExpiration(index, dateVal) {
+        if (this.tempGuiaProducts[index]) {
+            this.tempGuiaProducts[index].fechaVencimiento = dateVal;
+        }
     }
 
     unlockQtyInput(el) {
