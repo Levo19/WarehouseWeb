@@ -65,11 +65,19 @@ class App {
         // Close sidebar when clicking a link on mobile
         navLinks.forEach(link => {
             link.addEventListener('click', () => {
-                if (window.innerWidth <= 768) {
+                if (window.innerWidth <= 1024) { // Updated to match CSS breakpoint
                     if (sidebar) sidebar.classList.remove('active');
                     if (overlay) overlay.classList.remove('active');
                 }
             });
+        });
+
+        // SAFETY: Handle Resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 1024) {
+                if (sidebar) sidebar.classList.remove('active');
+                if (overlay) overlay.classList.remove('active');
+            }
         });
     }
 
@@ -115,8 +123,16 @@ class App {
         // Navigation
         this.navLinks.forEach(link => {
             link.addEventListener('click', (e) => {
-                e.preventDefault();
                 const targetId = link.dataset.target;
+                console.log(`🖱️ CLICK DETECTED on Nav Link: ${targetId}`);
+                e.preventDefault();
+
+                // Force Overlay Hide (Defensive)
+                const overlay = document.getElementById('sidebar-overlay');
+                if (overlay) {
+                    overlay.style.display = 'none';
+                    overlay.classList.remove('active');
+                }
 
                 // Cleanup Dispatch Header (Restore Default)
                 this.restoreDefaultHeader();
@@ -202,18 +218,24 @@ class App {
         // Show App
         this.showApp();
 
-        // Show Global Loading State
+        // Show Global Loading State (SAFE APPEND)
         const mainApp = document.getElementById('main-app');
-        if (mainApp) {
-            mainApp.innerHTML = `
-                <div id="initial-loader" style="height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; background:#f1f5f9;">
-                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size:3rem; color:var(--primary-color);"></i>
-                    <h3 style="margin-top:1rem; color:#64748b;">Cargando datos del sistema...</h3>
-                </div>
-             ` + mainApp.innerHTML;
+        let loader = document.getElementById('initial-loader');
+
+        if (mainApp && !loader) {
+            loader = document.createElement('div');
+            loader.id = 'initial-loader';
+            loader.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; background:#f1f5f9; z-index:9999;';
+            loader.innerHTML = `
+                 <i class="fa-solid fa-circle-notch fa-spin" style="font-size:3rem; color:var(--primary-color);"></i>
+                 <h3 style="margin-top:1rem; color:#64748b;">Cargando datos del sistema...</h3>
+            `;
+            // Prepend relative to mainApp to ensure it covers content but doesn't wipe events
+            mainApp.style.position = 'relative';
+            mainApp.appendChild(loader);
         }
 
-        console.log("✅ USER STARTUP COMPLETE (v79 - Async Load)");
+        console.log("✅ USER STARTUP COMPLETE (v80 - Safe Loader)");
 
         // Setup Notifications System
         this.renderNotificationIcon();
@@ -227,7 +249,6 @@ class App {
         }
 
         // Remove Loader
-        const loader = document.getElementById('initial-loader');
         if (loader) loader.remove();
 
         // AUTO-REFRESH (Every 60s)
@@ -1323,22 +1344,26 @@ class App {
 
         this.searchTimeout = setTimeout(() => {
             const term = query.toLowerCase().trim();
-            const cards = document.querySelectorAll('.product-card');
+            const container = document.getElementById('zone-workspace');
 
-            // Use requestAnimationFrame for batch DOM update
-            requestAnimationFrame(() => {
-                cards.forEach(card => {
-                    // Fast lookup using data attribute (no reflow)
-                    const searchable = card.dataset.search || "";
+            if (!container) return;
 
-                    if (!term || searchable.includes(term)) {
-                        card.style.display = 'flex';
-                    } else {
-                        card.style.display = 'none';
-                    }
+            if (!term) {
+                // RESET: Show Paginated Default List
+                this.productLimit = 50; // Reset limit
+                container.innerHTML = this.renderProductMasterList();
+            } else {
+                // FILTER: Search in Data
+                const allEntries = Object.entries(this.data.products);
+                const filtered = allEntries.filter(([code, p]) => {
+                    const searchStr = `${p.desc} ${code} ${p.marca || ''}`.toLowerCase();
+                    return searchStr.includes(term);
                 });
-            });
-        }, 300); // Wait 300ms after typing stops
+
+                // Render Filtered Results (Full List of Matches)
+                container.innerHTML = this.renderProductMasterList(filtered);
+            }
+        }, 300); // 300ms Debounce
     }
 
     async selectZone(zone) {
@@ -1444,7 +1469,7 @@ class App {
             `;
         }
 
-        // Generate Cards HTML (Alphabetical Sort)
+        // Generate Cards HTML (Alphabetical Sort) - ALL PRODUCTS (No Pagination)
         const productEntries = Object.entries(this.data.products).sort(([, a], [, b]) => {
             return a.desc.localeCompare(b.desc);
         });
@@ -1462,53 +1487,45 @@ class App {
                 }
             }
 
-            const imgHtml = `<img src="${imgSrc}" class="card-img" alt="${product.desc}" referrerpolicy="no-referrer" loading="lazy" onerror="app.handleImageError(this, '${product.img || ''}')">`;
+            // Stock Color Logic
+            let stockColor = '#10b981'; // Green
+            if (product.stock <= 5) stockColor = '#ef4444'; // Red
+            else if (product.stock <= 20) stockColor = '#f59e0b'; // Amber
 
-            // Searchable Text for Performance
-            const searchText = `${code} ${product.desc}`.toLowerCase();
+            const searchString = `${product.desc} ${code} ${product.marca || ''}`.toLowerCase();
             const isNegative = product.stock < 0;
 
             return `
-            <div class="product-card ${isNegative ? 'negative-stock' : ''}" data-search="${searchText}" onclick="this.classList.toggle('flipped')">
+            <div class="product-card ${isNegative ? 'negative-stock' : ''}" data-search="${searchString}" onclick="this.classList.toggle('flipped')">
                 <div class="product-card-inner">
                     ${isNegative ? '<i class="fa-solid fa-bomb stock-bomb-icon"></i>' : ''}
+                    
                     <!-- FRONT -->
                     <div class="card-front">
-                        <button class="btn-quick-dispatch" 
-                            onclick="event.stopPropagation(); app.openQuickDispatchModal('${code}', '${product.desc.replace(/'/g, "\\'")}')"
-                            title="Despacho Rápido"
-                            style="
-                                position: absolute; 
-                                bottom: 10px; 
-                                right: 10px; 
-                                background: rgba(255, 255, 255, 0.95); 
-                                border: none; 
-                                border-radius: 50%; 
-                                width: 40px; 
-                                height: 40px; 
-                                box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
-                                cursor: pointer; 
-                                color: var(--primary-color); 
-                                display: flex; 
-                                justify-content: center; 
-                                align-items: center; 
-                                z-index: 20;
-                                transition: transform 0.2s;
-                            "
-                            onmouseover="this.style.transform='scale(1.1)'"
-                            onmouseout="this.style.transform='scale(1)'">
+                        <!-- Header: Historial Button (Top Right) removed, now on back -->
+                        
+                        <div style="position:absolute; top:10px; right:10px; background:rgba(255,255,255,0.9); padding:2px 8px; border-radius:12px; font-size:0.7rem; color:#64748b; font-weight:600; border:1px solid #e2e8f0;">
+                            ${product.marca || 'GENERICO'}
+                        </div>
+
+                        <!-- Add to Dispatch Button (Top Left) -->
+                        <button onclick="event.stopPropagation(); app.addProductToDispatch('${code}')" 
+                                style="position:absolute; top:10px; left:10px; background:var(--primary-color); color:white; border:none; width:32px; height:32px; border-radius:50%; box-shadow:0 4px 6px -1px rgba(79, 70, 229, 0.4); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.2s;"
+                                onmouseover="this.style.transform='scale(1.1)'"
+                                onmouseout="this.style.transform='scale(1)'"
+                                title="Agregar al Despacho">
                             <i class="fa-solid fa-cart-shopping"></i>
                         </button>
 
                         <div class="card-img-container">
-                            ${imgHtml}
+                            ${this.renderProductImage(imgSrc)}
                         </div>
                         <div class="card-content">
                              <div>
                                 <div class="card-desc" style="font-weight:800; font-size:1.05rem; color:#1a1a1a; margin-bottom:0.3rem; line-height:1.2;">${product.desc}</div>
                                 <div class="card-code" style="font-size:0.9rem; color:#6b7280; font-family:monospace;">${code}</div>
                             </div>
-                             <div style="margin-top:0.5rem; font-weight:bold; color:var(--primary-color); display:flex; align-items:center; gap:0.5rem;">
+                             <div style="margin-top:0.5rem; font-weight:bold; color:${stockColor}; display:flex; align-items:center; gap:0.5rem;">
                                 <i class="fa-solid fa-cubes"></i> Stock: <span class="stock-display-${code}">${product.stock}</span>
                             </div>
                         </div>
@@ -1555,22 +1572,26 @@ class App {
         }).join('');
 
         // Check for duplicates during mapping (debug)
-        console.log(`Rendering ${productEntries.length} products.`);
+        console.log(`Rendering ${productEntries.length} products (Review Mode).`);
 
-        // Removed Header and Nested Scroll as requested
         return `
             <div style="margin-top:1rem; padding-bottom: 3rem;">
                 <!-- Full Page Grid -->
-                <div style="
+                <div id="product-grid-container" style="
                     display: grid;
                     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
                     gap: 1rem;
-                    /* No fixed height or overflow-y here, letting the page scroll */
                 ">
                     ${productCards}
                 </div>
             </div>
         `;
+    }
+
+    // Restore HELPER
+    renderProductImage(src) {
+        if (!src) return '<img src="recursos/defaultImageProduct.png" class="card-img" loading="lazy">';
+        return `<img src="${src}" class="card-img" loading="lazy" onerror="this.src='recursos/defaultImageProduct.png'">`;
     }
 
 
@@ -1587,11 +1608,11 @@ class App {
         if (document.getElementById('btn-mov-guias')) return;
 
         headerActions.innerHTML = `
-            <div class="header-tab-group">
+            < div class="header-tab-group" >
                 <button id="btn-mov-guias" class="btn-header-tab active" onclick="app.switchMovTab('guias')">Guías</button>
                 <button id="btn-mov-preingresos" class="btn-header-tab" onclick="app.switchMovTab('preingresos')">Preingresos</button>
-            </div>
-        `;
+            </div >
+            `;
     }
 
     // Switch Tabs (Guias vs Preingresos)
@@ -1610,7 +1631,7 @@ class App {
 
         // Toggle Content Views
         document.querySelectorAll('.mov-tab-content').forEach(c => c.classList.remove('active'));
-        const target = document.getElementById(`tab-${tab}`);
+        const target = document.getElementById(`tab - ${tab} `);
         if (target) target.classList.add('active');
 
         // Close Detail Panels for Fresh Start
@@ -1628,7 +1649,7 @@ class App {
         const container = document.getElementById('guias-list-scroll');
         const CACHE_KEY = 'warehouse_movimientos_data';
 
-        console.log(`🔄 LOAD DATASOURCE START (Background=${isBackground})`);
+        console.log(`🔄 LOAD DATASOURCE START(Background = ${isBackground})`);
 
         // 1. Try Cache First (Fast Load)
         if (!isBackground) {
@@ -1664,7 +1685,7 @@ class App {
                     body: JSON.stringify({ action: 'getMovimientosData' })
                 });
 
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status} `);
 
                 const result = await response.json();
 
@@ -1708,14 +1729,14 @@ class App {
 
             } catch (e) {
                 attempts++;
-                console.warn(`Attempt ${attempts} failed: ${e.message}`);
+                console.warn(`Attempt ${attempts} failed: ${e.message} `);
 
                 if (attempts >= maxAttempts) {
                     console.error('All fetch attempts failed', e);
                     if (!isBackground && container && (!this.data.movimientos || !this.data.movimientos.guias)) {
-                        container.innerHTML = `<div style="text-align:center; padding:1rem; color:red;">
-                            <i class="fa-solid fa-triangle-exclamation"></i> Error de conexión. Reintentando... (${e.message})
-                        </div>`;
+                        container.innerHTML = `< div style = "text-align:center; padding:1rem; color:red;" >
+            <i class="fa-solid fa-triangle-exclamation"></i> Error de conexión.Reintentando... (${e.message})
+                        </div > `;
                     }
                 } else {
                     // Wait 2s before retry
@@ -1761,7 +1782,7 @@ class App {
             filtered = filtered.filter(g => {
                 const parts = g.fecha.split(' ')[0].split('/'); // ["16", "12", "2025"]
                 // Date input is YYYY-MM-DD
-                const gDateISO = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                const gDateISO = `${parts[2]} -${parts[1]} -${parts[0]} `;
                 return gDateISO === dateInput;
             });
         }
@@ -1797,15 +1818,15 @@ class App {
 
         let html = '';
         sortedDates.forEach(date => {
-            html += `<h4 style="margin: 1rem 0 0.5rem 0; color:var(--primary-color); border-bottom:2px solid #f3f4f6; padding-bottom:0.25rem;">${date}</h4>`;
-            html += `<div class="guias-group-list">`;
+            html += `< h4 style = "margin: 1rem 0 0.5rem 0; color:var(--primary-color); border-bottom:2px solid #f3f4f6; padding-bottom:0.25rem;" > ${date}</h4 > `;
+            html += `< div class="guias-group-list" > `;
 
             console.log('Rendering Grouped Guias:', list);
 
             groups[date].forEach(g => {
                 const shortId = g.id ? g.id.slice(-6) : '???';
                 html += `
-                    <div id="guia-row-${g.id}" class="guia-row-card" onclick="app.toggleGuiaDetail('${g.id}')">
+            < div id = "guia-row-${g.id}" class="guia-row-card" onclick = "app.toggleGuiaDetail('${g.id}')" >
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <div>
                                 <span class="badge ${g.tipo.toLowerCase()}">${g.tipo}</span>
@@ -1821,11 +1842,11 @@ class App {
                             </div>
                         </div>
                         ${g.comentario ? `<div style="font-size:0.8rem; color:#888; font-style:italic; margin-top:0.25rem;">"${g.comentario}"</div>` : ''}
-                    </div>
-                `;
+                    </div >
+            `;
             });
 
-            html += `</div>`;
+            html += `</div > `;
         });
 
         container.innerHTML = html;
@@ -1840,7 +1861,7 @@ class App {
         document.querySelectorAll('.guia-row-card').forEach(d => d.classList.remove('active'));
 
         // If clicking same, CLOSE
-        if (currentActiveInfo && currentActiveInfo.id === `guia-row-${id}`) {
+        if (currentActiveInfo && currentActiveInfo.id === `guia - row - ${id} `) {
             panel.style.width = '0';
             panel.style.opacity = '0';
             panel.innerHTML = '';
@@ -1851,7 +1872,7 @@ class App {
         }
 
         // OPEN logic
-        const row = document.getElementById(`guia-row-${id}`);
+        const row = document.getElementById(`guia - row - ${id} `);
         if (row) row.classList.add('active'); // Highlight
 
         panel.style.width = '400px'; // Fixed width for detail
@@ -1935,20 +1956,20 @@ class App {
         // info.fecha is "dd/MM/yyyy HH:mm:ss"
         // Get Today "dd/MM/yyyy"
         const now = new Date();
-        const todayStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+        const todayStr = `${String(now.getDate()).padStart(2, '0')} /${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} `;
         const guideDateStr = info.fecha.split(' ')[0];
         const canEdit = (todayStr === guideDateStr);
 
         const productsHtml = products.length > 0 ? products.map(p => `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #f9f9f9;">
+            < div style = "display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #f9f9f9;" >
                 <div style="flex:1;">
                     <div style="font-weight:bold; font-size:0.9rem;">${p.descripcion}</div>
                     <div style="font-size:0.8rem; color:#666;">Code: ${p.codigo}</div>
                 </div>
                 ${p.fechaVencimiento ? `<div style="font-size:0.8rem; color:#d97706; margin-right:1rem;"><i class="fa-regular fa-calendar"></i> ${p.fechaVencimiento}</div>` : ''}
-                <div style="font-weight:bold;">x${p.cantidad}</div>
-            </div>
-        `).join('') : '<div style="padding:1rem; text-align:center; color:#999;">Sin productos registrados</div>';
+        <div style="font-weight:bold;">x${p.cantidad}</div>
+            </div >
+            `).join('') : '<div style="padding:1rem; text-align:center; color:#999;">Sin productos registrados</div>';
 
         // Helper for enriched details logic inside template
         const enrichedDetails = products;
@@ -1958,19 +1979,19 @@ class App {
             ? this.data.nuevosProductos.filter(p => p.idGuia === info.id && p.estado !== 'PROCESADO')
             : [];
         const pendingHtml = pendingProducts.length > 0 ? pendingProducts.map(p => `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #fcd34d; background:#fffbeb;">
+            < div style = "display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #fcd34d; background:#fffbeb;" >
                 <div style="flex:1; padding-left:0.5rem;">
                     <div style="font-weight:bold; font-size:0.9rem; color:#92400e;">${p.descripcion} <span style="font-size:0.7rem; background:#fcd34d; padding:2px 4px; border-radius:4px;">NUEVO</span></div>
                     <div style="font-size:0.8rem; color:#b45309;">Marca: ${p.marca} | Venc: ${p.fechaVencimiento || '-'}</div>
                 </div>
                 <div style="font-weight:bold; color:#92400e; padding-right:0.5rem;">x${p.cantidad}</div>
-            </div>
-        `).join('') : '';
+            </div >
+            `).join('') : '';
 
         const totalItems = products.length + pendingProducts.length;
 
         panel.innerHTML = `
-            <div style="padding:1.5rem; background:#f9fafb; min-height:100%; display:flex; flex-direction:column;">
+            < div style = "padding:1.5rem; background:#f9fafb; min-height:100%; display:flex; flex-direction:column;" >
                 <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:1rem;">
                     <div>
                         <h3 style="color:var(--primary-color); margin:0;">Detalle de Guía</h3>
@@ -1998,15 +2019,16 @@ class App {
                     </div>
                 </div>
 
-                <!-- Photo Display Section -->
-                ${info.foto ? `
+                <!--Photo Display Section-- >
+            ${info.foto ? `
                 <div style="margin-bottom:1rem; border-radius:8px; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
                     <img src="${this.getOptimizedImageUrl(info.foto)}" 
                          onclick="app.openImageModal('${this.getOptimizedImageUrl(info.foto)}')"
                          style="width:100%; height:auto; display:block; cursor:pointer;" 
                          alt="Evidencia Guía">
                 </div>
-                ` : ''}
+                ` : ''
+            }
                 
                 ${info.comentario ? `<div style="margin-bottom:1rem; background:#fff; padding:0.5rem; border-radius:4px; border:1px solid #eee; font-style:italic; color:#555;">"${info.comentario}"</div>` : ''}
 
@@ -2026,8 +2048,8 @@ class App {
                     </button>
                     <button onclick="app.closeGuiaDetails()" class="btn-secondary">Cerrar Panel</button>
                 </div>
-            </div>
-        `;
+            </div >
+            `;
     }
 
     printGuiaTicket(id) {
@@ -6855,3 +6877,4 @@ try {
     console.error('Critical Init Error:', err);
     alert('Error crítico al iniciar la aplicación: ' + err.message);
 }
+
