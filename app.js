@@ -1585,7 +1585,7 @@ class App {
         }
     }
 
-    renderProductMasterList() {
+    renderProductMasterList(filteredEntries = null) {
         if (!this.data.products || Object.keys(this.data.products).length === 0) {
             return `
                 <div style="text-align:center; padding:2rem; color:#666;">
@@ -1600,8 +1600,11 @@ class App {
             `;
         }
 
-        // Generate Cards HTML (Alphabetical Sort) - ALL PRODUCTS (No Pagination)
-        const productEntries = Object.entries(this.data.products).sort(([, a], [, b]) => {
+        // Use filtered entries if provided, otherwise get all
+        let productEntries = filteredEntries || Object.entries(this.data.products);
+
+        // Sort Alphabetically
+        productEntries.sort(([, a], [, b]) => {
             return a.desc.localeCompare(b.desc);
         });
 
@@ -2092,7 +2095,7 @@ class App {
         // info.fecha is "dd/MM/yyyy HH:mm:ss"
         // Get Today "dd/MM/yyyy"
         const now = new Date();
-        const todayStr = `${String(now.getDate()).padStart(2, '0')} /${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} `;
+        const todayStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
         const guideDateStr = info.fecha.split(' ')[0];
         const canEdit = (todayStr === guideDateStr);
 
