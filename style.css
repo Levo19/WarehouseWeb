@@ -367,17 +367,21 @@ h3 {
 
 .sidebar-header .brand {
     font-family: 'Outfit', sans-serif;
-    font-size: 2.2rem;
-    /* Much Bigger */
+    font-size: 2.8rem;
+    /* Imposing Size */
     font-weight: 800;
-    /* Bolder */
-    color: white;
+
+    /* Neon Text Effect */
+    background: linear-gradient(135deg, #ffffff 0%, #a5f3fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 15px rgba(6, 182, 212, 0.5));
+
     display: flex;
     align-items: center;
     gap: 1rem;
     width: 100%;
     justify-content: center;
-    /* Center horizontally */
 }
 
 .sidebar:hover .sidebar-header .brand {
@@ -386,10 +390,14 @@ h3 {
 }
 
 .sidebar-header .brand i {
-    font-size: 2.2rem;
-    /* 1.5x bigger */
-    color: var(--primary-color);
+    font-size: 3rem;
+    /* Match Text */
+    color: #06b6d4;
+    /* Cyan to match gradient */
     transition: var(--transition);
+    -webkit-text-fill-color: #06b6d4;
+    /* Restore fill for icon */
+    filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.8));
 }
 
 .nav-menu {
@@ -425,19 +433,22 @@ h3 {
 .nav-link {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 1rem 1.5rem;
-    /* More padding */
+    gap: 1.2rem;
+    /* More gap */
+    padding: 1.2rem 1.5rem;
+    /* Larger touch target */
     margin-bottom: 0.5rem;
-    /* Add spacing between items */
+
+    /* Bigger Font */
+    font-size: 1.25rem;
+    font-weight: 600;
+
     color: rgba(255, 255, 255, 0.7);
     text-decoration: none;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    /* Smoother transition */
-    border-left: 4px solid transparent;
-    /* Thicker border */
+    border-left: 5px solid transparent;
+
     justify-content: center;
-    /* Centered when collapsed */
     position: relative;
     overflow: hidden;
 }
