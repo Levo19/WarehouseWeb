@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 72 - FIX: FORCE BADGE CREATION");
+        console.log("🚀 APP VERSION 73 - FIX: SELF-HEALING NOTIFICATIONS");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -333,12 +333,33 @@ class App {
 
     updateNotifications(forceAlert = false) {
         console.log("🔔 UPDATE NOTIFICATIONS ENTERED");
-        // Fix: Use correct ID
-        const badge = document.getElementById('notification-badge');
-        const list = document.getElementById('notification-list');
-        const bell = document.querySelector('#header-notification-bell'); // CHANGED: check button itself, not icon
 
-        console.log("🔔 DOM CHECK v72:", { badge: !!badge, list: !!list, bell: !!bell });
+        let badge = document.getElementById('notification-badge');
+        let bell = document.getElementById('header-notification-bell');
+        const list = document.getElementById('notification-list');
+
+        // SELF-HEALING: If bell exists but badge doesn't, create it NOW.
+        if (bell && !badge) {
+            console.warn("⚠️ BADGE MISSING IN UPDATE - CREATING IT NOW");
+            const newBadge = document.createElement('span');
+            newBadge.id = 'notification-badge';
+            newBadge.style.cssText = `position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border-radius: 50%; padding: 2px 5px; font-size: 10px; display: none;`;
+            bell.appendChild(newBadge);
+            bell.style.position = 'relative';
+            badge = newBadge; // Update reference
+        }
+
+        console.log("🔔 DOM CHECK v73:", {
+            foundBadge: !!badge,
+            foundBell: !!bell,
+            foundList: !!list,
+            bellInHTML: document.body.innerHTML.includes('header-notification-bell')
+        });
+
+        if (!badge || !list) {
+            console.error("❌ STILL MISSING ELEMENTS - ABORTING");
+            return;
+        }
 
         // Sidebar Badge Logic
         const dashboardLink = document.querySelector('.nav-link[data-target="dashboard"]');
@@ -376,7 +397,7 @@ class App {
         const count = prods.length;
         const lastCount = this.lastNotificationCount || 0;
 
-        console.log(`🔔 CHECK NOTIFICATIONS: Count=${count}, Last=${lastCount}`);
+        console.log(`🔔 CHECK NOTIFICATIONS: Count = ${count}, Last = ${lastCount} `);
 
         // TOAST ALERT for NEW notifications
         if (count > lastCount) {
@@ -410,10 +431,10 @@ class App {
             if (sidebarBadge) sidebarBadge.style.display = 'block';
 
             list.innerHTML = prods.map(p => `
-                <div style="padding:10px; border-bottom:1px solid #f1f5f9; cursor:pointer;" 
-                     onclick="app.handleNotificationClick('${p.id}')"
-                     onmouseover="this.style.backgroundColor='#f8fafc'"
-                     onmouseout="this.style.backgroundColor='white'">
+            < div style = "padding:10px; border-bottom:1px solid #f1f5f9; cursor:pointer;"
+        onclick = "app.handleNotificationClick('${p.id}')"
+        onmouseover = "this.style.backgroundColor='#f8fafc'"
+        onmouseout = "this.style.backgroundColor='white'" >
                     <div style="font-size:0.85rem; font-weight:bold; color:#1e293b;">
                         <i class="fa-solid fa-check-circle" style="color:#16a34a; margin-right:4px;"></i> ¡Producto Listo!
                     </div>
@@ -421,7 +442,7 @@ class App {
                         <strong>${p.descripcion}</strong> (${p.cantidad} un.)<br>
                         <span style="font-size:0.75rem; color:#16a34a;">Validado. Toca para ver.</span>
                     </div>
-                </div>
+                </div >
             `).join('');
 
         } else {
@@ -503,7 +524,7 @@ class App {
 
         // Switch View
         this.subViews.forEach(view => view.classList.remove('active'));
-        const targetView = document.getElementById(`view-${viewName}`);
+        const targetView = document.getElementById(`view - ${viewName} `);
         if (targetView) targetView.classList.add('active');
 
         // Restore Default Header Layout (Clears Dynamic Actions)
@@ -557,17 +578,17 @@ class App {
 
             if (result.status === 'success') {
                 const rows = result.data.map(req => `
-                    <tr>
+            < tr >
                         <td style="padding: 1rem;">${req.codigo}</td>
                         <td style="padding: 1rem;">${req.cantidad}</td>
                         <td style="padding: 1rem;">${req.fecha}</td>
                         <td style="padding: 1rem;">${req.usuario}</td>
                         <td style="padding: 1rem;"><span style="color: orange; font-weight:bold;">${req.categoria.toUpperCase()}</span></td>
-                    </tr>
-                `).join('');
+                    </tr >
+            `).join('');
 
                 container.innerHTML = `
-                    <h4>Solicitudes de Despacho</h4>
+            < h4 > Solicitudes de Despacho</h4 >
                     <div style="margin-top: 1rem; padding: 2rem; background: #f9fafb; border-radius: 8px; text-align: center;">
                         <button class="btn-primary" onclick="app.openNewRequestModal()">
                             <i class="fa-solid fa-plus"></i> Nueva Solicitud
@@ -589,7 +610,7 @@ class App {
                             </tbody>
                         </table>
                     </div>
-                `;
+        `;
             } else {
                 container.innerHTML = `< p style = "color:red;" > Error al cargar: ${result.message}</p > `;
             }
@@ -734,14 +755,14 @@ class App {
                 const container = document.getElementById('zone-workspace');
                 if (container) {
                     container.innerHTML = `
-                        <div style="text-align:center; padding:2rem; color:red;">
-                            <i class="fa-solid fa-triangle-exclamation"></i> Error al cargar inventario.
-                            <br><br>
-                            <button class="btn-sm" onclick="app.fetchProducts()">
-                                <i class="fa-solid fa-rotate-right"></i> Reintentar
-                            </button>
-                        </div>
-                    `;
+            < div style = "text-align:center; padding:2rem; color:red;" >
+                <i class="fa-solid fa-triangle-exclamation"></i> Error al cargar inventario.
+                            < br > <br>
+                        <button class="btn-sm" onclick="app.fetchProducts()">
+                            <i class="fa-solid fa-rotate-right"></i> Reintentar
+                        </button>
+                    </div>
+        `;
                 }
             }
         }
