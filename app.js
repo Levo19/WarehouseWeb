@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 70 - FIX: CREATE MISSING BADGE");
+        console.log("🚀 APP VERSION 71 - FIX: RETRY BADGE CREATION");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -229,6 +229,16 @@ class App {
     renderNotificationIcon() {
         const bellBtn = document.getElementById('header-notification-bell');
         if (!bellBtn) return;
+
+        // FIXED: Create BADGE if missing (v71)
+        if (!document.getElementById('notification-badge')) {
+            console.log("✅ BADGE CREATED (v71)");
+            const badge = document.createElement('span');
+            badge.id = 'notification-badge';
+            badge.style.cssText = `position: absolute; top: -5px; right: -5px; background: red; color: white; border-radius: 50%; padding: 2px 5px; font-size: 10px; display: none;`;
+            bellBtn.appendChild(badge);
+            bellBtn.style.position = 'relative';
+        }
 
         // Ensure dropdown container exists (append to body or keep inline if relative)
         if (!document.getElementById('notification-dropdown')) {
