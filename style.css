@@ -317,7 +317,8 @@ h3 {
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
-    transition: width 0.3s ease;
+    transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Faster & Smoother */
     overflow: hidden;
     white-space: nowrap;
     /* Prevent text wrapping */
@@ -365,8 +366,11 @@ h3 {
 
 .sidebar-header .brand {
     font-family: 'Outfit', sans-serif;
-    font-size: 1.5rem;
-    font-weight: 700;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.8rem;
+    /* Bigger */
+    font-weight: 800;
+    /* Bolder */
     color: white;
     display: flex;
     align-items: center;
@@ -391,11 +395,13 @@ h3 {
 .sidebar-nav {
     flex: 1;
     padding: 2rem 0;
-    /* More spacing top/bottom */
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    justify-content: center;
+    /* Center items vertically */
+    gap: 0.5rem;
+    /* Add gap between items */
     /* Center nav items */
 }
 
