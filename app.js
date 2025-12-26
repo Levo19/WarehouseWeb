@@ -321,11 +321,14 @@ class App {
         }, 4000);
     }
 
-    updateNotifications() {
+    updateNotifications(forceAlert = false) {
+        console.log("🔔 UPDATE NOTIFICATIONS ENTERED");
         // Fix: Use correct ID
         const badge = document.getElementById('notification-badge');
         const list = document.getElementById('notification-list');
         const bell = document.querySelector('#header-notification-bell i');
+
+        console.log("🔔 DOM CHECK:", { badge: !!badge, list: !!list, bell: !!bell });
 
         // Sidebar Badge Logic
         const dashboardLink = document.querySelector('.nav-link[data-target="dashboard"]');
@@ -350,7 +353,10 @@ class App {
             dashboardLink.appendChild(sidebarBadge);
         }
 
-        if (!badge || !list) return;
+        if (!badge || !list) {
+            console.error("❌ MISSING NOTIFICATION DOM ELEMENTS - RETURNING");
+            return;
+        }
 
         // Filter: PROCESADO products
         const prods = this.data.nuevosProductos
