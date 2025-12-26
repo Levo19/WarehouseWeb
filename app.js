@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 75 - FIX: ROBUST BELL FINDER");
+        console.log("🚀 APP VERSION 76 - FIX: CREATE DROPDOWN/LIST");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -347,10 +347,14 @@ class App {
                     console.log("✅ Found Bell Button via Icon! Assigning ID...");
                     bell.id = 'header-notification-bell'; // Fix the DOM
                     bell.style.position = 'relative';
+
+                    // CRITICAL v76: Now that bell exists, run the creator to make the Dropdown & List
+                    this.renderNotificationIcon();
                 }
             }
         }
 
+        // Re-query list in case it was just created
         const list = document.getElementById('notification-list');
 
         // SELF-HEALING: If bell exists but badge doesn't, create it NOW.
