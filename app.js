@@ -1369,7 +1369,10 @@ class App {
                         </div>
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem;">
                             <div style="font-size:0.85rem; color:#555;">Author: ${g.usuario}</div>
-                            <div style="font-size:0.85rem; color:#999;">ID: ...${shortId}</div>
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                ${g.foto ? '<i class="fa-solid fa-camera" style="color:var(--primary-color);" title="Tiene Foto"></i>' : ''}
+                                <div style="font-size:0.85rem; color:#999;">ID: ...${shortId}</div>
+                            </div>
                         </div>
                         ${g.comentario ? `<div style="font-size:0.8rem; color:#888; font-style:italic; margin-top:0.25rem;">"${g.comentario}"</div>` : ''}
                     </div>
@@ -1431,6 +1434,52 @@ class App {
         });
 
         this.renderGuiaDetailContent(guiaInfo, enrichedDetails);
+    }
+
+    handleGuiaPhotoUpload(id, input) {
+        if (!input.files || !input.files[0]) return;
+
+        const file = input.files[0];
+        this.showToast("Procesando imagen...", "info");
+
+        // Use existing resize helper
+        this.resizeImage(file, 1000).then(base64 => {
+            this.showToast("Subiendo foto...", "info");
+
+            const payload = {
+                idGuia: id,
+                foto: base64
+            };
+
+            fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: 'uploadGuiaPhoto', payload: payload })
+            })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.status === 'success') {
+                        this.showToast("Foto actualizada correctamente", "success");
+                        // Update local data
+                        const guia = this.data.movimientos.guias.find(g => g.id === id);
+                        if (guia) {
+                            guia.foto = res.data.url;
+                        }
+                        // Refresh Views
+                        this.filterGuiasList(); // Update icon in list
+                        this.toggleGuiaDetail(id); // Reload detail panel to show image
+                    } else {
+                        alert("Error subiendo foto: " + res.message);
+                    }
+                    input.value = ''; // Reset
+                })
+                .catch(e => {
+                    console.error(e);
+                    alert("Error de red al subir foto");
+                    input.value = '';
+                });
+        });
     }
 
     renderGuiaDetailContent(info, products) {
