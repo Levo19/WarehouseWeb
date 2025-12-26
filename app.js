@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 67 - FIX: MOVE TOAST TO SETUSER");
+        console.log("🚀 APP VERSION 68 - FIX: DASHBOARD SYNC & CLEANUP");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -201,12 +201,10 @@ class App {
         // Show App
         this.showApp();
 
-        console.log("✅ USER STARTUP COMPLETE (v67)");
-        // DEBUG: TEST TOAST ON LOGIN/RESTORE
-        setTimeout(() => {
-            console.error("🔥 FIRING TEST TOAST FROM SETUSER");
-            this.showToast("🔔 SISTEMA ACTIVO: Alertas Habilitadas", "success");
-        }, 1500);
+        console.log("✅ USER STARTUP COMPLETE (v68)");
+
+        // Setup Notifications System
+        this.renderNotificationIcon();
 
         // PRELOAD DATA (Background)
         this.loadInitialData(); // Products & Dispatch
@@ -1578,6 +1576,11 @@ class App {
 
                     // Update Notifications (CRITICAL for User Alert)
                     this.updateNotifications();
+
+                    // DASHBOARD SYNC FIX: If on dashboard, force re-render to show new data immediately
+                    if (this.state.currentView === 'dashboard') {
+                        this.renderDashboard();
+                    }
 
                     // Only Render if active module is movements
                     if (this.state.currentModule === 'movements' || !isBackground) {
