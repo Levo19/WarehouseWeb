@@ -1443,6 +1443,7 @@ class App {
     }
 
     renderZoneContent(zone, container) {
+        // ... (existing code)
         // Directly Render Pickup/Pending View (No Tabs)
         container.innerHTML = `
             <div class="slide-in-right" style="border-top:1px solid #eee; margin-top:1rem; padding-top:1rem;">
@@ -1452,6 +1453,56 @@ class App {
         `;
 
         this.renderZonePickup(zone, document.getElementById('zone-content'));
+    }
+
+    // --- MISSING DISPATCH FUNCTION ---
+    addProductToDispatch(code) {
+        const product = this.data.products[code];
+        if (!product) return alert('Producto no encontrado');
+
+        const qty = prompt(`Agregar "${product.desc}" al Despacho.\nIngrese cantidad:`, "1");
+        if (qty === null) return; // Cancelled
+        const quantity = parseInt(qty);
+        if (isNaN(quantity) || quantity <= 0) return alert("Cantidad inválida");
+
+        if (quantity > product.stock) {
+            if (!confirm(`Stock insuficiente (${product.stock}). ¿Desea solicitarlo igual?`)) return;
+        }
+
+        // Optimistic UI could go here
+        this.showToast("Guardando solicitud...", "info");
+
+        // Send to Backend
+        // We reuse 'saveRequest' or 'saveDispatchRequest' 
+        // Based on Code.gs: 'saveRequest' -> saveDispatchRequest(payload)
+        const payload = {
+            codigo: code,
+            cantidad: quantity,
+            usuario: this.currentUser ? this.currentUser.username : 'User'
+        };
+
+        fetch(API_URL, {
+            method: 'POST',
+            redirect: 'follow', // FIXED: Required for GAS
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: 'saveRequest', payload: payload })
+        })
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    this.showToast("Solicitud agregada", "success");
+                    // Refresh Request List if we are in Dispatch view?
+                    // Or just let background sync handle it? 
+                    // Better to refresh immediate if we have a view for it.
+                    this.fetchRequests({ isBackground: false });
+                } else {
+                    alert('Error: ' + res.message);
+                }
+            })
+            .catch(e => {
+                console.error(e);
+                alert("Error de red");
+            });
     }
 
     renderProductMasterList() {
@@ -1818,35 +1869,39 @@ class App {
 
         let html = '';
         sortedDates.forEach(date => {
-            html += `< h4 style = "margin: 1rem 0 0.5rem 0; color:var(--primary-color); border-bottom:2px solid #f3f4f6; padding-bottom:0.25rem;" > ${date}</h4 > `;
-            html += `< div class="guias-group-list" > `;
+            html += `<h4 style="margin: 1rem 0 0.5rem 0; color:var(--primary-color); border-bottom:2px solid #f3f4f6; padding-bottom:0.25rem;">${date}</h4>`;
+            html += `<div class="guias-group-list">`;
 
             console.log('Rendering Grouped Guias:', list);
 
             groups[date].forEach(g => {
                 const shortId = g.id ? g.id.slice(-6) : '???';
+                // DEFENSIVE: Check properies
+                const tipo = g.tipo || 'DESCONOCIDO';
+                const tipoClass = tipo.toLowerCase();
+
                 html += `
-            < div id = "guia-row-${g.id}" class="guia-row-card" onclick = "app.toggleGuiaDetail('${g.id}')" >
+            <div id="guia-row-${g.id}" class="guia-row-card" onclick="app.toggleGuiaDetail('${g.id}')">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <div>
-                                <span class="badge ${g.tipo.toLowerCase()}">${g.tipo}</span>
+                                <span class="badge ${tipoClass}">${tipo}</span>
                                 <span style="font-weight:bold; color:#333; margin-left:0.5rem;">${g.proveedor || 'Sin Nombre'}</span>
                             </div>
-                            <div style="font-size:0.8rem; color:#666;">${g.fecha.split(' ')[1] || ''}</div>
+                            <div style="font-size:0.8rem; color:#666;">${g.fecha ? g.fecha.split(' ')[1] : ''}</div>
                         </div>
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem;">
-                            <div style="font-size:0.85rem; color:#555;">Author: ${g.usuario}</div>
+                            <div style="font-size:0.85rem; color:#555;">Author: ${g.usuario || '-'}</div>
                             <div style="display:flex; align-items:center; gap:0.5rem;">
                                 ${g.foto ? '<i class="fa-solid fa-camera" style="color:var(--primary-color);" title="Tiene Foto"></i>' : ''}
                                 <div style="font-size:0.85rem; color:#999;">ID: ...${shortId}</div>
                             </div>
                         </div>
                         ${g.comentario ? `<div style="font-size:0.8rem; color:#888; font-style:italic; margin-top:0.25rem;">"${g.comentario}"</div>` : ''}
-                    </div >
+                    </div>
             `;
             });
 
-            html += `</div > `;
+            html += `</div>`;
         });
 
         container.innerHTML = html;
