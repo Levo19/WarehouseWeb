@@ -126,7 +126,11 @@
                 <h2 id="page-title">Dashboard</h2>
                 <div class="top-actions">
                     <div id="header-dynamic-actions"></div>
-                    <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
+                    <button class="icon-btn" id="header-notification-bell" style="position:relative;">
+                        <i class="fa-regular fa-bell"></i>
+                        <span id="notification-badge"
+                            style="display:none; position:absolute; top:-2px; right:-2px; background:red; color:white; font-size:0.6rem; padding:2px 4px; border-radius:50%;">0</span>
+                    </button>
                     <button class="icon-btn"><i class="fa-solid fa-gear"></i></button>
                 </div>
             </header>
