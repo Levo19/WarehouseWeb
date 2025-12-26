@@ -775,6 +775,11 @@ class App {
                         </div>
                     </div>
                 </div>
+                </div>
+
+                <!-- WIDGET: Processed Products -->
+                <div id="widget-processed-products" style="margin-top:1.5rem;"></div>
+
             </div>
         `;
 
@@ -792,10 +797,50 @@ class App {
             ? this.data.nuevosProductos.filter(p => p.estado === 'PROCESADO')
             : [];
 
-        if (prods.length === 0) {
+        const pending = this.data.nuevosProductos
+            ? this.data.nuevosProductos.filter(p => p.estado === 'PENDIENTE')
+            : [];
+
+        if (prods.length === 0 && (!pending || pending.length === 0)) {
             container.innerHTML = '';
             return;
         }
+
+        container.innerHTML = `
+            <div style="background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.1); padding:1.5rem;">
+                <h3 style="margin:0 0 1rem 0; font-size:1.1rem; color:#1e293b;">Estado de Nuevos Productos</h3>
+                
+                <div style="margin-bottom:1rem;">
+                    ${prods.length > 0 ? `
+                    <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:1rem; margin-bottom:1rem;">
+                        <h4 style="margin:0 0 0.5rem 0; color:#15803d; display:flex; align-items:center; gap:0.5rem;">
+                            <i class="fa-solid fa-check-circle"></i> Listos para Despacho (${prods.length})
+                        </h4>
+                        <table style="width:100%; font-size:0.9rem;">
+                            ${prods.map(p => `
+                            <tr>
+                                <td style="padding:4px 0;"><strong>${p.descripcion}</strong><br><span style="color:#666; font-size:0.8rem;">${p.marca}</span></td>
+                                <td style="text-align:right; font-weight:bold;">x${p.cantidad}</td>
+                            </tr>`).join('')}
+                        </table>
+                    </div>` : ''}
+
+                    ${pending.length > 0 ? `
+                    <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:1rem;">
+                        <h4 style="margin:0 0 0.5rem 0; color:#b45309; display:flex; align-items:center; gap:0.5rem;">
+                            <i class="fa-solid fa-clock"></i> Pendientes de Validación (${pending.length})
+                        </h4>
+                         <table style="width:100%; font-size:0.9rem;">
+                            ${pending.map(p => `
+                            <tr>
+                                <td style="padding:4px 0;">${p.descripcion}<br><span style="color:#666; font-size:0.8rem;">${p.marca}</span></td>
+                                <td style="text-align:right; color:#b45309;">x${p.cantidad}</td>
+                            </tr>`).join('')}
+                        </table>
+                    </div>` : ''}
+                </div>
+            </div>
+        `;
 
         container.innerHTML = `
             <div style="background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.1); padding:1.5rem; border-left:5px solid #16a34a;">
