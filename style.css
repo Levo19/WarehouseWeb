@@ -367,7 +367,7 @@ h3 {
 
 .sidebar-header .brand {
     font-family: 'Outfit', sans-serif;
-    font-family: 'Outfit', sans-serif;
+
     font-size: 1.8rem;
     /* Bigger */
     font-weight: 800;
@@ -393,22 +393,19 @@ h3 {
     transition: var(--transition);
 }
 
-.sidebar-nav {
+.nav-menu {
     flex: 1;
     padding: 2rem 0;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    /* Center items vertically */
-    gap: 0.5rem;
-    /* Add gap between items */
-    /* Center nav items */
+    justify-content: space-around;
+    /* Distribute evenly */
+    padding-bottom: 2rem;
 }
 
-.sidebar:hover .sidebar-nav {
+.sidebar:hover .nav-menu {
     align-items: stretch;
-    /* Stretch when expanded */
 }
 
 .nav-section {
