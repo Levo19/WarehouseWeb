@@ -1828,6 +1828,27 @@ class App {
 
         // Removed options logic, using search input now
 
+        // SHOW PENDING NEW PRODUCTS IN EDIT MODE (READ ONLY)
+        const pendingProducts = this.data.nuevosProductos ? this.data.nuevosProductos.filter(p => p.idGuia === id) : [];
+        let pendingHtml = '';
+        if (pendingProducts.length > 0) {
+            pendingHtml = `
+                <div style="margin-top:1.5rem; border:1px dashed #f59e0b; background:#fffbeb; padding:1rem; border-radius:8px;">
+                    <h5 style="margin:0 0 0.5rem 0; color:#b45309;"><i class="fa-solid fa-triangle-exclamation"></i> Productos Nuevos (Pendientes)</h5>
+                    <div style="font-size:0.8rem; color:#92400e; margin-bottom:0.5rem;">Estos productos están esperando validación administrativa.</div>
+                    ${pendingProducts.map(p => `
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0; border-bottom:1px solid #fcd34d;">
+                            <div>
+                                <div style="font-weight:bold; color:#78350f;">${p.descripcion} (${p.marca})</div>
+                                <div style="font-size:0.75rem;">Cant: ${p.cantidad} | Venc: ${p.fechaVencimiento || '-'}</div>
+                            </div>
+                            <span class="badge" style="background:#fcd34d; color:#78350f;">PENDIENTE</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
         panel.innerHTML = `
             <div style="padding:1.5rem; border-bottom:1px solid #eee; background:#f9fafb; display:flex; flex-direction:column; height:100%;">
                 <h3 style="color:var(--primary-color); margin-bottom:1rem;">Editar Guía</h3>
@@ -1840,6 +1861,13 @@ class App {
                 <div style="margin-bottom:1rem;">
                     <label style="font-size:0.8rem; font-weight:bold;">Comentario</label>
                     <textarea id="edit-guia-comment" style="width:100%; height:60px; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">${guiaInfo.comentario || ''}</textarea>
+                </div>
+                
+                 <div style="margin-bottom:1rem; display:flex; justify-content:flex-end;">
+                     <button onclick="app.showNewProductModal('${id}')" 
+                             style="background:#f59e0b; color:white; border:none; padding:0.5rem 1rem; border-radius:4px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; gap:0.5rem;">
+                         <i class="fa-solid fa-plus-circle"></i> Nuevo Producto (No en Catálogo)
+                     </button>
                 </div>
 
                 <div style="flex:1; overflow-y:auto; margin-bottom:1rem; border:1px solid #eee; border-radius:4px; background:white;">
@@ -1857,15 +1885,17 @@ class App {
                         </tbody>
                     </table>
                 </div>
+                
+                ${pendingHtml}
 
 
-                <!-- Add Product (Spotlight Button) -->
+                <!-- Add Product (Spotlight Button) - KEPT FOR NORMAL SEARCH -->
                 <div style="margin-bottom:1rem;">
                     <button class="spotlight-btn-add" onclick="app.openSpotlight('${id}')">
                         <i class="fa-solid fa-plus-circle" style="font-size:1.2rem; color:var(--primary-color);"></i>
                         <span>Agregar Producto</span>
                     </button>
-                    <div style="text-align:center; font-size:0.8rem; color:#888;">Presiona para buscar productos...</div>
+                    <div style="text-align:center; font-size:0.8rem; color:#888;">Presiona para buscar productos del catálogo...</div>
                 </div>
 
                 <!-- SPOTLIGHT MODAL (Hidden by default) -->
