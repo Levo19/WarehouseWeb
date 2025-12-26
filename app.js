@@ -1252,7 +1252,8 @@ class App {
                 // Update Cache
                 localStorage.setItem(CACHE_KEY, JSON.stringify(result.data));
 
-                this.data.movimientos = result.data; // { guias, preingresos, detalles, proveedores }
+                this.data.movimientos = result.data; // { guias, preingresos, detalles, proveedores, nuevosProductos }
+                this.data.nuevosProductos = result.data.nuevosProductos || [];
                 // !! CRITICAL FIX: Update global providers list !!
                 if (result.data.proveedores) {
                     this.data.providers = result.data.proveedores;
@@ -1507,6 +1508,20 @@ class App {
         // Helper for enriched details logic inside template
         const enrichedDetails = products;
 
+        // NEW PRODUCTS (PENDING)
+        const pendingProducts = this.data.nuevosProductos ? this.data.nuevosProductos.filter(p => p.idGuia === info.id) : [];
+        const pendingHtml = pendingProducts.length > 0 ? pendingProducts.map(p => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #fcd34d; background:#fffbeb;">
+                <div style="flex:1; padding-left:0.5rem;">
+                    <div style="font-weight:bold; font-size:0.9rem; color:#92400e;">${p.descripcion} <span style="font-size:0.7rem; background:#fcd34d; padding:2px 4px; border-radius:4px;">NUEVO</span></div>
+                    <div style="font-size:0.8rem; color:#b45309;">Marca: ${p.marca} | Venc: ${p.fechaVencimiento || '-'}</div>
+                </div>
+                <div style="font-weight:bold; color:#92400e; padding-right:0.5rem;">x${p.cantidad}</div>
+            </div>
+        `).join('') : '';
+
+        const totalItems = products.length + pendingProducts.length;
+
         panel.innerHTML = `
             <div style="padding:1.5rem; background:#f9fafb; min-height:100%; display:flex; flex-direction:column;">
                 <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:1rem;">
@@ -1550,9 +1565,10 @@ class App {
 
                 <div style="background:white; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.05); overflow:hidden; margin-bottom:1rem; flex:1;">
                     <div style="padding:0.75rem 1rem; border-bottom:1px solid #eee; background:#fff; font-weight:bold; color:#444;">
-                        Productos (${enrichedDetails.length})
+                        Productos (${totalItems})
                     </div>
                     <div style="padding:0.5rem;">
+                        ${pendingHtml}
                         ${productsHtml}
                     </div>
                 </div>
@@ -1571,7 +1587,7 @@ class App {
         const guiaInfo = this.data.movimientos.guias.find(g => g.id === id);
         if (!guiaInfo) return alert('Guía no encontrada');
 
-        // Get Details with names
+        // Normal Details
         const details = this.data.movimientos.detalles
             ? this.data.movimientos.detalles.filter(d => d.idGuia === id)
             : [];
@@ -1582,25 +1598,182 @@ class App {
             return { ...d, descripcion: product ? product.desc : 'Desconocido' };
         });
 
+        // New Products (Pending)
+        const newProds = this.data.nuevosProductos
+            ? this.data.nuevosProductos.filter(np => np.idGuia === id)
+            : [];
+
+        // ... (Printing logic will be updated separately)
+
         const printWindow = window.open('', '_blank', 'width=450,height=600');
         if (!printWindow) return alert('Bloqueo de ventanas emergentes activado.');
 
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${id}`;
-        const tipoTitulo = `GUÍA DE ${guiaInfo.tipo || 'MOVIMIENTO'}`;
 
-        this.writeReceiptHtml(printWindow, {
-            title: 'LEVO ERP',
-            subtitle: tipoTitulo,
-            meta: {
-                'ID': id.substring(0, 13) + '...',
-                'Fecha': guiaInfo.fecha,
-                'Destino/Prov': guiaInfo.proveedor,
-                'Usuario': guiaInfo.usuario
-            },
-            items: enriched.map(e => ({ desc: e.descripcion, code: e.codigo, qty: e.cantidad })),
-            qr: qrUrl
+        let rowsHtml = '';
+
+        // 1. Existing Products
+        enriched.forEach(p => {
+            rowsHtml += `
+            <tr style="border-bottom:1px dashed #000;">
+                <td style="padding:5px 0;">
+                    <div style="font-weight:bold; font-size:12px;">${p.descripcion}</div>
+                    <div style="font-size:10px;">${p.codigo} ${p.fechaVencimiento ? `<br>Venc: ${p.fechaVencimiento}` : ''}</div>
+                </td>
+                <td style="padding:5px 0; text-align:right; font-weight:bold; font-size:14px;">${p.cantidad}</td>
+            </tr>
+            `;
         });
+
+        // 2. New (Pending) Products
+        newProds.forEach(p => {
+            rowsHtml += `
+            <tr style="border-bottom:1px dashed #000;">
+                <td style="padding:5px 0;">
+                     <div style="font-weight:bold; font-size:12px;">${p.descripcion} <span style="font-size:9px; border:1px solid #000; padding:0 2px;">NUEVO</span></div>
+                     <div style="font-size:10px;">Marca: ${p.marca} ${p.fechaVencimiento ? `<br>Venc: ${p.fechaVencimiento}` : ''}</div>
+                </td>
+                <td style="padding:5px 0; text-align:right; font-weight:bold; font-size:14px;">${p.cantidad}</td>
+            </tr>
+            `;
+        });
+
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Ticket Guía ${guiaInfo.tipo}</title>
+                    <style>
+                        body { font-family: 'Courier New', monospace; width: 80mm; margin: 0; padding: 10px; box-sizing: border-box; }
+                        .header { text-align: center; margin-bottom: 10px; border-bottom: 2px dashed #000; padding-bottom: 10px; }
+                        h2 { margin: 5px 0; font-size: 18px; }
+                        .meta { font-size: 12px; margin-bottom: 5px; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                        .footer { text-align: center; margin-top: 20px; font-size: 11px; border-top: 2px dashed #000; padding-top: 10px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h2>${guiaInfo.tipo}</h2>
+                        <div class="meta">${guiaInfo.fecha}</div>
+                        <div class="meta">ID: ...${guiaInfo.id.slice(-6)}</div>
+                        <div class="meta"><strong>${guiaInfo.proveedor || guiaInfo.destino || '-'}</strong></div>
+                        <div class="meta">User: ${guiaInfo.usuario}</div>
+                    </div>
+                    
+                    <table>
+                        <thead>
+                            <tr style="border-bottom:2px solid #000;">
+                                <th style="text-align:left; font-size:12px;">Producto</th>
+                                <th style="text-align:right; font-size:12px;">Cant.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+
+                     ${guiaInfo.comentario ? `<div style="margin-top:10px; font-size:11px; font-style:italic;">Nota: ${guiaInfo.comentario}</div>` : ''}
+
+                    <div class="footer">
+                        <img src="${qrUrl}" width="100" style="margin-bottom:5px;">
+                        <div>Sistema de Inventario</div>
+                    </div>
+                    <script>
+                        window.onload = function() { window.print(); window.close(); }
+                    </script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
     }
+
+
+    /* --- NEW PRODUCT REGISTRATION --- */
+
+    showNewProductModal(idGuia) {
+        // Simple manual modal injection
+        const modalHtml = `
+            <div id="new-prod-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:10000;">
+                <div style="background:white; padding:1.5rem; border-radius:8px; width:90%; max-width:400px; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+                    <h3 style="margin-top:0; color:var(--primary-color);">Registrar Nuevo Producto</h3>
+                    <div style="font-size:0.85rem; color:#666; margin-bottom:1rem;">
+                        Este producto se guardará como <strong>PENDIENTE</strong> hasta que sea validado por administración.
+                    </div>
+                    
+                    <div style="display:flex; flex-direction:column; gap:0.75rem;">
+                        <input type="text" id="np-marca" placeholder="Marca" style="padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
+                        <input type="text" id="np-desc" placeholder="Descripción del Producto *" style="padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
+                        <input type="text" id="np-code" placeholder="Código de Barra (Opcional)" style="padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
+                        <div style="display:flex; gap:0.5rem;">
+                             <input type="number" id="np-qty" placeholder="Cant. *" style="flex:1; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
+                             <input type="date" id="np-date" style="flex:1; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
+                        </div>
+                    </div>
+
+                    <div style="margin-top:1.5rem; display:flex; justify-content:flex-end; gap:0.5rem;">
+                        <button onclick="document.getElementById('new-prod-modal').remove()" style="padding:0.5rem 1rem; border:1px solid #ddd; background:white; border-radius:4px; cursor:pointer;">Cancelar</button>
+                        <button onclick="app.saveNewProduct('${idGuia}')" style="padding:0.5rem 1rem; background:var(--primary-color); color:white; border:none; border-radius:4px; cursor:pointer;">Guardar</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    saveNewProduct(idGuia) {
+        const marca = document.getElementById('np-marca').value;
+        const desc = document.getElementById('np-desc').value;
+        const code = document.getElementById('np-code').value;
+        const qty = document.getElementById('np-qty').value;
+        const date = document.getElementById('np-date').value;
+
+        if (!desc || !qty) return alert('Descripción y Cantidad son obligatorios');
+
+        const payload = {
+            idGuia: idGuia,
+            marca: marca,
+            descripcion: desc,
+            codigo: code,
+            cantidad: qty,
+            fechaVencimiento: date,
+            usuario: this.data.currentUser || 'unknown'
+        };
+
+        const btn = document.querySelector('#new-prod-modal button[onclick^="app.saveNewProduct"]');
+        if (btn) { btn.disabled = true; btn.innerText = "Guardando..."; }
+
+        fetch(API_URL, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: 'saveProductoNuevo', payload: payload })
+        })
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    alert('Producto registrado correctamente como Pendiente');
+                    document.getElementById('new-prod-modal').remove();
+                    // Reload Data to see it immediately
+                    this.loadMovimientosData().then(() => {
+                        // If we are in edit mode or detail mode, refresh?
+                        // Currently loadMovimientosData refreshes Views.
+                        // But we might need to re-open the edit mode if we were there?
+                        // Actually showGuiaEditMode is static until saved. 
+                        // But we want to show it in the LIST. 
+                        this.showGuiaEditMode(idGuia); // Re-render edit mode to show new list
+                    });
+                } else {
+                    alert('Error: ' + res.message);
+                    if (btn) { btn.disabled = false; btn.innerText = "Guardar"; }
+                }
+            })
+            .catch(e => {
+                console.error(e);
+                alert('Error de red');
+                if (btn) { btn.disabled = false; btn.innerText = "Guardar"; }
+            });
+    }
+
 
     openImageModal(url) {
         const modal = document.createElement('div');
