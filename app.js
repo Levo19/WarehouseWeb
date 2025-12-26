@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 68 - FIX: DASHBOARD SYNC & CLEANUP");
+        console.log("🚀 APP VERSION 69 - DEBUG: GRANULAR TRACING");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -1524,6 +1524,8 @@ class App {
         const container = document.getElementById('guias-list-scroll');
         const CACHE_KEY = 'warehouse_movimientos_data';
 
+        console.log(`🔄 LOAD DATASOURCE START (Background=${isBackground})`);
+
         // 1. Try Cache First (Fast Load)
         if (!isBackground) {
             const cached = localStorage.getItem(CACHE_KEY);
@@ -1575,6 +1577,7 @@ class App {
                     }
 
                     // Update Notifications (CRITICAL for User Alert)
+                    console.log("🌍 FETCH SUCCESS - CALLING UPDATE NOTIFICATIONS");
                     this.updateNotifications();
 
                     // DASHBOARD SYNC FIX: If on dashboard, force re-render to show new data immediately
