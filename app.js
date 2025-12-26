@@ -202,18 +202,24 @@ class App {
         // Show App
         this.showApp();
 
-        // Show Global Loading State
+        // Show Global Loading State (SAFE APPEND)
         const mainApp = document.getElementById('main-app');
-        if (mainApp) {
-            mainApp.innerHTML = `
-                <div id="initial-loader" style="height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; background:#f1f5f9;">
-                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size:3rem; color:var(--primary-color);"></i>
-                    <h3 style="margin-top:1rem; color:#64748b;">Cargando datos del sistema...</h3>
-                </div>
-             ` + mainApp.innerHTML;
+        let loader = document.getElementById('initial-loader');
+
+        if (mainApp && !loader) {
+            loader = document.createElement('div');
+            loader.id = 'initial-loader';
+            loader.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center; background:#f1f5f9; z-index:9999;';
+            loader.innerHTML = `
+                 <i class="fa-solid fa-circle-notch fa-spin" style="font-size:3rem; color:var(--primary-color);"></i>
+                 <h3 style="margin-top:1rem; color:#64748b;">Cargando datos del sistema...</h3>
+            `;
+            // Prepend relative to mainApp to ensure it covers content but doesn't wipe events
+            mainApp.style.position = 'relative';
+            mainApp.appendChild(loader);
         }
 
-        console.log("✅ USER STARTUP COMPLETE (v79 - Async Load)");
+        console.log("✅ USER STARTUP COMPLETE (v80 - Safe Loader)");
 
         // Setup Notifications System
         this.renderNotificationIcon();
@@ -227,7 +233,6 @@ class App {
         }
 
         // Remove Loader
-        const loader = document.getElementById('initial-loader');
         if (loader) loader.remove();
 
         // AUTO-REFRESH (Every 60s)
@@ -1323,22 +1328,26 @@ class App {
 
         this.searchTimeout = setTimeout(() => {
             const term = query.toLowerCase().trim();
-            const cards = document.querySelectorAll('.product-card');
+            const container = document.getElementById('zone-workspace');
 
-            // Use requestAnimationFrame for batch DOM update
-            requestAnimationFrame(() => {
-                cards.forEach(card => {
-                    // Fast lookup using data attribute (no reflow)
-                    const searchable = card.dataset.search || "";
+            if (!container) return;
 
-                    if (!term || searchable.includes(term)) {
-                        card.style.display = 'flex';
-                    } else {
-                        card.style.display = 'none';
-                    }
+            if (!term) {
+                // RESET: Show Paginated Default List
+                this.productLimit = 50; // Reset limit
+                container.innerHTML = this.renderProductMasterList();
+            } else {
+                // FILTER: Search in Data
+                const allEntries = Object.entries(this.data.products);
+                const filtered = allEntries.filter(([code, p]) => {
+                    const searchStr = `${p.desc} ${code} ${p.marca || ''}`.toLowerCase();
+                    return searchStr.includes(term);
                 });
-            });
-        }, 300); // Wait 300ms after typing stops
+
+                // Render Filtered Results (Full List of Matches)
+                container.innerHTML = this.renderProductMasterList(filtered);
+            }
+        }, 300); // 300ms Debounce
     }
 
     async selectZone(zone) {
@@ -1429,7 +1438,10 @@ class App {
         this.renderZonePickup(zone, document.getElementById('zone-content'));
     }
 
-    renderProductMasterList() {
+    renderProductMasterList(customList = null) {
+        // Initialize limit if not set
+        if (!this.productLimit) this.productLimit = 50;
+
         if (!this.data.products || Object.keys(this.data.products).length === 0) {
             return `
                 <div style="text-align:center; padding:2rem; color:#666;">
@@ -1444,10 +1456,27 @@ class App {
             `;
         }
 
-        // Generate Cards HTML (Alphabetical Sort)
-        const productEntries = Object.entries(this.data.products).sort(([, a], [, b]) => {
-            return a.desc.localeCompare(b.desc);
-        });
+        // Determine Source Data
+        let productEntries;
+        let isFiltered = false;
+
+        if (customList) {
+            // Custom List from Search (Already Array)
+            productEntries = customList;
+            isFiltered = true;
+        } else {
+            // Default Master List (Paginated)
+            // Sort Alphabetically
+            const allEntries = Object.entries(this.data.products).sort(([, a], [, b]) => {
+                return a.desc.localeCompare(b.desc);
+            });
+
+            // SLICE for Pagination
+            productEntries = allEntries.slice(0, this.productLimit);
+
+            // Check if we have more
+            this.hasMoreProducts = allEntries.length > this.productLimit;
+        }
 
         const productCards = productEntries.map(([code, product]) => {
             // Image Logic (Optimized for Drive)
@@ -1462,53 +1491,42 @@ class App {
                 }
             }
 
-            const imgHtml = `<img src="${imgSrc}" class="card-img" alt="${product.desc}" referrerpolicy="no-referrer" loading="lazy" onerror="app.handleImageError(this, '${product.img || ''}')">`;
+            // Stock Color Logic
+            let stockColor = '#10b981'; // Green
+            if (product.stock <= 5) stockColor = '#ef4444'; // Red
+            else if (product.stock <= 20) stockColor = '#f59e0b'; // Amber
 
-            // Searchable Text for Performance
-            const searchText = `${code} ${product.desc}`.toLowerCase();
-            const isNegative = product.stock < 0;
+            const searchString = `${product.desc} ${code}`.toLowerCase();
 
             return `
-            <div class="product-card ${isNegative ? 'negative-stock' : ''}" data-search="${searchText}" onclick="this.classList.toggle('flipped')">
-                <div class="product-card-inner">
-                    ${isNegative ? '<i class="fa-solid fa-bomb stock-bomb-icon"></i>' : ''}
+            <div class="product-card" data-search="${searchString}">
+                <div class="card-inner">
                     <!-- FRONT -->
                     <div class="card-front">
-                        <button class="btn-quick-dispatch" 
-                            onclick="event.stopPropagation(); app.openQuickDispatchModal('${code}', '${product.desc.replace(/'/g, "\\'")}')"
-                            title="Despacho Rápido"
-                            style="
-                                position: absolute; 
-                                bottom: 10px; 
-                                right: 10px; 
-                                background: rgba(255, 255, 255, 0.95); 
-                                border: none; 
-                                border-radius: 50%; 
-                                width: 40px; 
-                                height: 40px; 
-                                box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
-                                cursor: pointer; 
-                                color: var(--primary-color); 
-                                display: flex; 
-                                justify-content: center; 
-                                align-items: center; 
-                                z-index: 20;
-                                transition: transform 0.2s;
-                            "
-                            onmouseover="this.style.transform='scale(1.1)'"
-                            onmouseout="this.style.transform='scale(1)'">
+                        <!-- Header: Historial Button (Top Right) removed, now on back -->
+                        
+                        <div style="position:absolute; top:10px; right:10px; background:rgba(255,255,255,0.9); padding:2px 8px; border-radius:12px; font-size:0.7rem; color:#64748b; font-weight:600; border:1px solid #e2e8f0;">
+                            ${product.marca || 'GENERICO'}
+                        </div>
+
+                        <!-- Add to Dispatch Button (Top Left) -->
+                        <button onclick="event.stopPropagation(); app.addProductToDispatch('${code}')" 
+                                style="position:absolute; top:10px; left:10px; background:var(--primary-color); color:white; border:none; width:32px; height:32px; border-radius:50%; box-shadow:0 4px 6px -1px rgba(79, 70, 229, 0.4); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.2s;"
+                                onmouseover="this.style.transform='scale(1.1)'"
+                                onmouseout="this.style.transform='scale(1)'"
+                                title="Agregar al Despacho">
                             <i class="fa-solid fa-cart-shopping"></i>
                         </button>
 
                         <div class="card-img-container">
-                            ${imgHtml}
+                            ${this.renderProductImage(imgSrc)}
                         </div>
                         <div class="card-content">
                              <div>
                                 <div class="card-desc" style="font-weight:800; font-size:1.05rem; color:#1a1a1a; margin-bottom:0.3rem; line-height:1.2;">${product.desc}</div>
                                 <div class="card-code" style="font-size:0.9rem; color:#6b7280; font-family:monospace;">${code}</div>
                             </div>
-                             <div style="margin-top:0.5rem; font-weight:bold; color:var(--primary-color); display:flex; align-items:center; gap:0.5rem;">
+                             <div style="margin-top:0.5rem; font-weight:bold; color:${stockColor}; display:flex; align-items:center; gap:0.5rem;">
                                 <i class="fa-solid fa-cubes"></i> Stock: <span class="stock-display-${code}">${product.stock}</span>
                             </div>
                         </div>
@@ -1554,23 +1572,46 @@ class App {
             </div>`;
         }).join('');
 
-        // Check for duplicates during mapping (debug)
-        console.log(`Rendering ${productEntries.length} products.`);
+        // Load More Button
+        let loadMoreHtml = '';
+        if (!isFiltered && this.hasMoreProducts) {
+            loadMoreHtml = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 2rem;">
+                    <button class="btn-primary" onclick="app.loadMoreProducts()">
+                        <i class="fa-solid fa-circle-plus"></i> Cargar Más Productos
+                    </button>
+                    <div style="margin-top:0.5rem; color:#94a3b8; font-size:0.8rem;">
+                        Mostrando ${this.productLimit} productos
+                    </div>
+                </div>
+            `;
+        }
 
-        // Removed Header and Nested Scroll as requested
         return `
             <div style="margin-top:1rem; padding-bottom: 3rem;">
                 <!-- Full Page Grid -->
-                <div style="
+                <div id="product-grid-container" style="
                     display: grid;
                     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
                     gap: 1rem;
-                    /* No fixed height or overflow-y here, letting the page scroll */
                 ">
                     ${productCards}
+                    ${loadMoreHtml}
                 </div>
             </div>
         `;
+    }
+
+    // RESTORING HELPER (Since I used it above)
+    renderProductImage(src) {
+        if (!src) return '<img src="recursos/defaultImageProduct.png" class="card-img" loading="lazy">';
+        // Handle Google Drive IDs ?
+        return `<img src="${src}" class="card-img" loading="lazy" onerror="this.src='recursos/defaultImageProduct.png'">`;
+    }
+
+    loadMoreProducts() {
+        this.productLimit += 50;
+        document.getElementById('zone-workspace').innerHTML = this.renderProductMasterList();
     }
 
 
