@@ -1787,7 +1787,7 @@ class App {
                     if (!isBackground && container && (!this.data.movimientos || !this.data.movimientos.guias)) {
                         container.innerHTML = `< div style = "text-align:center; padding:1rem; color:red;" >
             <i class="fa-solid fa-triangle-exclamation"></i> Error de conexión.Reintentando... (${e.message})
-                        </div > `;
+                       </div> `;
                     }
                 } else {
                     // Wait 2s before retry
@@ -2074,7 +2074,7 @@ class App {
                     </div>
                 </div>
 
-                <!--Photo Display Section-- >
+                <!-- Photo Display Section -->
             ${info.foto ? `
                 <div style="margin-bottom:1rem; border-radius:8px; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
                     <img src="${this.getOptimizedImageUrl(info.foto)}" 
