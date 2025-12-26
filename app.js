@@ -1598,11 +1598,6 @@ class App {
             return { ...d, descripcion: product ? product.desc : 'Desconocido' };
         });
 
-        // New Products (Pending)
-        const newProds = this.data.nuevosProductos
-            ? this.data.nuevosProductos.filter(np => np.idGuia === id)
-            : [];
-
         // ... (Printing logic will be updated separately)
 
         const printWindow = window.open('', '_blank', 'width=450,height=600');
@@ -1610,17 +1605,21 @@ class App {
 
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${id}`;
 
+        // Title Logic
+        const tipoTitulo = guiaInfo.tipo === 'INGRESO' ? 'GUÍA DE INGRESO' :
+            guiaInfo.tipo === 'SALIDA' ? 'GUÍA DE SALIDA' : guiaInfo.tipo;
+
         let rowsHtml = '';
 
         // 1. Existing Products
         enriched.forEach(p => {
             rowsHtml += `
             <tr style="border-bottom:1px dashed #000;">
-                <td style="padding:5px 0;">
-                    <div style="font-weight:bold; font-size:12px;">${p.descripcion}</div>
-                    <div style="font-size:10px;">${p.codigo} ${p.fechaVencimiento ? `<br>Venc: ${p.fechaVencimiento}` : ''}</div>
+                <td style="padding:8px 0;">
+                    <div style="font-weight:800; font-size:14px; line-height:1.2; margin-bottom:2px;">${p.descripcion}</div>
+                    <div style="font-size:11px; color:#333;">${p.codigo} ${p.fechaVencimiento ? ` | Venc: ${p.fechaVencimiento}` : ''}</div>
                 </td>
-                <td style="padding:5px 0; text-align:right; font-weight:bold; font-size:14px;">${p.cantidad}</td>
+                <td style="padding:8px 0; text-align:right; font-weight:900; font-size:16px;">${p.cantidad}</td>
             </tr>
             `;
         });
@@ -1629,11 +1628,11 @@ class App {
         newProds.forEach(p => {
             rowsHtml += `
             <tr style="border-bottom:1px dashed #000;">
-                <td style="padding:5px 0;">
-                     <div style="font-weight:bold; font-size:12px;">${p.descripcion} <span style="font-size:9px; border:1px solid #000; padding:0 2px;">NUEVO</span></div>
-                     <div style="font-size:10px;">Marca: ${p.marca} ${p.fechaVencimiento ? `<br>Venc: ${p.fechaVencimiento}` : ''}</div>
+                <td style="padding:8px 0;">
+                     <div style="font-weight:800; font-size:14px; line-height:1.2; margin-bottom:2px;">${p.descripcion} <span style="font-size:10px; border:1px solid #000; padding:1px 3px; font-weight:normal;">NUEVO</span></div>
+                     <div style="font-size:11px; color:#333;">Marca: ${p.marca} ${p.fechaVencimiento ? ` | Venc: ${p.fechaVencimiento}` : ''}</div>
                 </td>
-                <td style="padding:5px 0; text-align:right; font-weight:bold; font-size:14px;">${p.cantidad}</td>
+                <td style="padding:8px 0; text-align:right; font-weight:900; font-size:16px;">${p.cantidad}</td>
             </tr>
             `;
         });
@@ -1641,30 +1640,62 @@ class App {
         printWindow.document.write(`
             <html>
                 <head>
-                    <title>Ticket Guía ${guiaInfo.tipo}</title>
+                    <title>Ticket ${tipoTitulo}</title>
                     <style>
-                        body { font-family: 'Courier New', monospace; width: 80mm; margin: 0; padding: 10px; box-sizing: border-box; }
-                        .header { text-align: center; margin-bottom: 10px; border-bottom: 2px dashed #000; padding-bottom: 10px; }
-                        h2 { margin: 5px 0; font-size: 18px; }
-                        .meta { font-size: 12px; margin-bottom: 5px; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-                        .footer { text-align: center; margin-top: 20px; font-size: 11px; border-top: 2px dashed #000; padding-top: 10px; }
+                        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
+                        body { 
+                            font-family: 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif; 
+                            width: 72mm; /* 80mm - margins */
+                            margin: 0 auto; 
+                            padding: 2mm 0; 
+                            box-sizing: border-box; 
+                            color: #000;
+                        }
+                        .header { 
+                            text-align: center; 
+                            margin-bottom: 5px; 
+                            border-bottom: 2px solid #000; 
+                            padding-bottom: 10px; 
+                        }
+                        h2 { 
+                            margin: 5px 0; 
+                            font-size: 20px; 
+                            font-weight: 900; 
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                        }
+                        .meta { 
+                            font-size: 13px; 
+                            margin-bottom: 4px; 
+                            font-weight: 500;
+                        }
+                        .meta strong { font-weight: 800; font-size: 14px; }
+                        
+                        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+                        th { text-transform: uppercase; font-size: 11px; border-bottom: 2px solid #000; padding-bottom: 4px; }
+                        
+                        .footer { 
+                            text-align: center; 
+                            margin-top: 15px; 
+                            font-size: 11px; 
+                            border-top: 2px solid #000; 
+                            padding-top: 15px; 
+                        }
                     </style>
                 </head>
                 <body>
                     <div class="header">
-                        <h2>${guiaInfo.tipo}</h2>
+                        <h2>${tipoTitulo}</h2>
+                        <div style="font-size:18px; font-weight:bold; margin-bottom:5px;">${guiaInfo.proveedor || guiaInfo.destino || '-'}</div>
                         <div class="meta">${guiaInfo.fecha}</div>
-                        <div class="meta">ID: ...${guiaInfo.id.slice(-6)}</div>
-                        <div class="meta"><strong>${guiaInfo.proveedor || guiaInfo.destino || '-'}</strong></div>
                         <div class="meta">User: ${guiaInfo.usuario}</div>
                     </div>
                     
                     <table>
                         <thead>
-                            <tr style="border-bottom:2px solid #000;">
-                                <th style="text-align:left; font-size:12px;">Producto</th>
-                                <th style="text-align:right; font-size:12px;">Cant.</th>
+                            <tr>
+                                <th style="text-align:left;">DESCRIPCIÓN</th>
+                                <th style="text-align:right;">CANT.</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1672,11 +1703,11 @@ class App {
                         </tbody>
                     </table>
 
-                     ${guiaInfo.comentario ? `<div style="margin-top:10px; font-size:11px; font-style:italic;">Nota: ${guiaInfo.comentario}</div>` : ''}
+                     ${guiaInfo.comentario ? `<div style="margin-top:10px; font-size:12px; font-style:italic; border:1px dashed #000; padding:5px;"><strong>Nota:</strong> ${guiaInfo.comentario}</div>` : ''}
 
                     <div class="footer">
-                        <img src="${qrUrl}" width="100" style="margin-bottom:5px;">
-                        <div>Sistema de Inventario</div>
+                        <img src="${qrUrl}" width="120" style="display:block; margin:0 auto 5px auto;">
+                        <div style="font-weight:bold;">SISTEMA INTELIGENTE</div>
                     </div>
                     <script>
                         window.onload = function() { window.print(); window.close(); }
