@@ -1603,8 +1603,6 @@ class App {
             ? this.data.nuevosProductos.filter(np => np.idGuia === id)
             : [];
 
-        // ... (Printing logic will be updated separately)
-
         const printWindow = window.open('', '_blank', 'width=450,height=600');
         if (!printWindow) return alert('Bloqueo de ventanas emergentes activado.');
 
@@ -1620,11 +1618,11 @@ class App {
         enriched.forEach(p => {
             rowsHtml += `
             <tr style="border-bottom:1px dashed #000;">
-                <td style="padding:8px 0;">
-                    <div style="font-weight:800; font-size:14px; line-height:1.2; margin-bottom:2px;">${p.descripcion}</div>
-                    <div style="font-size:11px; color:#333;">${p.codigo} ${p.fechaVencimiento ? ` | Venc: ${p.fechaVencimiento}` : ''}</div>
+                <td style="padding:4px 0;">
+                    <div style="font-weight:900; font-size:15px; line-height:1.1; margin-bottom:3px; text-transform:uppercase;">${p.descripcion}</div>
+                    <div style="font-size:13px; font-weight:600; color:#000;">${p.codigo} ${p.fechaVencimiento ? ` | Venc: ${p.fechaVencimiento}` : ''}</div>
                 </td>
-                <td style="padding:8px 0; text-align:right; font-weight:900; font-size:16px;">${p.cantidad}</td>
+                <td style="padding:4px 0; text-align:right; font-weight:900; font-size:18px; vertical-align:top;">${p.cantidad}</td>
             </tr>
             `;
         });
@@ -1633,11 +1631,14 @@ class App {
         newProds.forEach(p => {
             rowsHtml += `
             <tr style="border-bottom:1px dashed #000;">
-                <td style="padding:8px 0;">
-                     <div style="font-weight:800; font-size:14px; line-height:1.2; margin-bottom:2px;">${p.descripcion} <span style="font-size:10px; border:1px solid #000; padding:1px 3px; font-weight:normal;">NUEVO</span></div>
-                     <div style="font-size:11px; color:#333;">Marca: ${p.marca} ${p.fechaVencimiento ? ` | Venc: ${p.fechaVencimiento}` : ''}</div>
+                <td style="padding:4px 0;">
+                     <div style="font-weight:900; font-size:15px; line-height:1.1; margin-bottom:3px; text-transform:uppercase;">
+                        ${p.descripcion} 
+                        <span style="font-size:11px; border:2px solid #000; padding:1px 3px; font-weight:800; display:inline-block; transform:translateY(-1px);">NUEVO</span>
+                     </div>
+                     <div style="font-size:13px; font-weight:600; color:#000;">Marca: ${p.marca} ${p.fechaVencimiento ? ` | Venc: ${p.fechaVencimiento}` : ''}</div>
                 </td>
-                <td style="padding:8px 0; text-align:right; font-weight:900; font-size:16px;">${p.cantidad}</td>
+                <td style="padding:4px 0; text-align:right; font-weight:900; font-size:18px; vertical-align:top;">${p.cantidad}</td>
             </tr>
             `;
         });
@@ -1647,53 +1648,65 @@ class App {
                 <head>
                     <title>Ticket ${tipoTitulo}</title>
                     <style>
-                        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
+                        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@500;700;900&display=swap');
                         body { 
-                            font-family: 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif; 
-                            width: 72mm; /* 80mm - margins */
-                            margin: 0 auto; 
-                            padding: 2mm 0; 
+                            font-family: 'Roboto', Helvetica, Arial, sans-serif; 
+                            width: 100%; /* Use full width available */
+                            max-width: 78mm; /* Slightly wider */
+                            margin: 0; 
+                            padding: 0 1mm; /* Minimal padding */
                             box-sizing: border-box; 
                             color: #000;
                         }
                         .header { 
                             text-align: center; 
                             margin-bottom: 5px; 
-                            border-bottom: 2px solid #000; 
-                            padding-bottom: 10px; 
+                            border-bottom: 3px solid #000; 
+                            padding-bottom: 5px; 
                         }
                         h2 { 
-                            margin: 5px 0; 
-                            font-size: 20px; 
+                            margin: 0 0 2px 0; 
+                            font-size: 24px; /* Larger Title */
                             font-weight: 900; 
                             text-transform: uppercase;
-                            letter-spacing: 0.5px;
+                            letter-spacing: -0.5px;
+                        }
+                        .provider {
+                            font-size: 20px;
+                            font-weight: 900;
+                            margin-bottom: 5px;
                         }
                         .meta { 
-                            font-size: 13px; 
-                            margin-bottom: 4px; 
-                            font-weight: 500;
+                            font-size: 14px; 
+                            margin-bottom: 2px; 
+                            font-weight: 700;
                         }
-                        .meta strong { font-weight: 800; font-size: 14px; }
                         
                         table { width: 100%; border-collapse: collapse; margin-top: 5px; }
-                        th { text-transform: uppercase; font-size: 11px; border-bottom: 2px solid #000; padding-bottom: 4px; }
+                        th { 
+                            text-transform: uppercase; 
+                            font-size: 13px; 
+                            font-weight: 900;
+                            border-bottom: 3px solid #000; 
+                            padding-bottom: 4px; 
+                        }
                         
                         .footer { 
                             text-align: center; 
-                            margin-top: 15px; 
-                            font-size: 11px; 
-                            border-top: 2px solid #000; 
-                            padding-top: 15px; 
+                            margin-top: 10px; 
+                            font-size: 14px; 
+                            font-weight: 900;
+                            border-top: 3px solid #000; 
+                            padding-top: 10px; 
                         }
                     </style>
                 </head>
                 <body>
                     <div class="header">
                         <h2>${tipoTitulo}</h2>
-                        <div style="font-size:18px; font-weight:bold; margin-bottom:5px;">${guiaInfo.proveedor || guiaInfo.destino || '-'}</div>
+                        <div class="provider">${guiaInfo.proveedor || guiaInfo.destino || '-'}</div>
                         <div class="meta">${guiaInfo.fecha}</div>
-                        <div class="meta">User: ${guiaInfo.usuario}</div>
+                        <div class="meta">USER: ${guiaInfo.usuario.toUpperCase()}</div>
                     </div>
                     
                     <table>
@@ -1708,11 +1721,12 @@ class App {
                         </tbody>
                     </table>
 
-                     ${guiaInfo.comentario ? `<div style="margin-top:10px; font-size:12px; font-style:italic; border:1px dashed #000; padding:5px;"><strong>Nota:</strong> ${guiaInfo.comentario}</div>` : ''}
+                     ${guiaInfo.comentario ? `<div style="margin-top:10px; font-size:14px; font-weight:500; border:2px dashed #000; padding:5px;"><strong>NOTA:</strong> ${guiaInfo.comentario}</div>` : ''}
 
                     <div class="footer">
-                        <img src="${qrUrl}" width="120" style="display:block; margin:0 auto 5px auto;">
-                        <div style="font-weight:bold;">SISTEMA INTELIGENTE</div>
+                        <img src="${qrUrl}" width="150" style="display:block; margin:0 auto 10px auto;">
+                        <div>LEVO ERP</div>
+                        <div style="font-size:10px; font-weight:500; margin-top:5px;">${new Date().toLocaleString()}</div>
                     </div>
                     <script>
                         window.onload = function() { window.print(); window.close(); }
