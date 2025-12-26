@@ -188,7 +188,7 @@ class App {
         }
     }
 
-    setUser(user) {
+    async setUser(user) {
         this.currentUser = user;
         localStorage.setItem('levo_user', JSON.stringify(user));
 
@@ -202,14 +202,33 @@ class App {
         // Show App
         this.showApp();
 
-        console.log("✅ USER STARTUP COMPLETE (v68)");
+        // Show Global Loading State
+        const mainApp = document.getElementById('main-app');
+        if (mainApp) {
+            mainApp.innerHTML = `
+                <div id="initial-loader" style="height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; background:#f1f5f9;">
+                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size:3rem; color:var(--primary-color);"></i>
+                    <h3 style="margin-top:1rem; color:#64748b;">Cargando datos del sistema...</h3>
+                </div>
+             ` + mainApp.innerHTML;
+        }
+
+        console.log("✅ USER STARTUP COMPLETE (v79 - Async Load)");
 
         // Setup Notifications System
         this.renderNotificationIcon();
 
-        // PRELOAD DATA (Background)
-        this.loadInitialData(); // Products & Dispatch
-        this.loadMovimientosData(true); // Guias (Silent)
+        // CRITICAL FIX: AWAIT DATA BEFORE DASHBOARD
+        // This ensures dashboard has data to calculate alerts/widgets
+        try {
+            await this.preloadAllData();
+        } catch (e) {
+            console.error("Initial Load Error", e);
+        }
+
+        // Remove Loader
+        const loader = document.getElementById('initial-loader');
+        if (loader) loader.remove();
 
         // AUTO-REFRESH (Every 60s)
         if (this.refreshInterval) clearInterval(this.refreshInterval);
@@ -219,12 +238,6 @@ class App {
         }, 60000);
 
         this.navigateTo('dashboard');
-
-        // Start Pre-load with visual feedback
-        this.loadInitialData();
-
-        // Init Notifications
-        this.renderNotificationIcon();
     }
 
     renderNotificationIcon() {
