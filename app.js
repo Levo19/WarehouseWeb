@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 62 - DEBUG: TOAST & CACHE FIX");
+        console.log("🚀 APP VERSION 63 - FINAL FIXES (CSS IMP + TOAST DEBUG)");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -269,6 +269,7 @@ class App {
     }
 
     showToast(message, type = 'info') {
+        console.log("🔔 TOAST CALLED:", message, type);
         const toast = document.createElement('div');
         // Inline styles for reliability
         const bg = type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#3b82f6';
