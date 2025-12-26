@@ -22,13 +22,19 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 63 - FINAL FIXES (CSS IMP + TOAST DEBUG)");
+        console.log("🚀 APP VERSION 64 - DEBUG: TEST TOAST ON INIT");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
         // Load data if logged in
+        // Load data if logged in
         if (this.currentUser) {
             this.preloadAllData();
+
+            // DEBUG: TEST TOAST ON LOAD
+            setTimeout(() => {
+                this.showToast("🔔 PRUEBA DE SISTEMA: Alertas Activas", "info");
+            }, 2000);
         }
 
         // Background Auto-Refresh (Every 45s)
@@ -350,6 +356,8 @@ class App {
 
         const count = prods.length;
         const lastCount = this.lastNotificationCount || 0;
+
+        console.log(`🔔 CHECK NOTIFICATIONS: Count=${count}, Last=${lastCount}`);
 
         // TOAST ALERT for NEW notifications
         if (count > lastCount) {
