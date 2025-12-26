@@ -2103,7 +2103,7 @@ class App {
                     </button>
                     <button onclick="app.closeGuiaDetails()" class="btn-secondary">Cerrar Panel</button>
                 </div>
-            </div >
+            </div>
             `;
     }
 
