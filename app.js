@@ -1430,46 +1430,70 @@ class App {
             }
         }
 
-        try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                redirect: 'follow',
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ action: 'getMovimientosData' })
-            });
-            const result = await response.json();
+        // RETRY LOGIC for Connection Stability
+        let attempts = 0;
+        const maxAttempts = 3;
 
-            if (result.status === 'success') {
-                // Update Cache
-                localStorage.setItem(CACHE_KEY, JSON.stringify(result.data));
+        while (attempts < maxAttempts) {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    redirect: 'follow',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: 'getMovimientosData' })
+                });
 
-                this.data.movimientos = result.data; // { guias, preingresos, detalles, proveedores, nuevosProductos }
-                this.data.nuevosProductos = result.data.nuevosProductos || [];
-                // !! CRITICAL FIX: Update global providers list !!
-                if (result.data.proveedores) {
-                    this.data.providers = result.data.proveedores;
-                }
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-                // Update Notifications
-                this.updateNotifications();
+                const result = await response.json();
 
-                // Only Render if active module is movements
-                if (this.state.currentModule === 'movements' || !isBackground) {
-                    this.renderGuiasList();
-                    this.renderPreingresos();
+                if (result.status === 'success') {
+                    // Update Cache
+                    localStorage.setItem(CACHE_KEY, JSON.stringify(result.data));
 
-                    // Refresh open panel if exists
-                    const activeRow = document.querySelector('.guia-row-card.active');
-                    if (activeRow) {
-                        const id = activeRow.id.replace('guia-row-', '');
-                        this.toggleGuiaDetail(id); // Re-open to update
+                    this.data.movimientos = result.data; // { guias, preingresos, detalles, proveedores, nuevosProductos }
+                    this.data.nuevosProductos = result.data.nuevosProductos || [];
+
+                    // !! CRITICAL FIX: Update global providers list !!
+                    if (result.data.proveedores) {
+                        this.data.providers = result.data.proveedores;
                     }
+
+                    // Update Notifications (CRITICAL for User Alert)
+                    this.updateNotifications();
+
+                    // Only Render if active module is movements
+                    if (this.state.currentModule === 'movements' || !isBackground) {
+                        this.renderGuiasList();
+                        this.renderPreingresos();
+
+                        // Refresh open panel if exists
+                        const activeRow = document.querySelector('.guia-row-card.active');
+                        if (activeRow) {
+                            const id = activeRow.id.replace('guia-row-', '');
+                            this.toggleGuiaDetail(id); // Re-open to update
+                        }
+                    }
+                    return; // SUCCESS - Exit function
+                } else {
+                    throw new Error(result.message || 'Error desconocido del servidor');
                 }
-            }
-        } catch (e) {
-            console.error(e);
-            if (!isBackground && container && (!this.data.movimientos || !this.data.movimientos.guias)) {
-                container.innerHTML = `<div style="text-align:center; padding:1rem; color:red;">Error de conexión: ${e.message}</div>`;
+
+            } catch (e) {
+                attempts++;
+                console.warn(`Attempt ${attempts} failed: ${e.message}`);
+
+                if (attempts >= maxAttempts) {
+                    console.error('All fetch attempts failed', e);
+                    if (!isBackground && container && (!this.data.movimientos || !this.data.movimientos.guias)) {
+                        container.innerHTML = `<div style="text-align:center; padding:1rem; color:red;">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Error de conexión. Reintentando... (${e.message})
+                        </div>`;
+                    }
+                } else {
+                    // Wait 2s before retry
+                    await new Promise(res => setTimeout(res, 2000));
+                }
             }
         }
     }
