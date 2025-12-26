@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 76 - FIX: CREATE DROPDOWN/LIST");
+        console.log("🚀 APP VERSION 78 - FEATURE: SMART NOTIFICATIONS");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -437,7 +437,7 @@ class App {
             // const audio = new Audio('notification.mp3'); audio.play().catch(e=>{});
         }
 
-        this.lastNotificationCount = count;
+        this.currentNotificationCount = count; // Store for clearing Logic
 
         if (count > 0) {
             badge.style.display = 'block';
@@ -453,11 +453,17 @@ class App {
             // Show Sidebar Badge
             if (sidebarBadge) sidebarBadge.style.display = 'block';
 
-            list.innerHTML = prods.map(p => `
-            < div style = "padding:10px; border-bottom:1px solid #f1f5f9; cursor:pointer;"
-        onclick = "app.handleNotificationClick('${p.id}')"
-        onmouseover = "this.style.backgroundColor='#f8fafc'"
-        onmouseout = "this.style.backgroundColor='white'" >
+            list.innerHTML = `
+                <div style="padding:8px; border-bottom:1px solid #eee; text-align:right;">
+                    <button style="font-size:0.75rem; color:#3b82f6; background:none; border:none; cursor:pointer;" onclick="app.clearNotifications()">
+                        Marcar todo como leído
+                    </button>
+                </div>
+                ${prods.map(p => `
+                <div style="padding:10px; border-bottom:1px solid #f1f5f9; cursor:pointer;"
+                     onclick="app.handleNotificationClick('${p.id}')"
+                     onmouseover="this.style.backgroundColor='#f8fafc'"
+                     onmouseout="this.style.backgroundColor='white'">
                     <div style="font-size:0.85rem; font-weight:bold; color:#1e293b;">
                         <i class="fa-solid fa-check-circle" style="color:#16a34a; margin-right:4px;"></i> ¡Producto Listo!
                     </div>
@@ -465,8 +471,9 @@ class App {
                         <strong>${p.descripcion}</strong> (${p.cantidad} un.)<br>
                         <span style="font-size:0.75rem; color:#16a34a;">Validado. Toca para ver.</span>
                     </div>
-                </div >
-            `).join('');
+                </div>
+                `).join('')}
+            `;
 
         } else {
             badge.style.display = 'none';
@@ -481,9 +488,41 @@ class App {
             // Hide Sidebar Badge
             if (sidebarBadge) sidebarBadge.style.display = 'none';
 
-            list.innerHTML = '<div style="padding:10px; color:#999; font-size:0.85rem; text-align:center;">Sin notificaciones</div>';
+            list.innerHTML = '<div style="padding:10px; color:#999; font-size:0.85rem; text-align:center;">Sin notificaciones nuevas</div>';
         }
     }
+
+    handleNotificationClick(productId) {
+        console.log("🔔 Notification Clicked:", productId);
+        this.navigateTo('dashboard');
+        // The navigateTo call will trigger clearNotifications via logic below, but we enforce it here too
+    }
+
+    clearNotifications() {
+        console.log("🔔 Clearing Notifications (Mark as Read)");
+        // Update "Last Count" to match "Current", effectively engaging "Zero New" state logic next check,
+        // but for immediate UI feedback we hide elements manually.
+        this.lastNotificationCount = this.currentNotificationCount || 0;
+
+        const badge = document.getElementById('notification-badge');
+        if (badge) badge.style.display = 'none';
+
+        const sidebarBadge = document.getElementById('sidebar-dashboard-badge');
+        if (sidebarBadge) sidebarBadge.style.display = 'none';
+
+        const bell = document.getElementById('header-notification-bell');
+        if (bell) {
+            bell.classList.remove('fa-solid', 'fa-shake');
+            bell.classList.add('fa-regular');
+            bell.style.color = '';
+        }
+
+        // Update list to show "Cleared" state immediately
+        const list = document.getElementById('notification-list');
+        if (list) list.innerHTML = '<div style="padding:10px; color:#999; font-size:0.85rem; text-align:center;">Leído. Sin nuevas alertas.</div>';
+    }
+
+
 
     setupPermissions() {
         // Check permissions based on the 'modulos' list from Sheet
@@ -558,6 +597,8 @@ class App {
             this.state.currentModule = 'dispatch';
             this.renderDispatchModule();
         } else if (viewName === 'dashboard') {
+            // Auto-Read Notifications when viewing Dashboard
+            this.clearNotifications();
             this.state.currentModule = 'dashboard';
             this.renderDashboard();
         } else if (viewName === 'prepedidos') {
@@ -1270,6 +1311,11 @@ class App {
                 <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
                 <button class="icon-btn"><i class="fa-solid fa-gear"></i></button>
             `;
+
+            // RE-INITIALIZE NOTIFICATIONS
+            // Because we just wiped the header, we must re-attach the bell logic.
+            this.renderNotificationIcon();
+            this.updateNotifications();
         }
     }
 
