@@ -330,7 +330,8 @@ h3 {
 }
 
 /* Hide logo text when collapsed */
-.sidebar .brand span,
+/* Hide logo text when collapsed */
+.sidebar .brand-text,
 .sidebar .nav-link span,
 .sidebar .user-info .user-details {
     opacity: 0;
@@ -340,7 +341,7 @@ h3 {
     /* Hide completely to fix alignment */
 }
 
-.sidebar:hover .brand span,
+.sidebar:hover .brand-text,
 .sidebar:hover .nav-link span,
 .sidebar:hover .user-info .user-details {
     opacity: 1;
@@ -423,8 +424,11 @@ h3 {
 
 .nav-menu {
     flex: 1;
+    flex: 1;
     padding: 2rem 0;
     overflow-y: auto;
+    overflow-x: hidden;
+    /* Fix horizontal scroll */
     display: flex;
     flex-direction: column;
     justify-content: space-around;
