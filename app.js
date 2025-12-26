@@ -1817,12 +1817,12 @@ class App {
                     <title>Ticket ${tipoTitulo}</title>
                     <style>
                         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@500;700;900&display=swap');
+                        @page { margin: 0; size: 80mm auto; }
                         body { 
                             font-family: 'Roboto', Helvetica, Arial, sans-serif; 
-                            width: 100%; /* Use full width available */
-                            max-width: 78mm; /* Slightly wider */
+                            width: 79mm; 
                             margin: 0; 
-                            padding: 0 1mm; /* Minimal padding */
+                            padding: 1mm 2mm; 
                             box-sizing: border-box; 
                             color: #000;
                         }
@@ -1834,7 +1834,7 @@ class App {
                         }
                         h2 { 
                             margin: 0 0 2px 0; 
-                            font-size: 24px; /* Larger Title */
+                            font-size: 24px; 
                             font-weight: 900; 
                             text-transform: uppercase;
                             letter-spacing: -0.5px;
@@ -1892,7 +1892,7 @@ class App {
                      ${guiaInfo.comentario ? `<div style="margin-top:10px; font-size:14px; font-weight:500; border:2px dashed #000; padding:5px;"><strong>NOTA:</strong> ${guiaInfo.comentario}</div>` : ''}
 
                     <div class="footer">
-                        <img src="${qrUrl}" width="150" style="display:block; margin:0 auto 10px auto;">
+                        <img src="${qrUrl}" width="120" style="display:block; margin:0 auto 10px auto;">
                         <div>LEVO ERP</div>
                         <div style="font-size:10px; font-weight:500; margin-top:5px;">${new Date().toLocaleString()}</div>
                     </div>
