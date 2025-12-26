@@ -357,7 +357,8 @@ h3 {
 }
 
 .sidebar-header {
-    height: 70px;
+    height: 80px;
+    /* Taller header */
     display: flex;
     align-items: center;
     padding: 0 1.5rem;
@@ -496,11 +497,15 @@ h3 {
 }
 
 .sidebar-footer {
-    padding: 1rem 1.5rem;
+    margin-top: auto;
+    /* Force to bottom */
+    padding: 1.5rem;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    background: var(--bg-sidebar);
+    /* Ensure background covers */
 }
 
 .user-info {
