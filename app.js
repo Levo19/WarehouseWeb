@@ -212,6 +212,121 @@ class App {
 
         // Start Pre-load with visual feedback
         this.loadInitialData();
+
+        // Init Notifications
+        this.renderNotificationIcon();
+    }
+
+    renderNotificationIcon() {
+        // Only if it doesn't exist
+        if (document.getElementById('notification-bell')) return;
+
+        // Try to find a header container.
+        // Assuming there is a .user-info or similar in the header where User Initials are.
+        // We will insert it before the user info.
+        const userInfo = document.querySelector('.user-info');
+        if (userInfo) {
+            const bellContainer = document.createElement('div');
+            bellContainer.id = 'notification-bell';
+            bellContainer.style.position = 'relative';
+            bellContainer.style.marginRight = '1.5rem';
+            bellContainer.style.cursor = 'pointer';
+            bellContainer.style.fontSize = '1.2rem';
+            bellContainer.style.color = '#64748b';
+
+            bellContainer.innerHTML = `
+                <i class="fa-regular fa-bell"></i>
+                <span id="notification-badge" style="
+                    display:none; 
+                    position:absolute; 
+                    top:-5px; 
+                    right:-5px; 
+                    background:red; 
+                    color:white; 
+                    font-size:0.7rem; 
+                    padding:2px 5px; 
+                    border-radius:10px;
+                    font-weight:bold;">0</span>
+                <div id="notification-dropdown" style="
+                    display:none;
+                    position:absolute;
+                    top:100%;
+                    right:0;
+                    width:300px;
+                    background:white;
+                    box-shadow:0 4px 12px rgba(0,0,0,0.15);
+                    border-radius:8px;
+                    z-index:1000;
+                    margin-top:10px;
+                    overflow:hidden;
+                ">
+                    <div style="padding:10px; border-bottom:1px solid #eee; font-weight:bold; font-size:0.9rem;">Notificaciones</div>
+                    <div id="notification-list" style="max-height:300px; overflow-y:auto;">
+                        <div style="padding:10px; color:#999; font-size:0.85rem; text-align:center;">Sin notificaciones</div>
+                    </div>
+                </div>
+            `;
+
+            // Toggle Logic
+            bellContainer.addEventListener('click', (e) => {
+                const drop = document.getElementById('notification-dropdown');
+                if (drop) {
+                    const isVisible = drop.style.display === 'block';
+                    drop.style.display = isVisible ? 'none' : 'block';
+                    e.stopPropagation();
+                }
+            });
+
+            // Close when clicking outside
+            document.addEventListener('click', () => {
+                const drop = document.getElementById('notification-dropdown');
+                if (drop) drop.style.display = 'none';
+            });
+
+            userInfo.parentNode.insertBefore(bellContainer, userInfo);
+        }
+    }
+
+    updateNotifications() {
+        const badge = document.getElementById('notification-badge');
+        const list = document.getElementById('notification-list');
+        const bell = document.querySelector('#notification-bell i');
+
+        if (!badge || !list) return;
+
+        // Filter: PROCESADO products
+        // We only care about PROCESADO logic here for the operator to dispatch
+        const prods = this.data.nuevosProductos
+            ? this.data.nuevosProductos.filter(p => p.estado === 'PROCESADO')
+            : [];
+
+        const count = prods.length;
+
+        if (count > 0) {
+            badge.style.display = 'block';
+            badge.textContent = count > 99 ? '99+' : count;
+            bell.classList.remove('fa-regular');
+            bell.classList.add('fa-solid'); // Filled bell
+            bell.style.color = '#f59e0b'; // Amber color
+
+            list.innerHTML = prods.map(p => `
+                <div style="padding:10px; border-bottom:1px solid #f1f5f9; hover:bg-slate-50;">
+                    <div style="font-size:0.85rem; font-weight:bold; color:#1e293b;">¡Producto Listo!</div>
+                    <div style="font-size:0.8rem; color:#475569;">
+                        <strong>${p.descripcion}</strong> (${p.cantidad} un.)<br>
+                        Marca: ${p.marca}<br>
+                        <span style="font-size:0.75rem; color:#16a34a;">Ya fue validado. Proceder al despacho.</span>
+                    </div>
+                </div>
+            `).join('');
+
+        } else {
+            badge.style.display = 'none';
+            bell.classList.add('fa-regular');
+            bell.classList.remove('fa-solid');
+            bell.style.color = '#64748b';
+            list.innerHTML = '<div style="padding:10px; color:#999; font-size:0.85rem; text-align:center;">Sin notificaciones</div>';
+        }
     }
 
     setupPermissions() {
@@ -666,6 +781,56 @@ class App {
         // Load Widgets
         this.renderRandomAuditWidget();
         this.renderExpirationWidget();
+        this.renderProcessedProductsWidget();
+    }
+
+    renderProcessedProductsWidget() {
+        const container = document.getElementById('widget-processed-products');
+        if (!container) return;
+
+        const prods = this.data.nuevosProductos
+            ? this.data.nuevosProductos.filter(p => p.estado === 'PROCESADO')
+            : [];
+
+        if (prods.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        container.innerHTML = `
+            <div style="background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.1); padding:1.5rem; border-left:5px solid #16a34a;">
+                <h3 style="margin:0 0 1rem 0; font-size:1.1rem; color:#1e293b; display:flex; align-items:center; gap:0.5rem;">
+                    <i class="fa-solid fa-check-circle" style="color:#16a34a;"></i> Productos Validados (Listos para Despacho)
+                </h3>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                        <thead>
+                            <tr style="background:#f8fafc; color:#64748b;">
+                                <th style="padding:0.75rem; text-align:left;">Producto</th>
+                                <th style="padding:0.75rem; text-align:left;">Marca</th>
+                                <th style="padding:0.75rem; text-align:right;">Cantidad</th>
+                                <th style="padding:0.75rem; text-align:left;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${prods.map(p => `
+                                <tr style="border-bottom:1px solid #f1f5f9;">
+                                    <td style="padding:0.75rem; font-weight:bold;">${p.descripcion}</td>
+                                    <td style="padding:0.75rem;">${p.marca}</td>
+                                    <td style="padding:0.75rem; text-align:right;">${p.cantidad}</td>
+                                    <td style="padding:0.75rem;">
+                                        <button class="btn-sm" style="background:#3b82f6; color:white; border:none; padding:4px 8px; border-radius:4px;"
+                                            onclick="alert('Por favor, busca la Guía original para incluir este item o crea una nueva.')">
+                                            Ver Guía
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
     }
 
     async renderRandomAuditWidget() {
@@ -1258,6 +1423,9 @@ class App {
                 if (result.data.proveedores) {
                     this.data.providers = result.data.proveedores;
                 }
+
+                // Update Notifications
+                this.updateNotifications();
 
                 // Only Render if active module is movements
                 if (this.state.currentModule === 'movements' || !isBackground) {
