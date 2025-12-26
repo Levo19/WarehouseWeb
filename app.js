@@ -10,7 +10,8 @@ class App {
         this.currentUser = null;
         this.state = {
             currentView: 'login',
-            currentModule: null
+            currentModule: null,
+            notificationsClearedCount: 0 // Track cleared count to prevent re-badging
         };
         this.data = {
             products: {}, // Map: Code -> Desc
@@ -240,7 +241,6 @@ class App {
             bellBtn.style.position = 'relative';
         }
 
-        // Ensure dropdown container exists (append to body or keep inline if relative)
         if (!document.getElementById('notification-dropdown')) {
             const dropdown = document.createElement('div');
             dropdown.id = 'notification-dropdown';
@@ -249,34 +249,48 @@ class App {
                 position: absolute;
                 top: 60px; /* Below header */
                 right: 20px;
-                width: 320px;
+                width: 340px;
                 background: white;
-                box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-                border-radius: 12px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                border-radius: 16px;
                 z-index: 2000;
                 overflow: hidden;
                 border: 1px solid #e2e8f0;
+                animation: slideDown 0.2s ease-out;
             `;
             dropdown.innerHTML = `
-                <div style="padding:15px; border-bottom:1px solid #f1f5f9; font-weight:bold; font-size:1rem; display:flex; justify-content:space-between; align-items:center;">
-                    <span>Notificaciones</span>
-                    <span id="notif-count-header" style="font-size:0.7rem; background:#eff6ff; color:#3b82f6; padding:2px 8px; border-radius:10px;">0 nuevas</span>
+                <div style="padding:16px; border-bottom:1px solid #f1f5f9; background:#fff; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight:700; font-size:1.1rem; color:#1e293b;">Notificaciones</span>
+                    <span id="notif-count-header" style="font-size:0.75rem; background:#eff6ff; color:#3b82f6; padding:4px 10px; border-radius:20px; font-weight:600;">0 nuevas</span>
                 </div>
-                <div id="notification-list" style="max-height:350px; overflow-y:auto;">
-                    <div style="padding:20px; color:#94a3b8; font-size:0.9rem; text-align:center;">
-                        <i class="fa-regular fa-bell-slash" style="font-size:1.5rem; margin-bottom:0.5rem; display:block;"></i>
+                <div id="notification-list" style="max-height:400px; overflow-y:auto; background:#f8fafc;">
+                    <div style="padding:30px; color:#94a3b8; font-size:0.95rem; text-align:center;">
+                        <i class="fa-regular fa-bell-slash" style="font-size:2rem; margin-bottom:1rem; display:block; opacity:0.5;"></i>
                         Sin notificaciones nuevas
                     </div>
                 </div>
+                <div style="padding:10px; text-align:center; border-top:1px solid #eee; background:#fff;">
+                     <button style="font-size:0.85rem; color:#3b82f6; background:none; border:none; cursor:pointer; font-weight:600;" onclick="app.clearNotifications()">
+                        <i class="fa-solid fa-check-double"></i> Marcar todo como leído
+                    </button>
+                </div>
+                <style>
+                    @keyframes slideDown {
+                        from { opacity: 0; transform: translateY(-10px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+                </style>
             `;
             document.body.appendChild(dropdown);
 
-            // Toggle Logic
-            bellBtn.addEventListener('click', (e) => {
+            // Toggle Logic (Robust)
+            bellBtn.onclick = (e) => {
                 e.stopPropagation();
+                e.preventDefault();
+                console.log("🔔 Bell Clicked - Toggling Dropdown");
                 const isVisible = dropdown.style.display === 'block';
                 dropdown.style.display = isVisible ? 'none' : 'block';
-            });
+            };
 
             // Close when clicking outside
             document.addEventListener('click', (e) => {
@@ -285,6 +299,17 @@ class App {
                 }
             });
         }
+
+        // Re-attach listener if element was replaced (Safety)
+        bellBtn.onclick = (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            const dropdown = document.getElementById('notification-dropdown');
+            if (dropdown) {
+                const isVisible = dropdown.style.display === 'block';
+                dropdown.style.display = isVisible ? 'none' : 'block';
+            }
+        };
     }
 
     showToast(message, type = 'info') {
@@ -294,19 +319,20 @@ class App {
         const bg = type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#3b82f6';
         toast.style.cssText = `
             position: fixed;
-            bottom: 20px;
+            top: 20px;
             right: 20px;
             background: ${bg};
             color: white;
             padding: 1rem 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
             z-index: 9999;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 1rem;
             font-weight: 600;
-            transform: translateY(100px);
+            font-size: 1rem;
+            transform: translateY(-100px);
             opacity: 0;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         `;
@@ -420,28 +446,27 @@ class App {
         const count = prods.length;
         const lastCount = this.lastNotificationCount || 0;
 
-        console.log(`🔔 CHECK NOTIFICATIONS: Count = ${count}, Last = ${lastCount} `);
+        // Check Notifications Logic
+        console.log(`🔔 CHECK LOGIC: Total=${count}, Cleared=${this.state.notificationsClearedCount}, LastFetch=${lastCount}`);
+
+        // Effective New Count = Total - Cleared (But never less than 0)
+        let effectiveCount = Math.max(0, count - this.state.notificationsClearedCount);
 
         // TOAST ALERT for NEW notifications
-        if (count > lastCount) {
-            // Only show if explicitly increased (avoid annoyance on first load if we want?)
-            // Actually, usually good to know on load.
-            // But let's avoid it on init if user just logged in? 
-            // Logic: If lastCount was 0 and now > 0, SHOW.
-
-            // Use a specialized toast
+        // Trigger only if effective count INCREASED from what we last saw (accounting for cleared)
+        // AND if it's > 0
+        if (effectiveCount > 0 && count > lastCount) {
             const diff = count - lastCount;
-            this.showToast(`¡${diff} Producto(s) Procesado(s)!`, 'success');
-
-            // Audio Alert (Optional, might be blocked by browser policy)
-            // const audio = new Audio('notification.mp3'); audio.play().catch(e=>{});
+            // Only toast if meaningful increase
+            if (diff > 0) this.showToast(`¡${diff} Nuevo(s) Producto(s) Listo(s)!`, 'success');
         }
 
-        this.currentNotificationCount = count; // Store for clearing Logic
+        // Always update this for the "Next" delta check
+        this.lastNotificationCount = count;
 
-        if (count > 0) {
+        if (effectiveCount > 0) {
             badge.style.display = 'block';
-            badge.textContent = count > 99 ? '99+' : count;
+            badge.textContent = effectiveCount > 99 ? '99+' : effectiveCount;
 
             if (bell) {
                 bell.classList.remove('fa-regular');
@@ -500,9 +525,13 @@ class App {
 
     clearNotifications() {
         console.log("🔔 Clearing Notifications (Mark as Read)");
-        // Update "Last Count" to match "Current", effectively engaging "Zero New" state logic next check,
-        // but for immediate UI feedback we hide elements manually.
-        this.lastNotificationCount = this.currentNotificationCount || 0;
+
+        // 1. STATEFUL UPDATE: Mark current total as "Cleared"
+        const prods = this.data.nuevosProductos
+            ? this.data.nuevosProductos.filter(p => p.estado === 'PROCESADO')
+            : [];
+        this.state.notificationsClearedCount = prods.length; // All current are now cleared
+
 
         const badge = document.getElementById('notification-badge');
         if (badge) badge.style.display = 'none';
@@ -1004,54 +1033,10 @@ class App {
         }
 
         container.innerHTML = `
-            <div style="background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.1); padding:1.5rem;">
-                <h3 style="margin:0 0 1rem 0; font-size:1.1rem; color:#1e293b;">Estado de Nuevos Productos</h3>
-                
-                <div style="margin-bottom:1rem;">
-                    ${prods.length > 0 ? `
-                    <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:1rem; margin-bottom:1rem;">
-                        <h4 style="margin:0 0 0.5rem 0; color:#15803d; display:flex; align-items:center; gap:0.5rem;">
-                            <i class="fa-solid fa-check-circle"></i> Listos para Despacho (${prods.length})
-                        </h4>
-                        <table style="width:100%; font-size:0.9rem;">
-                            ${prods.map(p => `
-                            <tr>
-                                <td style="padding:4px 0;"><strong>${p.descripcion}</strong><br><span style="color:#666; font-size:0.8rem;">${p.marca}</span></td>
-                                <td style="text-align:right; font-weight:bold;">x${p.cantidad}</td>
-                            </tr>`).join('')}
-                        </table>
-                    </div>` : ''}
-
-                    ${pending.length > 0 ? `
-                    <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:1rem;">
-                        <h4 style="margin:0 0 0.5rem 0; color:#b45309; display:flex; align-items:center; gap:0.5rem;">
-                            <i class="fa-solid fa-clock"></i> Pendientes de Validación (${pending.length})
-                        </h4>
-                         <table style="width:100%; font-size:0.9rem;">
-                            ${pending.map(p => `
-                            <tr>
-                                <td style="padding:4px 0;">${p.descripcion}<br><span style="color:#666; font-size:0.8rem;">${p.marca}</span></td>
-                                <td style="text-align:right; color:#b45309;">x${p.cantidad}</td>
-                            </tr>`).join('')}
-                        </table>
-                    </div>` : ''}
-                </div>
-            </div>
-        `;
-
-        container.innerHTML = `
-            <div style="background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.1); padding:1.5rem; border-left:5px solid #16a34a;">
+                <div style="background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,0.1); padding:1.5rem; border-left:5px solid #16a34a; margin-top:1.5rem;">
                 <h3 style="margin:0 0 1rem 0; font-size:1.1rem; color:#1e293b; display:flex; align-items:center; gap:0.5rem;">
-                    <i class="fa-solid fa-check-circle" style="color:#16a34a;"></i> Productos Validados (Listos para Despacho)
+                    <i class="fa-solid fa-check-circle" style="color:#16a34a;"></i> Nuevos Productos Listos para Despacho
                 </h3>
-                <div style="overflow-x:auto;">
-                    <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
-                        <thead>
-                            <tr style="background:#f8fafc; color:#64748b;">
-                                <th style="padding:0.75rem; text-align:left;">Producto</th>
-                                <th style="padding:0.75rem; text-align:left;">Marca</th>
-                                <th style="padding:0.75rem; text-align:right;">Cantidad</th>
-                                <th style="padding:0.75rem; text-align:left;">Acción</th>
                             </tr>
                         </thead>
                         <tbody>
