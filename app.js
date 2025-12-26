@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 64 - DEBUG: TEST TOAST ON INIT");
+        console.log("🚀 APP VERSION 65 - DEBUG: LOG TRACING");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -275,7 +275,7 @@ class App {
     }
 
     showToast(message, type = 'info') {
-        console.log("🔔 TOAST CALLED:", message, type);
+        console.error("🔔 TOAST CALLED (ERROR LEVEL):", message, type);
         const toast = document.createElement('div');
         // Inline styles for reliability
         const bg = type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#3b82f6';
