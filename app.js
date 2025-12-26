@@ -22,26 +22,17 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 66 - DEBUG: DEEP TRACE");
+        console.log("🚀 APP VERSION 67 - FIX: MOVE TOAST TO SETUSER");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
         // Load data if logged in
         // Load data if logged in
         // Load data if logged in
-        console.log("👤 USER STATUS IN INIT:", this.currentUser);
-
+        // NOTE: checkSession might trigger setUser later, so init check is unreliable
+        console.log("👤 INIT CHECK:", this.currentUser);
         if (this.currentUser) {
-            console.log("✅ USER FOUND, PRELOADING DATA");
             this.preloadAllData();
-
-            // DEBUG: TEST TOAST ON LOAD
-            setTimeout(() => {
-                console.error("🔥 FIRING TEST TOAST NOW");
-                this.showToast("🔔 PRUEBA DE SISTEMA (v66): Alertas Activas", "info");
-            }, 3000);
-        } else {
-            console.error("❌ USER NOT FOUND IN INIT");
         }
 
         // Background Auto-Refresh (Every 45s)
@@ -209,6 +200,13 @@ class App {
 
         // Show App
         this.showApp();
+
+        console.log("✅ USER STARTUP COMPLETE (v67)");
+        // DEBUG: TEST TOAST ON LOGIN/RESTORE
+        setTimeout(() => {
+            console.error("🔥 FIRING TEST TOAST FROM SETUSER");
+            this.showToast("🔔 SISTEMA ACTIVO: Alertas Habilitadas", "success");
+        }, 1500);
 
         // PRELOAD DATA (Background)
         this.loadInitialData(); // Products & Dispatch
