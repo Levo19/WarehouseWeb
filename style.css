@@ -367,21 +367,42 @@ h3 {
 
 .sidebar-header .brand {
     font-family: 'Outfit', sans-serif;
-    font-size: 2.8rem;
-    /* Imposing Size */
-    font-weight: 800;
-
-    /* Neon Text Effect */
-    background: linear-gradient(135deg, #ffffff 0%, #a5f3fc 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 0 15px rgba(6, 182, 212, 0.5));
-
     display: flex;
     align-items: center;
     gap: 1rem;
     width: 100%;
     justify-content: center;
+    overflow: hidden;
+    /* Prevent spill */
+}
+
+/* NEW: Vertical Stack for Title */
+.brand-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    line-height: 0.9;
+}
+
+.brand-text .erp {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    /* Stretch to match LEVO width roughly */
+    color: #06b6d4;
+    /* Cyan */
+    text-shadow: 0 0 5px rgba(6, 182, 212, 0.6);
+}
+
+.brand-text .levo {
+    font-size: 2.2rem;
+    font-weight: 800;
+    /* Neon Text Effect */
+    background: linear-gradient(135deg, #ffffff 0%, #a5f3fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.5));
 }
 
 .sidebar:hover .sidebar-header .brand {
@@ -434,12 +455,9 @@ h3 {
     display: flex;
     align-items: center;
     gap: 1.2rem;
-    /* More gap */
     padding: 1.2rem 1.5rem;
-    /* Larger touch target */
     margin-bottom: 0.5rem;
 
-    /* Bigger Font */
     font-size: 1.25rem;
     font-weight: 600;
 
@@ -451,6 +469,9 @@ h3 {
     justify-content: center;
     position: relative;
     overflow: hidden;
+    /* FIX: Prevents scrollbar on hover */
+    white-space: nowrap;
+    /* Prevent wrapping */
 }
 
 .sidebar:hover .nav-link {
