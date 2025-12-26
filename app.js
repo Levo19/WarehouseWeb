@@ -22,7 +22,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 74 - DEBUG: DOM INVESTIGATION");
+        console.log("🚀 APP VERSION 75 - FIX: ROBUST BELL FINDER");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -334,17 +334,23 @@ class App {
     updateNotifications(forceAlert = false) {
         console.log("🔔 UPDATE NOTIFICATIONS ENTERED");
 
-        // DIAGNOSTIC v74: What is in the header?
-        const header = document.querySelector('.top-bar');
-        if (header) {
-            console.log("🔍 HEADER HTML:", header.innerHTML);
-            console.log("🔍 ALL BUTTON IDS:", Array.from(document.querySelectorAll('button')).map(b => b.id));
-        } else {
-            console.error("❌ HEADER .top-bar NOT FOUND!");
-        }
-
         let badge = document.getElementById('notification-badge');
         let bell = document.getElementById('header-notification-bell');
+
+        // ROBUST FINDER: If ID lookup failed, find by Icon Class
+        if (!bell) {
+            console.warn("⚠️ Bell ID missing - searching by Icon...");
+            const bellIcon = document.querySelector('.fa-bell');
+            if (bellIcon) {
+                bell = bellIcon.closest('button');
+                if (bell) {
+                    console.log("✅ Found Bell Button via Icon! Assigning ID...");
+                    bell.id = 'header-notification-bell'; // Fix the DOM
+                    bell.style.position = 'relative';
+                }
+            }
+        }
+
         const list = document.getElementById('notification-list');
 
         // SELF-HEALING: If bell exists but badge doesn't, create it NOW.
@@ -358,12 +364,16 @@ class App {
             badge = newBadge; // Update reference
         }
 
-        console.log("🔔 DOM CHECK v73:", {
+        console.log("🔔 DOM CHECK v75:", {
             foundBadge: !!badge,
             foundBell: !!bell,
-            foundList: !!list,
-            bellInHTML: document.body.innerHTML.includes('header-notification-bell')
+            foundList: !!list
         });
+
+        if (!bell) {
+            console.error("❌ CRITICAL: BELL BUTTON NOT FOUND EVEN BY ICON");
+            return;
+        }
 
         if (!badge || !list) {
             console.error("❌ STILL MISSING ELEMENTS - ABORTING");
