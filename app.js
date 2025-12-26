@@ -22,19 +22,26 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 65 - DEBUG: LOG TRACING");
+        console.log("🚀 APP VERSION 66 - DEBUG: DEEP TRACE");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
         // Load data if logged in
         // Load data if logged in
+        // Load data if logged in
+        console.log("👤 USER STATUS IN INIT:", this.currentUser);
+
         if (this.currentUser) {
+            console.log("✅ USER FOUND, PRELOADING DATA");
             this.preloadAllData();
 
             // DEBUG: TEST TOAST ON LOAD
             setTimeout(() => {
-                this.showToast("🔔 PRUEBA DE SISTEMA: Alertas Activas", "info");
-            }, 2000);
+                console.error("🔥 FIRING TEST TOAST NOW");
+                this.showToast("🔔 PRUEBA DE SISTEMA (v66): Alertas Activas", "info");
+            }, 3000);
+        } else {
+            console.error("❌ USER NOT FOUND IN INIT");
         }
 
         // Background Auto-Refresh (Every 45s)
