@@ -4646,29 +4646,11 @@ class App {
         const items = [];
         const targetZone = zone.toLowerCase();
 
-        this.data.requests.forEach(req => {
-            if (req.usuario.toLowerCase() !== targetZone) return;
-            // Check Date ("dd/MM/yyyy ...")
-            if (!req.fecha.startsWith(localTodayStr)) return;
-            // Check SOL prefix
-            if (!String(req.idSolicitud).toLowerCase().startsWith('sol')) return;
-            // Check Pending (Not Dispatched) - Actually user wants "lo solicitado".
-            // Usually "Pendientes" means not yet dispatched/separated? 
-            // "Pendientes" tab implies `requested - separated - dispatched > 0`.
-
-            // BUT user said "imprimir todos los productos solicitado de hoy ... para poder verificar".
-            // He likely wants the AGGREGATED LIST of what needs to be picked.
-            // So I should use the same aggregation logic as the view.
-        });
-
         // REUSE AGGREGATION LOGIC (Simplified)
         const aggregator = {};
         this.data.requests.forEach(req => {
             if (req.usuario.toLowerCase() !== targetZone) return;
             if (!req.fecha.startsWith(localTodayStr)) return;
-            // Only count if it's a SOL request involved? 
-            // Actually, if we aggregate, we might mix SOL and non-SOL? 
-            // User said "idSolicitud starts with SOL".
             if (!String(req.idSolicitud).toLowerCase().startsWith('sol')) return;
 
             const codeKey = String(req.codigo).trim();
@@ -4692,11 +4674,6 @@ class App {
             else if (cat === 'despachado') aggregator[codeKey].dispatched += qty;
         });
 
-        // Filter for PENDING items (Requested - Separated - Dispatched > 0) or Just Requested?
-        // "imprimir todos los productos solicitado de hoy" -> Usually means the total list to pick.
-        // But referencing the "Pending" tab implies distinct logic.
-        // Let's print the PENDING QTY.
-
         Object.values(aggregator).forEach(item => {
             const pending = item.requested - (item.separated + item.dispatched);
             if (pending > 0) {
@@ -4717,6 +4694,14 @@ class App {
         const available = items.filter(i => i.stock > 0);
         const outOfStock = items.filter(i => i.stock <= 0);
 
+        // DATE LOGIC (Yesterday)
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+
+        // Manual Spanish Format for "28 diciembre"
+        const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+        const dateLabel = `${yesterday.getDate()} ${months[yesterday.getMonth()]}`;
+
         // Generate HTML
         const printWindow = window.open('', '', 'width=400,height=600');
         printWindow.document.write(`
@@ -4728,26 +4713,42 @@ class App {
                         @page { margin: 0; size: 80mm auto; }
                         body { margin: 5mm; }
                     }
-                    body { font-family: 'Courier New', monospace; font-size: 12px; color: #000; max-width: 80mm; margin: 0 auto; background:#fff; }
+                    body { 
+                        font-family: 'Courier New', monospace; 
+                        font-size: 13px;
+                        color: #000; 
+                        max-width: 80mm; 
+                        margin: 0 auto; 
+                        background:#fff; 
+                    }
                     .header { text-align: center; margin-bottom: 10px; border-bottom: 1px dashed #000; padding-bottom: 5px; }
-                    .title { font-size: 16px; font-weight: bold; }
-                    .meta { font-size: 10px; }
-                    .item { margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 2px; }
-                    .desc { font-weight: bold; font-size: 12px; display: block; }
+                    .title { font-size: 16px; font-weight: bold; text-transform: uppercase; }
+                    
+                    /* Date Styling: Same size/weight as product name base logic */
+                    .date-line { font-size: 13px; font-weight: bold; margin-top:5px; margin-bottom: 2px; } 
+                    
+                    .item { margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+                    
+                    /* Product Name: "un poco mas grueso" -> text-shadow simulates extra weight */
+                    .desc { font-weight: bold; font-size: 13px; display: block; margin-bottom:2px; text-shadow: 0 0 0.5px #000; }
+                    
                     .row { display: flex; justify-content: space-between; align-items: baseline; }
-                    .code { font-size: 10px; color: #444; }
-                    .qty { font-size: 14px; font-weight: bold; }
+                    
+                    /* Code & Factor: "tamaño y grosor que el del nombre" (Standard Bold 13px) */
+                    .code { font-size: 13px; font-weight: bold; color: #000; }
+                    .factor { font-size: 13px; font-weight: bold; margin-left:4px; }
+                    
+                    .qty { font-size: 15px; font-weight: 900; }
                     .section-title { margin-top: 15px; border-bottom: 2px solid #000; font-weight: bold; text-align: center; }
-                    .oos { color: #000; } /* Thermal is B&W usually, so keeps it strict */
+                    .oos { color: #000; }
                     .oos .desc { text-decoration: line-through; }
-                    .factor { font-size: 10px; margin-left:2px; }
                 </style>
             </head>
             <body>
                 <div class="header">
-                    <div class="title">GUÍA DE SALIDA</div>
+                    <div class="title">LISTA DE VENTAS</div>
                     <div class="title">${zone}</div>
-                    <div class="meta">${localTodayStr} - ${new Date().toLocaleTimeString()}</div>
+                    <div class="date-line">${dateLabel}</div> 
                 </div>
 
                 <div id="list">
@@ -4755,21 +4756,21 @@ class App {
                         <div class="item">
                             <div class="desc">${i.desc}</div>
                             <div class="row">
-                                <span class="code">${i.code} ${i.factor > 0 ? `[x${i.factor}]` : ''}</span>
+                                <span class="code">${i.code} ${i.factor > 0 ? `<span class="factor">[x${i.factor}]</span>` : ''}</span>
                                 <span class="qty">${this.formatQty(i.qty)} ${i.unit}</span>
                             </div>
                         </div>
                     `).join('')}
                 </div>
 
-                ${outOfStock.length > 0 ? `
+                 ${outOfStock.length > 0 ? `
                     <div class="section-title">⚠️ SIN STOCK</div>
                     <div id="oos-list">
                          ${outOfStock.map(i => `
                             <div class="item oos">
                                 <div class="desc">${i.desc}</div>
                                 <div class="row">
-                                    <span class="code">${i.code} ${i.factor > 0 ? `[x${i.factor}]` : ''}</span>
+                                    <span class="code">${i.code} ${i.factor > 0 ? `<span class="factor">[x${i.factor}]</span>` : ''}</span>
                                     <span class="qty">${this.formatQty(i.qty)} ${i.unit}</span>
                                 </div>
                             </div>
