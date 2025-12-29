@@ -4781,12 +4781,21 @@ class App {
                 <div style="margin-top:20px; text-align:center; font-size:10px;">
                     *** FIN DEL TICKET ***
                 </div>
+                <script>
+                    window.onload = function() {
+                        setTimeout(function() {
+                            window.print();
+                            // Optional: Close after print (browser dependent)
+                            // window.close(); 
+                        }, 500); 
+                    };
+                </script>
             </body>
             </html>
         `);
         printWindow.document.close();
+        // Remove parent side print call to avoid conflicts
         printWindow.focus();
-        setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
     }
 
     async updateProductFactor(code) {
