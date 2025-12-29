@@ -4618,6 +4618,54 @@ class App {
         printWindow.document.close();
     }
 
+    async updateProductFactor(code) {
+        const product = this.data.products[code];
+        if (!product) return;
+
+        const current = product.factor || '';
+        const newVal = prompt(`Ingrese el Factor de Zona (Unidades por Paquete) para:\n${product.desc}\n\nActual: ${current || 'No Definido'}`, current);
+
+        if (newVal === null) return; // Cancel
+        const numVal = parseFloat(newVal);
+        if (isNaN(numVal) || numVal <= 0) return alert('Ingrese un número válido mayor a 0');
+
+        // Optimistic Update
+        this.data.products[code].factor = numVal;
+
+        // Refresh View
+        const zoneContent = document.getElementById('zone-content');
+        if (zoneContent) {
+            // We need to know which zone is active. 
+            // Helper: find active button
+            const activeBtn = document.querySelector('.client-buttons-group .btn-client.active');
+            const zoneName = activeBtn ? activeBtn.innerText : 'ZONA1'; // simplistic fallback
+
+            this.renderZonePickup(zoneName, zoneContent);
+        }
+
+        this.showToast('Guardando factor...', 'info');
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: 'saveProductFactor',
+                    payload: { code: code, factor: numVal }
+                })
+            });
+            const res = await response.json();
+            if (res.status === 'success') {
+                this.showToast('Factor guardado correctamente', 'success');
+            } else {
+                throw new Error(res.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error al guardar en hoja: ' + e.message);
+        }
+    }
+
     renderZonePickup(zone, container) {
         // 0. PRESERVE SCROLL POSITION
         const pendingScrollDiv = container.querySelector('.column-pending .scroll-container');
@@ -4685,7 +4733,8 @@ class App {
                     separated: 0, // Sum of 'separado'
                     dispatched: 0, // Sum of 'despachado'
                     reqIds: [],    // To track at least one ID for API call
-                    lastTs: 0     // Track latest timestamp for sorting
+                    lastTs: 0,     // Track latest timestamp for sorting
+                    factor: product.factor || 0 // Factor Zona
                 };
             }
             // Update Last Timestamp (Max) logic
@@ -4811,7 +4860,13 @@ class App {
                                     <div class="card-header">
                                         <div>
                                             <div class="card-desc" style="font-weight:700; color:#000;">${item.desc}</div>
-                                            <div class="card-code" style="color:#666; font-size:0.85rem;">${item.code}</div>
+                                            <div class="card-code" style="color:#666; font-size:0.85rem;">
+                                                ${item.code}
+                                                ${item.factor > 0
+                    ? `<span style="background:#fffbeb; color:#d97706; border:1px solid #fcd34d; padding:0 4px; border-radius:4px; margin-left:5px; font-weight:bold; font-size:0.75rem;">📦 x${item.factor}</span>`
+                    : `<i class="fa-solid fa-triangle-exclamation" style="color:#ef4444; margin-left:5px;" title="Factor no configurado"></i>`
+                }
+                                            </div>
                                         </div>
                                         <div style="text-align:right;">
                                             <div style="font-weight:bold; font-size:1.2rem;">${item.qtyToShow} <span style="font-size:0.8rem;">un</span></div>
@@ -4863,12 +4918,21 @@ class App {
                                                    disabled 
                                                    min="0.1" step="0.1"
                                                    style="width:60px; padding:5px; text-align:center; border:1px solid #ddd; border-radius:4px;">
-                                            <button class="btn-icon" id="btn-edit-${item.useId}" onclick="app.toggleEditSeparated('${item.useId}')" style="background:none; border:none; cursor:pointer; font-size:1.2rem; color:#666;">
+                                            <button class="btn-icon" id="btn-edit-${item.useId}" onclick="window.app.toggleEditSeparated('${item.useId}')" style="background:none; border:none; cursor:pointer; font-size:1.2rem; color:#666;">
                                                 <i class="fa-solid fa-pencil"></i>
                                             </button>
                                         </div>
                                     </div>
                                 `}
+                                
+                                <!-- EMERGENCY FACTOR BUTTON (BACK) -->
+                                ${!item.factor || item.factor == 0 ? `
+                                    <div style="margin-top:1rem; padding-top:0.5rem; border-top:1px dashed #ef4444; text-align:center;">
+                                        <button class="btn-sm" style="background:#fee2e2; color:#ef4444; border:1px solid #ef4444; width:100%;" onclick="event.stopPropagation(); window.app.updateProductFactor('${item.code}')">
+                                            <i class="fa-solid fa-triangle-exclamation"></i> Configurar Factor
+                                        </button>
+                                    </div>
+                                ` : ''}
                              </div>
                         </div>
                 </div>`;
