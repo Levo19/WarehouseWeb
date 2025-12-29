@@ -1015,7 +1015,7 @@ class App {
                         <h2 style="font-size:1.5rem; font-weight:700; color:#1e293b;">Dashboard</h2>
                         <p style="color:#64748b; font-size:0.9rem;">Resumen de actividad e inventario</p>
                    </div>
-                   <button class="btn-primary" onclick="app.updateCurrentView()">
+                   <button class="btn-primary" onclick="window.app.updateCurrentView()">
                         <i class="fa-solid fa-rotate-right"></i> Actualizar
                    </button>
                 </div>
@@ -1147,7 +1147,7 @@ class App {
                     <div style="font-size:2.5rem; font-weight:800; color:var(--primary-color);">${pendingCount}</div>
                     <div style="color:#666; font-size:0.9rem; margin-bottom:1rem;">Productos Pendientes</div>
                     
-                    <button class="btn-primary" style="width:100%;" onclick="app.openAuditModal()">
+                    <button class="btn-primary" style="width:100%;" onclick="window.app.openAuditModal()">
                         <i class="fa-solid fa-magnifying-glass"></i> Auditar Ahora
                     </button>
                 </div>
@@ -1290,7 +1290,7 @@ class App {
         if (headerActions) {
             // Generate Buttons HTML
             const buttonsHtml = clients.map(client =>
-                `<button class="btn-zone" data-client="${client}" onclick="app.selectZone('${client}')">${client.toUpperCase()}</button>`
+                `<button class="btn-zone" data-client="${client}" onclick="window.app.selectZone('${client}')">${client.toUpperCase()}</button>`
             ).join('');
 
             // Inject Search + Buttons + Bell (Remove Gear)
@@ -1298,8 +1298,8 @@ class App {
                 <div class="header-dispatch-toolbar">
                     <div class="search-bar-header">
                         <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                        <input type="text" id="dispatch-search-input" placeholder="Buscar producto..." onkeyup="app.filterDispatchView(this.value)" inputmode="search" enterkeyhint="search">
-                        <i class="fa-solid fa-barcode barcode-icon" title="Escanear con Cámara" onclick="app.triggerBarcodeScan()"></i>
+                        <input type="text" id="dispatch-search-input" placeholder="Buscar producto..." onkeyup="window.app.filterDispatchView(this.value)" inputmode="search" enterkeyhint="search">
+                        <i class="fa-solid fa-barcode barcode-icon" title="Escanear con Cámara" onclick="window.app.triggerBarcodeScan()"></i>
                     </div>
                     <div class="client-buttons-group">
                         ${buttonsHtml}
@@ -1965,7 +1965,7 @@ class App {
                 const tipoClass = tipo.toLowerCase();
 
                 html += `
-            <div id="guia-row-${g.id}" class="guia-row-card" onclick="app.toggleGuiaDetail('${g.id}')">
+            <div id="guia-row-${g.id}" class="guia-row-card" onclick="window.app.toggleGuiaDetail('${g.id}')">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <div>
                                 <span class="badge ${tipoClass}">${tipo}</span>
