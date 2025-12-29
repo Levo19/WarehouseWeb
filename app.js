@@ -4741,7 +4741,8 @@ class App {
                     dispatched: 0, // Sum of 'despachado'
                     reqIds: [],    // To track at least one ID for API call
                     lastTs: 0,     // Track latest timestamp for sorting
-                    factor: product.factor || 0 // Factor Zona
+                    factor: product.factor || 0, // Factor Zona
+                    stock: product.stock // Capture Stock
                 };
             }
             // Update Last Timestamp (Max) logic
@@ -4801,10 +4802,23 @@ class App {
             }
         });
 
+        // SORT PENDING LIST: Stock > 0 First, Then by Date
+        pendingList.sort((a, b) => {
+            const stockA = a.stock > 0 ? 1 : 0;
+            const stockB = b.stock > 0 ? 1 : 0;
+            if (stockA !== stockB) return stockB - stockA; // 1 (Stock) before 0 (No Stock)
+            return b.lastTs - a.lastTs; // Newest first within group
+        });
+
         // 2b. SORT SEPARATED LIST (Newest First)
         separatedList.sort((a, b) => b.lastTs - a.lastTs);
 
         const renderCard = (item, isPending) => {
+            // Visual Logic for Out of Stock
+            const isOutOfStock = isPending && item.stock <= 0;
+            const titleStyle = isOutOfStock ? 'font-weight:700; color:#ef4444; text-decoration: line-through; text-decoration-thickness: 2px;' : 'font-weight:700; color:#000;';
+            const cardOpacity = isOutOfStock ? 'opacity:0.8;' : '';
+
             // Image Logic for Requests
             const imgSrc = item.img ? item.img : 'recursos/defaultImageProduct.png';
             const imgHtml = `<img src="${imgSrc}" class="card-img" alt="${item.desc}" referrerpolicy="no-referrer" loading="lazy" onerror="app.handleImageError(this)">`;
@@ -4856,8 +4870,8 @@ class App {
 
 
             return `
-                    <div class="product-card request-card" data-search="${searchTerms}" onclick="this.classList.toggle('flipped')">
-                        <div class="product-card-inner" style="border-left: 4px solid ${isPending ? 'var(--primary-color)' : '#2e7d32'};">
+                    <div class="product-card request-card" data-search="${searchTerms}" onclick="this.classList.toggle('flipped')" style="${cardOpacity}">
+                        <div class="product-card-inner" style="border-left: 4px solid ${isPending ? (isOutOfStock ? '#ef4444' : 'var(--primary-color)') : '#2e7d32'};">
                             <!-- FRONT -->
                             <div class="card-front">
                                 <div class="card-img-container" style="height:140px;">
@@ -4866,13 +4880,14 @@ class App {
                                 <div class="card-content">
                                     <div class="card-header">
                                         <div>
-                                            <div class="card-desc" style="font-weight:700; color:#000;">${item.desc}</div>
+                                            <div class="card-desc" style="${titleStyle}">${item.desc}</div>
                                             <div class="card-code" style="color:#666; font-size:0.85rem;">
                                                 ${item.code}
                                                 ${item.factor > 0
                     ? `<span style="background:#fffbeb; color:#d97706; border:1px solid #fcd34d; padding:0 4px; border-radius:4px; margin-left:5px; font-weight:bold; font-size:0.75rem;">📦 x${item.factor}</span>`
                     : `<i class="fa-solid fa-triangle-exclamation" style="color:#ef4444; margin-left:5px;" title="Factor no configurado"></i>`
                 }
+                                                ${isOutOfStock ? `<span style="color:#ef4444; font-weight:bold; font-size:0.75rem; margin-left:5px;">(SIN STOCK: ${item.stock})</span>` : ''}
                                             </div>
                                         </div>
                                         <div style="text-align:right;">
