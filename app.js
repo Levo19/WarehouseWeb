@@ -4684,10 +4684,28 @@ class App {
         if (items.length === 0) return alert('No hay solicitudes pendientes tipo SOL para hoy.');
 
         // Sort: Stock > 0 First
+        // Sub-sort: Standard -> WZ -> WA -> WH
         items.sort((a, b) => {
+            // 1. Stock Status (Available First)
             const stockA = a.stock > 0 ? 1 : 0;
             const stockB = b.stock > 0 ? 1 : 0;
-            if (stockA !== stockB) return stockB - stockA;
+            if (stockA !== stockB) return stockB - stockA; // 1 before 0
+
+            // Helper for Rank
+            const getRank = (code) => {
+                const c = String(code).toUpperCase();
+                if (c.startsWith('WZ')) return 2;
+                if (c.startsWith('WA')) return 3;
+                if (c.startsWith('WH')) return 4;
+                return 1; // Standard
+            };
+
+            const rankA = getRank(a.code);
+            const rankB = getRank(b.code);
+
+            if (rankA !== rankB) return rankA - rankB; // 1 -> 2 -> 3 -> 4
+
+            // 3. Alphabetical Fallback
             return a.desc.localeCompare(b.desc);
         });
 
@@ -4729,8 +4747,14 @@ class App {
                     
                     .item { margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 4px; }
                     
-                    /* Product Name: "un poco mas grueso" -> text-shadow simulates extra weight */
-                    .desc { font-weight: bold; font-size: 13px; display: block; margin-bottom:2px; text-shadow: 0 0 0.5px #000; }
+                    /* Product Name: Increased by ~150% (13px * 1.5 = ~19.5px) */
+                    .desc { 
+                        font-weight: 800; /* Extra Bold */
+                        font-size: 20px; 
+                        display: block; 
+                        margin-bottom: 4px; 
+                        line-height: 1.1;
+                    }
                     
                     .row { display: flex; justify-content: space-between; align-items: baseline; }
                     
