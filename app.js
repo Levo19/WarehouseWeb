@@ -4761,7 +4761,9 @@ class App {
                 aggregator[codeKey].lastTs = reqTs;
             }
 
-            const qty = parseFloat(req.cantidad);
+            // Fix for "1,25" (ES Locale) -> 1.25
+            const cleanQty = String(req.cantidad).replace(',', '.');
+            const qty = parseFloat(cleanQty) || 0;
             const cat = String(req.categoria).trim().toLowerCase(); // Normalize Category
 
             if (cat === 'solicitado') {
