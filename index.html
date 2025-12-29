@@ -162,10 +162,10 @@
                     <!-- TAB: GUIAS -->
                     <div id="tab-guias" class="mov-tab-content active">
                         <div class="action-bar">
-                            <button class="btn-primary" onclick="app.openNewGuiaModal('INGRESO')">
+                            <button class="btn-primary" onclick="window.app.openNewGuiaModal('INGRESO')">
                                 <i class="fa-solid fa-arrow-down"></i> Ingreso
                             </button>
-                            <button class="btn-secondary" onclick="app.openNewGuiaModal('SALIDA')">
+                            <button class="btn-secondary" onclick="window.app.openNewGuiaModal('SALIDA')">
                                 <i class="fa-solid fa-arrow-up"></i> Salida
                             </button>
                         </div>
@@ -185,20 +185,20 @@
                                         <input type="text" id="guia-filter-text"
                                             placeholder="Buscar por Proveedor o ID..."
                                             style="width:100%; padding-left:35px; height:40px; border-radius: 8px; border: 1px solid #ddd;"
-                                            onkeyup="app.filterGuiasList()">
+                                            onkeyup="window.app.filterGuiasList()">
                                     </div>
 
                                     <!-- Compact Date Filter -->
                                     <div class="date-filter-wrapper" title="Filtrar por fecha"
                                         onclick="this.querySelector('input').showPicker()">
                                         <i class="fa-regular fa-calendar" style="font-size: 1.2rem;"></i>
-                                        <input type="date" id="guia-filter-date" onchange="app.filterGuiasList()"
+                                        <input type="date" id="guia-filter-date" onchange="window.app.filterGuiasList()"
                                             onclick="event.stopPropagation()">
                                     </div>
 
                                     <!-- Clear Filter Button -->
-                                    <button class="icon-btn" onclick="app.clearGuiaFilters()" title="Limpiar filtros"
-                                        style="font-size: 1rem;">
+                                    <button class="icon-btn" onclick="window.app.clearGuiaFilters()"
+                                        title="Limpiar filtros" style="font-size: 1rem;">
                                         <i class="fa-solid fa-filter-circle-xmark"></i>
                                     </button>
                                 </div>
@@ -223,7 +223,7 @@
                     <!-- TAB: PREINGRESOS -->
                     <div id="tab-preingresos" class="mov-tab-content">
                         <div class="action-bar">
-                            <button class="btn-primary" onclick="app.openNewPreingresoModal()">
+                            <button class="btn-primary" onclick="window.app.openNewPreingresoModal()">
                                 <i class="fa-solid fa-plus"></i> Nuevo Preingreso
                             </button>
                         </div>
@@ -245,7 +245,7 @@
                                         <input type="text" id="preingreso-filter-text"
                                             placeholder="Buscar por Proveedor..."
                                             style="width:100%; padding-left:35px; height:40px; border-radius: 8px; border: 1px solid #ddd;"
-                                            onkeyup="app.filterPreingresosList()">
+                                            onkeyup="window.app.filterPreingresosList()">
                                     </div>
 
                                     <!-- Compact Date Filter -->
@@ -253,11 +253,12 @@
                                         onclick="this.querySelector('input').showPicker()">
                                         <i class="fa-regular fa-calendar" style="font-size: 1.2rem;"></i>
                                         <input type="date" id="preingreso-filter-date"
-                                            onchange="app.filterPreingresosList()" onclick="event.stopPropagation()">
+                                            onchange="window.app.filterPreingresosList()"
+                                            onclick="event.stopPropagation()">
                                     </div>
 
                                     <!-- Clear Filter Button -->
-                                    <button class="icon-btn" onclick="app.clearPreingresoFilters()"
+                                    <button class="icon-btn" onclick="window.app.clearPreingresoFilters()"
                                         title="Limpiar filtros" style="font-size: 1rem;">
                                         <i class="fa-solid fa-filter-circle-xmark"></i>
                                     </button>
