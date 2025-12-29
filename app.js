@@ -4745,7 +4745,14 @@ class App {
                     /* Date Styling: Same size/weight as product name base logic */
                     .date-line { font-size: 13px; font-weight: bold; margin-top:5px; margin-bottom: 2px; } 
                     
-                    .item { margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+                    /* Smart Pagination: Prevent cutting items in half */
+                    .item { 
+                        margin-bottom: 10px; 
+                        border-bottom: 1px solid #eee; 
+                        padding-bottom: 4px; 
+                        page-break-inside: avoid; 
+                        break-inside: avoid;
+                    }
                     
                     /* Product Name: Increased by ~150% (13px * 1.5 = ~19.5px) */
                     .desc { 
@@ -4763,9 +4770,24 @@ class App {
                     .factor { font-size: 13px; font-weight: bold; margin-left:4px; }
                     
                     .qty { font-size: 15px; font-weight: 900; }
-                    .section-title { margin-top: 15px; border-bottom: 2px solid #000; font-weight: bold; text-align: center; }
+
+                    /* Force Page Break for OOS Section */
+                    .section-title { 
+                        margin-top: 15px; 
+                        border-bottom: 2px solid #000; 
+                        font-weight: bold; 
+                        text-align: center; 
+                        page-break-before: always;
+                        break-before: always;
+                    }
+                    
                     .oos { color: #000; }
-                    .oos .desc { text-decoration: line-through; }
+                    /* Thinner Strikethrough */
+                    .oos .desc { 
+                        text-decoration: line-through; 
+                        text-decoration-thickness: 1px; 
+                        opacity: 0.8; 
+                    }
                 </style>
             </head>
             <body>
