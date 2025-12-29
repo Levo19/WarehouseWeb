@@ -857,8 +857,6 @@ class App {
 
                 // DATA DEBUG
                 if (!options.isBackground) {
-                    const pDebug = result.data.find(p => p.codigo === '0028' || p.codigo === '28');
-                    console.log('DEBUG OREGANO:', pDebug);
                     console.log('Products Loaded:', Object.keys(this.data.products).length);
                     if (Object.keys(this.data.products).length === 0) {
                         alert('Alerta: Se descargaron 0 productos. Revise la hoja de Google.');
