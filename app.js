@@ -4635,6 +4635,159 @@ class App {
         return rounded;
     }
 
+    printSolTickets(zone) {
+        // 1. Filter Logic: Zone + Today + SOL prefix
+        const today = new Date();
+        const dd = String(today.getDate()).padStart(2, '0');
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const yyyy = today.getFullYear();
+        const localTodayStr = `${dd}/${mm}/${yyyy}`;
+
+        const items = [];
+        const targetZone = zone.toLowerCase();
+
+        this.data.requests.forEach(req => {
+            if (req.usuario.toLowerCase() !== targetZone) return;
+            // Check Date ("dd/MM/yyyy ...")
+            if (!req.fecha.startsWith(localTodayStr)) return;
+            // Check SOL prefix
+            if (!String(req.idSolicitud).toLowerCase().startsWith('sol')) return;
+            // Check Pending (Not Dispatched) - Actually user wants "lo solicitado".
+            // Usually "Pendientes" means not yet dispatched/separated? 
+            // "Pendientes" tab implies `requested - separated - dispatched > 0`.
+
+            // BUT user said "imprimir todos los productos solicitado de hoy ... para poder verificar".
+            // He likely wants the AGGREGATED LIST of what needs to be picked.
+            // So I should use the same aggregation logic as the view.
+        });
+
+        // REUSE AGGREGATION LOGIC (Simplified)
+        const aggregator = {};
+        this.data.requests.forEach(req => {
+            if (req.usuario.toLowerCase() !== targetZone) return;
+            if (!req.fecha.startsWith(localTodayStr)) return;
+            // Only count if it's a SOL request involved? 
+            // Actually, if we aggregate, we might mix SOL and non-SOL? 
+            // User said "idSolicitud starts with SOL".
+            if (!String(req.idSolicitud).toLowerCase().startsWith('sol')) return;
+
+            const codeKey = String(req.codigo).trim();
+            if (!aggregator[codeKey]) {
+                const product = this.data.products[codeKey] || { desc: '?? ' + codeKey, stock: 0, factor: 0, unit: 'un' };
+                aggregator[codeKey] = {
+                    code: codeKey,
+                    desc: product.desc,
+                    stock: product.stock,
+                    factor: product.factor || 0,
+                    unit: product.unit || 'un',
+                    requested: 0,
+                    separated: 0,
+                    dispatched: 0
+                };
+            }
+            const qty = parseFloat(String(req.cantidad).replace(',', '.')) || 0;
+            const cat = String(req.categoria).trim().toLowerCase();
+            if (cat === 'solicitado') aggregator[codeKey].requested += qty;
+            else if (cat === 'separado') aggregator[codeKey].separated += qty;
+            else if (cat === 'despachado') aggregator[codeKey].dispatched += qty;
+        });
+
+        // Filter for PENDING items (Requested - Separated - Dispatched > 0) or Just Requested?
+        // "imprimir todos los productos solicitado de hoy" -> Usually means the total list to pick.
+        // But referencing the "Pending" tab implies distinct logic.
+        // Let's print the PENDING QTY.
+
+        Object.values(aggregator).forEach(item => {
+            const pending = item.requested - (item.separated + item.dispatched);
+            if (pending > 0) {
+                items.push({ ...item, qty: pending });
+            }
+        });
+
+        if (items.length === 0) return alert('No hay solicitudes pendientes tipo SOL para hoy.');
+
+        // Sort: Stock > 0 First
+        items.sort((a, b) => {
+            const stockA = a.stock > 0 ? 1 : 0;
+            const stockB = b.stock > 0 ? 1 : 0;
+            if (stockA !== stockB) return stockB - stockA;
+            return a.desc.localeCompare(b.desc);
+        });
+
+        const available = items.filter(i => i.stock > 0);
+        const outOfStock = items.filter(i => i.stock <= 0);
+
+        // Generate HTML
+        const printWindow = window.open('', '', 'width=400,height=600');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Ticket Salida ${zone}</title>
+                <style>
+                    @media print {
+                        @page { margin: 0; size: 80mm auto; }
+                        body { margin: 5mm; }
+                    }
+                    body { font-family: 'Courier New', monospace; font-size: 12px; color: #000; max-width: 80mm; margin: 0 auto; background:#fff; }
+                    .header { text-align: center; margin-bottom: 10px; border-bottom: 1px dashed #000; padding-bottom: 5px; }
+                    .title { font-size: 16px; font-weight: bold; }
+                    .meta { font-size: 10px; }
+                    .item { margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 2px; }
+                    .desc { font-weight: bold; font-size: 12px; display: block; }
+                    .row { display: flex; justify-content: space-between; align-items: baseline; }
+                    .code { font-size: 10px; color: #444; }
+                    .qty { font-size: 14px; font-weight: bold; }
+                    .section-title { margin-top: 15px; border-bottom: 2px solid #000; font-weight: bold; text-align: center; }
+                    .oos { color: #000; } /* Thermal is B&W usually, so keeps it strict */
+                    .oos .desc { text-decoration: line-through; }
+                    .factor { font-size: 10px; margin-left:2px; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <div class="title">GUÍA DE SALIDA</div>
+                    <div class="title">${zone}</div>
+                    <div class="meta">${localTodayStr} - ${new Date().toLocaleTimeString()}</div>
+                </div>
+
+                <div id="list">
+                    ${available.map(i => `
+                        <div class="item">
+                            <div class="desc">${i.desc}</div>
+                            <div class="row">
+                                <span class="code">${i.code} ${i.factor > 0 ? `[x${i.factor}]` : ''}</span>
+                                <span class="qty">${this.formatQty(i.qty)} ${i.unit}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                ${outOfStock.length > 0 ? `
+                    <div class="section-title">⚠️ SIN STOCK</div>
+                    <div id="oos-list">
+                         ${outOfStock.map(i => `
+                            <div class="item oos">
+                                <div class="desc">${i.desc}</div>
+                                <div class="row">
+                                    <span class="code">${i.code} ${i.factor > 0 ? `[x${i.factor}]` : ''}</span>
+                                    <span class="qty">${this.formatQty(i.qty)} ${i.unit}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+
+                <div style="margin-top:20px; text-align:center; font-size:10px;">
+                    *** FIN DEL TICKET ***
+                </div>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
+    }
+
     async updateProductFactor(code) {
         const product = this.data.products[code];
         if (!product) return;
@@ -4987,12 +5140,10 @@ class App {
                                     <h5 style="color: var(--primary-color); margin:0;">
                                         <i class="fa-solid fa-list-ul"></i> Pendientes (${pendingList.length})
                                     </h5>
-                                    ${new Date().getHours() >= 16 ?
-                `<button class="btn-sm" style="background:#666; color:white; border:none; border-radius:4px;" 
-                                                 title="Imprimir Pendientes" onclick="app.printPendingList('${zone}')">
-                                            <i class="fa-solid fa-print"></i> Imprimir
-                                         </button>` : ''
-            }
+                <button class="btn-sm" style="background:var(--primary-color); color:white; border:none; border-radius:4px; margin-left:auto; display:flex; align-items:center; gap:5px; padding: 5px 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
+                                        title="Imprimir Ticket SOL" onclick="app.printSolTickets('${zone}')">
+                                            <i class="fa-solid fa-print"></i> Ticket SOL
+                                         </button>
                                 </div>
                                 <!-- Search Input Pending -->
                                 <div style="margin-bottom: 1rem; position: relative; flex-shrink: 0;">
