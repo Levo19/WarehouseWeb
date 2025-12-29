@@ -850,7 +850,8 @@ class App {
                         stock: p.stock,
                         img: stableImg,
                         min: p.min,
-                        factor: p.factor || 0
+                        factor: p.factor || 0,
+                        unit: p.unit || 'un'
                     };
                 });
 
@@ -4625,6 +4626,15 @@ class App {
         printWindow.document.close();
     }
 
+    // Helper for Decimal Formatting (Max 2 decimals, no trailing zeros)
+    formatQty(val) {
+        if (!val) return 0;
+        const num = parseFloat(val);
+        // Round to 2 decimals
+        const rounded = Math.round(num * 100) / 100;
+        return rounded;
+    }
+
     async updateProductFactor(code) {
         const product = this.data.products[code];
         if (!product) return;
@@ -4742,7 +4752,8 @@ class App {
                     reqIds: [],    // To track at least one ID for API call
                     lastTs: 0,     // Track latest timestamp for sorting
                     factor: product.factor || 0, // Factor Zona
-                    stock: product.stock // Capture Stock
+                    stock: product.stock, // Capture Stock
+                    unit: product.unit || 'un' // Capture Unit
                 };
             }
             // Update Last Timestamp (Max) logic
@@ -4891,14 +4902,14 @@ class App {
                                             </div>
                                         </div>
                                         <div style="text-align:right;">
-                                            <div style="font-weight:bold; font-size:1.2rem;">${item.qtyToShow} <span style="font-size:0.8rem;">un</span></div>
+                                            <div style="font-weight:bold; font-size:1.2rem;">${app.formatQty(item.qtyToShow)} <span style="font-size:0.8rem;">${item.unit}</span></div>
                                         </div>
                                     </div>
                                     ${isPending ? `
                              <div class="card-inputs" style="margin-top:auto; padding-top:1rem; border-top:1px solid #eee; display:flex; gap:0.5rem; justify-content:flex-end;" onclick="event.stopPropagation()">
                                  <div style="display:flex; align-items:center; gap:0.5rem;">
                                     <label style="font-size:0.8rem;">Cant:</label>
-                                    <input type="number" id="qty-${item.useId}" value="${item.qtyToShow}" min="1" max="${item.qtyToShow}" style="width:60px; padding:5px; text-align:center; border:1px solid #ddd; border-radius:4px;">
+                                    <input type="number" id="qty-${item.useId}" value="${app.formatQty(item.qtyToShow)}" min="0.01" step="0.01" max="${item.qtyToShow}" style="width:70px; padding:5px; text-align:center; border:1px solid #ddd; border-radius:4px;">
                                  </div>
                                  <button class="btn-primary" onclick="app.moveToSeparated(this, '${item.useId}')">Separar</button>
                                </div>
@@ -4936,10 +4947,10 @@ class App {
                                         <div style="font-size:0.8rem; color:#666; margin-bottom:5px;">Editar Cantidad:</div>
                                         <div style="display:flex; align-items:center; gap:8px; justify-content:center;">
                                             <input type="number" id="edit-qty-${item.useId}"  
-                                                   value="${item.qtyToShow}" 
+                                                   value="${app.formatQty(item.qtyToShow)}" 
                                                    disabled 
-                                                   min="0.1" step="0.1"
-                                                   style="width:60px; padding:5px; text-align:center; border:1px solid #ddd; border-radius:4px;">
+                                                   min="0.01" step="0.01"
+                                                   style="width:70px; padding:5px; text-align:center; border:1px solid #ddd; border-radius:4px;">
                                             <button class="btn-icon" id="btn-edit-${item.useId}" onclick="window.app.toggleEditSeparated('${item.useId}')" style="background:none; border:none; cursor:pointer; font-size:1.2rem; color:#666;">
                                                 <i class="fa-solid fa-pencil"></i>
                                             </button>
