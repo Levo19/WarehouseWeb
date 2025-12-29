@@ -4805,16 +4805,18 @@ class App {
                 <div style="margin-top:20px; text-align:center; font-size:10px;">
                     *** FIN DEL TICKET ***
                 </div>
+                <script>
+                    // Simple, robust print trigger when content is loaded
+                    window.addEventListener('load', function() {
+                        window.print();
+                    });
+                </script>
             </body>
             </html>
         `);
         printWindow.document.close();
         printWindow.focus();
-        // Increased timeout to 1000ms to allow full rendering
-        setTimeout(() => {
-            printWindow.print();
-            // printWindow.close(); // Keep open for now to debug if needed, or user closes it
-        }, 1000);
+        // Remove parent timeout entirely
     }
 
     async updateProductFactor(code) {
