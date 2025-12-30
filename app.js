@@ -5720,7 +5720,7 @@ class App {
                 qtyToSeparate: take,
                 codigo: item.details ? item.details.codigo : codeOrId, // Pass context
                 producto: item.details ? item.details.producto : 'Unknown',
-                zona: item.details ? item.details.zona : targetZone, // Or current User
+                zona: item.details ? item.details.usuario : targetZone, // Correct field name
                 fecha: item.details ? item.details.fecha : ''
             });
 
