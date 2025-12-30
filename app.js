@@ -5700,31 +5700,48 @@ class App {
             }
         }
 
-        // ALLOCATE
-        const batchPayload = [];
-        let remainingToSep = newQty;
+        // ALLOCATE (Consolidated for History Cleanliness)
+        // Instead of multiple items, we send ONE record with the total quantity.
+        // The backend appends this as a new 'separado' row.
 
-        for (let i = 0; i < validQueue.length; i++) {
-            const item = validQueue[i];
-            const isLast = i === validQueue.length - 1;
+        let totalToSeparate = 0;
 
+        for (const item of validQueue) {
             if (remainingToSep <= 0) break;
-
-            // If it's the last item, take ALL remaining (Over-allocation support)
-            // Otherwise, take min(available, remaining)
-            const take = isLast ? remainingToSep : Math.min(item.available, remainingToSep);
-
-            batchPayload.push({
-                idSolicitud: item.id,
-                qtyToSeparate: take,
-                codigo: item.details ? item.details.codigo : codeOrId,
-                producto: item.details ? item.details.producto : 'Unknown',
-                zona: item.details ? item.details.usuario : targetZone,
-                fecha: item.details ? item.details.fecha : ''
-            });
-
+            // Logic: we consume from available, but we aggregate into ONE payload.
+            const take = Math.min(item.available, remainingToSep);
+            totalToSeparate += take;
             remainingToSep -= take;
         }
+
+        // Handle Over-Allocation (Exceeds Pending) if confirmed
+        if (remainingToSep > 0 && validQueue.length > 0) {
+            totalToSeparate += remainingToSep; // Add the rest
+            remainingToSep = 0;
+        }
+
+        if (totalToSeparate <= 0) return;
+
+        // Context from first valid item or fallback
+        const contextItem = validQueue[0] || {};
+        const contextDetails = contextItem.details || {};
+
+        // Generate Single Payload
+        const separationNow = new Date();
+        const timestamp = separationNow.getTime();
+        const dateStr = separationNow.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' +
+            separationNow.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+        const singlePayload = {
+            idSolicitud: `SEP-${timestamp}-${Math.floor(Math.random() * 1000)}`, // Unique ID for this consolidated batch
+            qtyToSeparate: totalToSeparate,
+            codigo: contextDetails.codigo || codeOrId,
+            producto: contextDetails.producto || 'Unknown',
+            zona: targetZone, // Strict Zone
+            fecha: dateStr    // CURRENT DATE/TIME
+        };
+
+        const batchPayload = [singlePayload]; // Wrap in array for backend compatibility
 
         if (batchPayload.length === 0) {
             alert("No se pudo asignar cantidad a ninguna solicitud.");
