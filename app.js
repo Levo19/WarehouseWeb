@@ -1737,6 +1737,222 @@ class App {
         `;
     }
 
+    /* --- PRODUCT HISTORY --- */
+    async showProductHistory(code, name) {
+        // 1. Create/Show Modal with Loading State
+        const modalId = 'history-modal';
+        const existing = document.getElementById(modalId);
+        if (existing) existing.remove();
+
+        // Safe Name escape
+        const safeName = name ? name.replace(/'/g, "&apos;") : "Producto";
+
+        const modalHtml = `
+            <div id="${modalId}" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:10000;">
+                <div style="background:white; width:90%; max-width:600px; max-height:85vh; border-radius:12px; display:flex; flex-direction:column; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+                    
+                    <div style="padding:1.5rem; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <h3 style="margin:0; color:var(--primary-color);">Historial de Movimientos</h3>
+                            <div style="font-size:0.9rem; color:#666; margin-top:0.25rem;">${safeName}</div>
+                            <div style="font-size:0.8rem; color:#999; font-family:monospace;">${code}</div>
+                        </div>
+                        <button onclick="document.getElementById('${modalId}').remove()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#999;">&times;</button>
+                    </div>
+
+                    <div id="history-content" style="flex:1; overflow-y:auto; padding:1.5rem; position:relative;">
+                        <div style="text-align:center; padding:3rem; color:#999;">
+                            <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;"></i>
+                            <div style="margin-top:1rem;">Cargando historial completo...</div>
+                        </div>
+                    </div>
+
+                    <div style="padding:1rem 1.5rem; border-top:1px solid #eee; display:flex; justify-content:flex-end; gap:1rem; background:#f9fafb; border-radius:0 0 12px 12px;">
+                         <button onclick="document.getElementById('${modalId}').remove()" class="btn-secondary">Cerrar</button>
+                         <button id="btn-print-history" class="btn-primary" disabled onclick="app.printProductHistory('${code}', '${safeName}')">
+                            <i class="fa-solid fa-print"></i> Imprimir Historial
+                         </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // 2. Fetch Data
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow', // FIXED: Required for GAS
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: 'getProductHistory', payload: { codigo: code } })
+            });
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                this.renderHistoryContent(result.data);
+                // Enable Print Button and attach data
+                const printBtn = document.getElementById('btn-print-history');
+                if (printBtn) {
+                    printBtn.disabled = false;
+                    // Store data in the app instance for printing
+                    this._tempHistoryData = result.data;
+                }
+            } else {
+                const el = document.getElementById('history-content');
+                if (el) el.innerHTML = `<div style="text-align:center; color:red; padding:2rem;">Error: ${result.message}</div>`;
+            }
+        } catch (e) {
+            console.error(e);
+            const el = document.getElementById('history-content');
+            if (el) el.innerHTML = `<div style="text-align:center; color:red; padding:2rem;">Error de conexión.</div>`;
+        }
+    }
+
+    renderHistoryContent(data) {
+        const container = document.getElementById('history-content');
+        if (!container) return;
+
+        const { initial, movements } = data;
+
+        let runningStock = Number(initial);
+        // movements are sorted by date ascending in backend.
+
+        const rows = movements.map(m => {
+            // Basic running stock logic (approximate if history is partial)
+            let qty = Number(m.qty);
+            if (m.type === 'INGRESO' || (m.type === 'AJUSTE' && qty > 0)) { // Adjustment Logic depends on sign
+                // In backend, adjustment qty is already signed (+/-)
+                // But for display, 'qty' field is absolute usually? 
+                // Checked backend: Adjustment qty is from Col B, can be negative.
+                // Movement qty from details is always positive.
+
+                // If type INGRESO -> +qty
+                // If type SALIDA -> -qty
+                if (m.type === 'INGRESO') runningStock += qty;
+                else if (m.type === 'SALIDA') runningStock -= qty;
+                else if (m.type === 'AJUSTE') runningStock += qty; // Qty is signed
+
+            } else { // SALIDA
+                runningStock -= qty;
+            }
+
+            // Date Formatting
+            // m.date might be timestamp or string
+            let dateStr = m.date;
+            if (typeof m.date === 'number') dateStr = new Date(m.date).toLocaleString();
+
+            const isPositive = (m.type === 'INGRESO' || (m.type === 'AJUSTE' && m.qty > 0));
+            const typeColor = m.type === 'INGRESO' ? '#16a34a' : (m.type === 'AJUSTE' ? '#f59e0b' : '#ef4444');
+            const icon = m.type === 'INGRESO' ? 'fa-arrow-right-to-bracket' : (m.type === 'AJUSTE' ? 'fa-scale-balanced' : 'fa-arrow-right-from-bracket');
+
+            const displayQty = m.type === 'SALIDA' ? -Math.abs(m.qty) : (m.type === 'AJUSTE' && m.qty > 0 ? `+${m.qty}` : m.qty);
+
+            return `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #eee;">
+                    <div style="display:flex; align-items:center; gap:0.75rem;">
+                        <div style="width:30px; height:30px; border-radius:50%; background:${typeColor}20; color:${typeColor}; display:flex; align-items:center; justify-content:center;">
+                            <i class="fa-solid ${icon}" style="font-size:0.8rem;"></i>
+                        </div>
+                        <div>
+                            <div style="font-weight:bold; font-size:0.9rem; color:#333;">${m.type}</div>
+                            <div style="font-size:0.75rem; color:#888;">${dateStr}</div>
+                            ${m.ref ? `<div style="font-size:0.75rem; color:#555;">${m.ref}</div>` : ''}
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-weight:bold; font-size:1rem; color:${typeColor};">${displayQty}</div>
+                    </div>
+                </div>
+            `;
+        }).reverse().join(''); // Show Newest First for Display
+
+        container.innerHTML = `
+            <div style="padding-bottom:1rem;">
+                <div style="background:#f1f5f9; padding:1rem; border-radius:8px; display:flex; justify-content:space-between; margin-bottom:1rem;">
+                    <span style="font-weight:bold; color:#555;">Stock Inicial (Registrado)</span>
+                    <span style="font-weight:bold; color:#333;">${initial}</span>
+                </div>
+                ${rows.length > 0 ? rows : '<div style="text-align:center; color:#999;">No hay movimientos registrados.</div>'}
+            </div>
+        `;
+    }
+
+    printProductHistory(code, name) {
+        if (!this._tempHistoryData) return;
+
+        const { initial, movements } = this._tempHistoryData;
+        const now = new Date().toLocaleString();
+
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        if (!printWindow) return alert('Habilita ventanas emergentes');
+
+        let rowsHtml = '';
+        // Use logic from render to show signed quantities, or keep absolute with type colored?
+        // Let's keep it clean
+
+        // Reverse for print too? Usually history is printed newest first (Statement style) or oldest first (Ledger style).
+        // Let's go Newest First (matching UI)
+        const sortedMovements = [...movements].reverse();
+
+        sortedMovements.forEach(m => {
+            const typeColor = m.type === 'INGRESO' ? 'green' : (m.type === 'AJUSTE' ? 'orange' : 'red');
+            rowsHtml += `
+                <tr>
+                    <td style="padding:8px; border-bottom:1px solid #ddd;">${m.date}</td>
+                    <td style="padding:8px; border-bottom:1px solid #ddd; font-weight:bold; color:${typeColor}">${m.type}</td>
+                    <td style="padding:8px; border-bottom:1px solid #ddd;">${m.ref || '-'}</td>
+                    <td style="padding:8px; text-align:right; border-bottom:1px solid #ddd; font-weight:bold;">${m.qty}</td>
+                </tr>
+             `;
+        });
+
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Historial - ${name}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                        th { text-align: left; background: #f3f3f3; padding: 10px; border-bottom: 2px solid #333; }
+                        .header { margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #ccc; }
+                        h1 { font-size: 20px; margin: 0 0 5px 0; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>Historial de Producto</h1>
+                        <div style="font-size:1.2rem; font-weight:bold; margin: 5px 0;">${name}</div>
+                        <div style="color:#666;">CÓDIGO: ${code}</div>
+                        <div style="color:#888; font-size:12px; margin-top:5px;">Impreso: ${now}</div>
+                    </div>
+                    
+                    <div style="background:#f9f9f9; padding:10px; font-weight:bold; margin-bottom:10px;">
+                        STOCK INICIAL: ${initial}
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>FECHA</th>
+                                <th>TIPO</th>
+                                <th>REFERENCIA</th>
+                                <th style="text-align:right;">CANT.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+
+                    <script>
+                        window.onload = function() { window.print(); window.close(); }
+                    </script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+    }
+
     // Restore HELPER
     renderProductImage(src) {
         if (!src) return '<img src="recursos/defaultImageProduct.png" class="card-img" loading="lazy">';
