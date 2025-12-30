@@ -5705,6 +5705,7 @@ class App {
         // The backend appends this as a new 'separado' row.
 
         let totalToSeparate = 0;
+        let remainingToSep = newQty;
 
         for (const item of validQueue) {
             if (remainingToSep <= 0) break;
