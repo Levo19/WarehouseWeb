@@ -6180,7 +6180,55 @@ class App {
         }).join('');
     }
 
-    // --- NEW: PROVIDER HISTORY MODAL ---
+    async deleteSeparatedRequest(id) {
+        if (!confirm('¿Devolver este ítem a pendiente?')) return;
+
+        // Visual Feedback
+        const card = document.querySelector(`.request-card .btn-delete-separated[onclick*="${id}"]`).closest('.request-card');
+        if (card) card.style.opacity = '0.5';
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: 'revertSeparatedRequest', // Updated action name
+                    payload: { id: id }
+                })
+            });
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                this.showToast('Ítem devuelto a pendientes', 'success');
+                // Remove card visually immediately
+                if (card) {
+                    card.style.transform = 'scale(0)';
+                    setTimeout(() => card.remove(), 300);
+                }
+
+                // Refresh Data to ensure consistency (Pending quantity needs to update)
+                // Small delay to allow sheet update
+                setTimeout(() => {
+                    const activeBtn = document.querySelector('.client-buttons-group .btn-client.active');
+                    const zoneName = activeBtn ? activeBtn.innerText : 'ZONA1';
+                    // We need to re-fetch requests
+                    this.fetchRequests().then(() => {
+                        const zoneContent = document.getElementById('zone-content');
+                        if (zoneContent) this.renderZonePickup(zoneName, zoneContent);
+                    });
+                }, 1000);
+
+            } else {
+                alert('Error al eliminar: ' + result.message);
+                if (card) card.style.opacity = '1';
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error de conexión');
+            if (card) card.style.opacity = '1';
+        }
+    }
+
     filterProviders(searchTerm) {
         const term = searchTerm.toLowerCase().trim();
         const cards = document.querySelectorAll('.provider-card');
