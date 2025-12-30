@@ -148,7 +148,13 @@ class App {
     checkSession() {
         const storedUser = localStorage.getItem('levo_user');
         if (storedUser) {
-            this.setUser(JSON.parse(storedUser));
+            try {
+                this.setUser(JSON.parse(storedUser));
+            } catch (e) {
+                console.error("Invalid Session Data found in localStorage. Resetting.", e);
+                localStorage.removeItem('levo_user');
+                this.showLogin();
+            }
         } else {
             this.showLogin();
         }
@@ -5450,8 +5456,8 @@ class App {
             return;
         }
 
-        const newQty = qtyInput.value;
-        if (newQty <= 0) { alert('Cantidad inválida'); return; }
+        let newQty = parseFloat(qtyInput.value);
+        if (isNaN(newQty) || newQty <= 0) { alert('Cantidad inválida'); return; }
 
         // --- ANIMATION START ---
         // 1. Find the card and Data
@@ -5504,8 +5510,7 @@ class App {
             document.body.appendChild(clone);
 
             // Hide original card instantly -> Visual Pop
-            card.style.visibility = 'hidden'; // Keep layout space for a moment? No, user wants instant move.
-            // Actually, if we re-render instantly, the card might disappear from DOM anyway.
+            card.style.visibility = 'hidden';
 
             // UI Feedback on button (just in case)
             btnElement.innerHTML = '<i class="fa-solid fa-check"></i>';
@@ -5568,26 +5573,29 @@ class App {
                             console.log('Swapped temp ID for Real ID in local state');
                         }
                     } else {
-                        console.error("Server synced but no ID returned or error", result);
-                    }
-                })
-                // Check if we need to re-render? No, stick with valid optimistic data.
-                .then(() => {
-                    // Optional: Re-render one last time to ensure ID consistency (tempId -> realId)
-                    // This might cause a slight flicker if IDs change, but usually imperceptible if content is same.
-                    // We can skip re-render if we trust the math, but for safety lets do it.
-                    const activeBtn = document.querySelector('.zone-carousel .btn-secondary.active');
-                    if (activeBtn) {
-                        const zone = activeBtn.innerText.toLowerCase().replace('zona ', 'zona');
-                        const zoneContainer = document.getElementById('zone-content');
-                        if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
+                        throw new Error(result.message || 'Error desconocido del servidor');
                     }
                 })
                 .catch(err => {
                     console.error("Separation failed:", err);
-                    alert("Error guardando en servidor. Verifique conexión.");
-                    // Rollback optimistic update? 
-                    // Too complex for now, user can refresh.
+                    alert("Error al guardar separación: " + err.message);
+
+                    // --- ROLLBACK OPTIMISTIC UPDATE ---
+                    // Remove the temporary separated item
+                    const index = this.data.requests.findIndex(r => r.idSolicitud === tempId);
+                    if (index > -1) {
+                        this.data.requests.splice(index, 1);
+                    }
+
+                    // Re-render to show the original item again (it was in 'pending')
+                    // Since we didn't remove the original 'pending' request from data (we just aggregated it differently in renderZonePickup),
+                    // removing the 'separated' mock entry should make renderZonePickup put it back in the Pending column.
+                    const activeBtn = document.querySelector('.client-buttons-group .btn-zone.active');
+                    if (activeBtn) {
+                        const zone = activeBtn.dataset.client;
+                        const zoneContainer = document.getElementById('zone-content');
+                        if (zoneContainer && zone) this.renderZonePickup(zone, zoneContainer);
+                    }
                 });
 
         } else {
