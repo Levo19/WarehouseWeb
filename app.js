@@ -5644,7 +5644,7 @@ class App {
         const productRequests = this.data.requests.filter(r =>
             String(r.codigo).trim() === String(codeOrId).trim() &&
             r.usuario.toLowerCase() === targetZone &&
-            (String(r.idSolicitud).startsWith('temp-') || r.categoria === 'solicitado') // Allow all solicited items
+            (String(r.idSolicitud).startsWith('temp-') || String(r.categoria).toLowerCase() === 'solicitado') // Allow all solicited items
         );
 
         // Build Queue from 'solicitado'
