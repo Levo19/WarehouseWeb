@@ -5590,12 +5590,29 @@ class App {
         // We need the Queue to allocate logic.
         const targetZone = document.querySelector('.client-buttons-group .btn-zone.active').dataset.client.toLowerCase();
 
-        // Include ALL requests (Solicited + Separated) for accurate math
+        // 1.1 FILTER LOGIC (Must match renderZonePickup)
+        const BASELINE_DATE = new Date(2025, 11, 29); // Dec 29, 2025
+        const parseDate = (str) => {
+            if (!str) return null;
+            const [datePart] = str.split(' ');
+            const [d, m, y] = datePart.split('/').map(Number);
+            return new Date(y, m - 1, d);
+        };
+        const isOnOrAfterBaseline = (dateStr) => {
+            const d = parseDate(dateStr);
+            if (!d) return false;
+            return d.getTime() >= BASELINE_DATE.getTime();
+        };
+
+        // Include requests matching Code + Zone + Date Filter
         // Use trim() for category to avoid mismatch
         const productRequests = this.data.requests.filter(r =>
             String(r.codigo).trim() === String(codeOrId).trim() &&
-            r.usuario.toLowerCase() === targetZone
+            r.usuario.toLowerCase() === targetZone &&
+            (!r.fecha || isOnOrAfterBaseline(r.fecha)) // Filter OLD "ghosts"
         );
+
+        console.log("Separation Logic Fix 2.1 Applied - Requests Found:", productRequests.length);
 
         // A. Calculate Global Separated Amount
         let alreadySeparatedGlobal = 0;
