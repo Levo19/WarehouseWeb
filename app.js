@@ -5751,32 +5751,28 @@ class App {
 
 
         // --- ANIMATION & OPTIMISTIC UPDATE ---
+        // --- ANIMATION & OPTIMISTIC UPDATE ---
         const card = btnElement.closest('.request-card');
 
         // Optimistic: We create ONE "Temp Separated" item that represents this batch.
-        // To simplify, we just treat it as a new 'separado' record.
-        // But what ID? We can give it a temp ID. 
-        // The aggregator sums 'separado'. So it will just add to the total.
-        // It will be effective immediately.
-
-        // We piggybacking on one of the real requests to get metadata (desc, code, etc)
-        const sourceRequest = this.data.requests.find(r => r.idSolicitud === batchPayload[0].idSolicitud);
+        // We cannot search by ID because the ID is new. We must construct from context.
 
         const tempId = 'temp-' + Date.now();
-        const now = new Date();
-        const day = String(now.getDate()).padStart(2, '0');
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const year = now.getFullYear();
-        const time = now.toTimeString().split(' ')[0]; // HH:mm:ss
-        const formattedDate = `${day}/${month}/${year} ${time}`;
+        // Use variables from above loop (separationNow, etc)
+        // Ensure we supply ALL fields expected by renderZonePickup: 
+        // usuario, categoria, codigo, fecha, idSolicitud, cantidad, etc.
 
         const mockSeparated = {
-            ...sourceRequest,
-            idSolicitud: tempId, // unique temp
+            ...contextDetails, // Inherit base props (desc, img, etc) if available
+            idSolicitud: tempId,
+            codigo: singlePayload.codigo,
+            producto: singlePayload.producto,
+            usuario: targetZone, // CRITICAL: Matches renderZonePickup expectations
+            zona: targetZone,    // Legacy/Backend compat
             categoria: 'separado',
-            cantidad: newQty, // Full amount
-            fecha: formattedDate,
-            _isBatchMock: true // Marker
+            cantidad: singlePayload.qtyToSeparate,
+            fecha: dateStr, // from above
+            _isBatchMock: true
         };
 
         // VISUALS
