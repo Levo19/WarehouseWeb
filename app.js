@@ -5112,8 +5112,11 @@ class App {
         this.data.requests.forEach(req => {
             if (req.usuario.toLowerCase() !== targetZone) return;
 
-            // NEW: Mocks bypass date check OR valid date check
-            if (!String(req.idSolicitud).startsWith('temp-') && !isOnOrAfterBaseline(req.fecha)) {
+            // NEW: Mocks bypass date check. 
+            // LOGIC CHANGE: We SHOW old "separado" items so user can delete them.
+            // We only filter old "solicitado" (Pending) to avoid clutter.
+            const isSeparated = String(req.categoria).trim().toLowerCase() === 'separado';
+            if (!String(req.idSolicitud).startsWith('temp-') && !isOnOrAfterBaseline(req.fecha) && !isSeparated) {
                 return;
             }
 
@@ -5155,6 +5158,8 @@ class App {
                 aggregator[codeKey].separated += qty;
                 if (!aggregator[codeKey].sepIds) aggregator[codeKey].sepIds = [];
                 aggregator[codeKey].sepIds.push(req.idSolicitud);
+                // Mark as containing old items if needed? 
+                // We will rely on the card renderer to check dates if we want.
             } else if (cat === 'despachado') {
                 aggregator[codeKey].dispatched += qty;
             }
@@ -5164,6 +5169,7 @@ class App {
                 status: cat,
                 qty: qty,
                 time: req.fecha.split(' ')[1] || '',
+                date: req.fecha.split(' ')[0] || '', // Capture Date
                 id: req.idSolicitud
             });
         });
@@ -5216,7 +5222,7 @@ class App {
                     else if (r.status === 'despachado') { shadowColor = 'rgba(231, 76, 60, 0.6)'; borderColor = '#e74c3c'; }
 
                     return `<div style="padding:6px 10px; margin-bottom:8px; background:white; border-radius:6px; border-left:4px solid ${borderColor}; box-shadow:2px 2px 6px ${shadowColor}; display:flex; justify-content:space-between; align-items:center; font-size:0.85rem;">
-                            <div><div style="font-weight:bold; text-transform:capitalize; color:#333;">${r.status}</div><div style="font-size:0.75rem; color:#888;">${r.time}</div></div>
+                            <div><div style="font-weight:bold; text-transform:capitalize; color:#333;">${r.status}</div><div style="font-size:0.75rem; color:#888;">${r.date} ${r.time}</div></div>
                             <div style="font-weight:bold; font-size:1rem;">${r.qty}</div></div>`;
                 }).join('');
             }
