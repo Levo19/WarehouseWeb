@@ -5604,15 +5604,22 @@ class App {
             return d.getTime() >= BASELINE_DATE.getTime();
         };
 
-        // Include requests matching Code + Zone + Date Filter
-        // Use trim() for category to avoid mismatch
-        const productRequests = this.data.requests.filter(r =>
-            String(r.codigo).trim() === String(codeOrId).trim() &&
-            r.usuario.toLowerCase() === targetZone &&
-            (!r.fecha || isOnOrAfterBaseline(r.fecha)) // Filter OLD "ghosts"
-        );
+        // Include requests matching Code + Zone + Date Filter (Strict Match to renderZonePickup)
+        const productRequests = this.data.requests.filter(r => {
+            const isMatch = String(r.codigo).trim() === String(codeOrId).trim() &&
+                r.usuario.toLowerCase() === targetZone;
+            if (!isMatch) return false;
 
-        console.log("Separation Logic Fix 2.1 Applied - Requests Found:", productRequests.length);
+            const isTemp = String(r.idSolicitud).startsWith('temp-');
+            const dateOk = isOnOrAfterBaseline(r.fecha);
+
+            // If NOT temp, we REQUIRE a valid date on or after baseline
+            if (!isTemp && !dateOk) return false;
+
+            return true;
+        });
+
+        console.log("Separation Logic Fix 3.0 (Strict + Overfill) - Requests Found:", productRequests.length);
 
         // A. Calculate Global Separated Amount
         let alreadySeparatedGlobal = 0;
@@ -5624,11 +5631,9 @@ class App {
         });
 
         // B. Build Pending Queue (Solicited Items)
-        // Sort by Date FIFO
         const solicitedItems = productRequests
             .filter(r => String(r.categoria).trim().toLowerCase() === 'solicitado')
             .map(r => {
-                // Parse TS for sorting
                 const [datePart, timePart] = r.fecha.split(' ');
                 const [d, m, y] = datePart.split('/').map(Number);
                 let h = 0, min = 0, sec = 0;
@@ -5640,28 +5645,24 @@ class App {
                     qty: parseFloat(r.cantidad || 0),
                     ts: ts,
                     details: r,
-                    available: 0 // Will calculate
+                    available: 0
                 };
             })
             .sort((a, b) => a.ts - b.ts);
 
-        // C. "Consume" Already Separated Amount from the Queue (FIFO)
-        // We assume separations apply to the oldest requests first
+        // C. Consume Already Separated
         let remainingSepInfo = alreadySeparatedGlobal;
         const queue = [];
 
         for (const item of solicitedItems) {
             if (remainingSepInfo >= item.qty) {
-                // Fully separated
                 item.available = 0;
                 remainingSepInfo -= item.qty;
             } else if (remainingSepInfo > 0) {
-                // Partially separated
                 item.available = item.qty - remainingSepInfo;
                 remainingSepInfo = 0;
                 queue.push(item);
             } else {
-                // Not touched
                 item.available = item.qty;
                 queue.push(item);
             }
@@ -5670,29 +5671,49 @@ class App {
         // Apply Tolerance
         const validQueue = queue.filter(item => item.available > 0.001);
 
-        // Check if we have enough
+        // Check availability
         const totalAvailable = validQueue.reduce((sum, item) => sum + item.available, 0);
 
+        // ALLOW OVER-ALLOCATION WITH CONFIRMATION
         if (newQty > totalAvailable + 0.001) {
-            alert(`Cantidad excede lo pendiente (${totalAvailable.toFixed(3)})`);
-            return;
+            if (!confirm(`La cantidad (${newQty}) excede lo pendiente (${totalAvailable.toFixed(3)}). ¿Desea separar el exceso de todas formas?`)) {
+                return;
+            }
+        }
+
+        if (validQueue.length === 0 && newQty > 0) {
+            // Edge case: No pending queue but user wants to separate (and confirmed).
+            // We need ANY request ID to attach to.
+            // Fallback: use the most recent 'solicitado' request even if exhausted, or throw error if ABSOLUTELY no requests exist.
+            if (solicitedItems.length > 0) {
+                const fallback = solicitedItems[solicitedItems.length - 1]; // Use last
+                validQueue.push({ ...fallback, available: 0 }); // Add with 0 available, loop will force-fill
+            } else {
+                alert("No existe ninguna solicitud base para asociar esta separación.");
+                return;
+            }
         }
 
         // ALLOCATE
         const batchPayload = [];
         let remainingToSep = newQty;
 
-        for (const item of validQueue) {
+        for (let i = 0; i < validQueue.length; i++) {
+            const item = validQueue[i];
+            const isLast = i === validQueue.length - 1;
+
             if (remainingToSep <= 0) break;
 
-            const take = Math.min(item.available, remainingToSep);
+            // If it's the last item, take ALL remaining (Over-allocation support)
+            // Otherwise, take min(available, remaining)
+            const take = isLast ? remainingToSep : Math.min(item.available, remainingToSep);
 
             batchPayload.push({
                 idSolicitud: item.id,
                 qtyToSeparate: take,
-                codigo: item.details ? item.details.codigo : codeOrId, // Pass context
+                codigo: item.details ? item.details.codigo : codeOrId,
                 producto: item.details ? item.details.producto : 'Unknown',
-                zona: item.details ? item.details.usuario : targetZone, // Correct field name
+                zona: item.details ? item.details.usuario : targetZone,
                 fecha: item.details ? item.details.fecha : ''
             });
 
