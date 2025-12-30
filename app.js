@@ -4539,47 +4539,7 @@ class App {
         }
     }
 
-    async deleteSeparatedRequest(id) {
-        if (!confirm('¿Eliminar este ítem separado? Regresará a la lista de pendientes.')) return;
 
-        // Optimistic Delete
-        const reqIndex = this.data.requests.findIndex(r => r.idSolicitud === id);
-        if (reqIndex !== -1) {
-            this.data.requests.splice(reqIndex, 1);
-        }
-
-        // Re-render
-        const activeBtn = document.querySelector('.client-buttons-group .btn-zone.active');
-        if (activeBtn) {
-            const zone = activeBtn.dataset.client;
-            const zoneContainer = document.getElementById('zone-content');
-            if (zoneContainer && zone) this.renderZonePickup(zone, zoneContainer);
-        }
-
-        try {
-            // API Call with Qty 0 to trigger deletion in backend
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                redirect: 'follow',
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({
-                    action: 'updateSeparatedQuantity',
-                    payload: { id: id, quantity: 0 }
-                })
-            });
-            const result = await response.json();
-            if (result.status !== 'success') {
-                alert('Error al eliminar: ' + result.message);
-                this.fetchRequests(); // Reload on error to ensure data consistency
-            } else {
-                this.showToast(result.message || 'Ítem eliminado y regresado a pendientes', 'info');
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Error al conectar con servidor');
-            this.fetchRequests(); // Reload on network error
-        }
-    }
 
     async handleDispatchZone(zone) {
         // 1. Filter Items to Dispatch
@@ -5630,75 +5590,71 @@ class App {
         // We need the Queue to allocate logic.
         const targetZone = document.querySelector('.client-buttons-group .btn-zone.active').dataset.client.toLowerCase();
 
-        // Filter Requests for this Product & Zone & Date
-        const BASELINE_DATE = new Date(2025, 11, 29);
-        const parseDate = (str) => {
-            if (!str) return null;
-            const [datePart] = str.split(' ');
-            const [d, m, y] = datePart.split('/').map(Number);
-            return new Date(y, m - 1, d);
-        };
-
-        // NOTE: We match by CODE. 
-        // codeOrId passed from Pending Card is the CODE.
+        // Include ALL requests (Solicited + Separated) for accurate math
+        // Use trim() for category to avoid mismatch
         const productRequests = this.data.requests.filter(r =>
             String(r.codigo).trim() === String(codeOrId).trim() &&
-            r.usuario.toLowerCase() === targetZone &&
-            (String(r.idSolicitud).startsWith('temp-') || String(r.categoria).toLowerCase() === 'solicitado') // Allow all solicited items
+            r.usuario.toLowerCase() === targetZone
         );
 
-        // Build Queue from 'solicitado'
-        // And subtract 'separado' logic?
-        // Actually, we need to find WHICH requests are 'solicitado' and available.
-        // But wait, the aggregation logic already subtracted 'separado' from 'requested'.
-        // So we strictly look for 'solicitado' items.
-        // Any 'separado' items are "done".
-
-        // If we have partial separation?
-        // The system appends 'separado' rows, but the original 'solicitado' row remains.
-        // So if Request A (5) exists. And we have separated 3 (linked to A). 
-        // Then Request A effectively has 2 remaining.
-
-        // COMPLEXITY: We need to calculate REMAINING for each request.
-        // Map ID -> Remaining Qty
-        const requestMap = {};
-
-        // Helper to find initial request details
-        const getRequestDetails = (id) => this.data.requests.find(r => r.idSolicitud === id && r.categoria.toLowerCase() === 'solicitado');
-
+        // A. Calculate Global Separated Amount
+        let alreadySeparatedGlobal = 0;
         productRequests.forEach(r => {
-            const cat = r.categoria.toLowerCase();
-            const qty = parseFloat(r.cantidad);
+            const cat = String(r.categoria).trim().toLowerCase();
+            if (cat === 'separado' || cat === 'despachado') {
+                alreadySeparatedGlobal += parseFloat(r.cantidad || 0);
+            }
+        });
 
-            if (cat === 'solicitado') {
-                if (!requestMap[r.idSolicitud]) requestMap[r.idSolicitud] = { id: r.idSolicitud, initial: 0, separated: 0, ts: 0, details: r };
-                requestMap[r.idSolicitud].initial += qty;
+        // B. Build Pending Queue (Solicited Items)
+        // Sort by Date FIFO
+        const solicitedItems = productRequests
+            .filter(r => String(r.categoria).trim().toLowerCase() === 'solicitado')
+            .map(r => {
                 // Parse TS for sorting
                 const [datePart, timePart] = r.fecha.split(' ');
                 const [d, m, y] = datePart.split('/').map(Number);
                 let h = 0, min = 0, sec = 0;
                 if (timePart) [h, min, sec] = timePart.split(':').map(Number);
-                requestMap[r.idSolicitud].ts = new Date(y, m - 1, d, h, min, sec).getTime();
+                const ts = new Date(y, m - 1, d, h, min, sec).getTime();
 
-            } else if (cat === 'separado' || cat === 'despachado') {
-                if (!requestMap[r.idSolicitud]) {
-                    const parent = getRequestDetails(r.idSolicitud);
-                    requestMap[r.idSolicitud] = { id: r.idSolicitud, initial: 0, separated: 0, ts: 0, details: parent };
-                }
+                return {
+                    id: r.idSolicitud,
+                    qty: parseFloat(r.cantidad || 0),
+                    ts: ts,
+                    details: r,
+                    available: 0 // Will calculate
+                };
+            })
+            .sort((a, b) => a.ts - b.ts);
 
-                if (cat === 'separado' || cat === 'despachado') {
-                    requestMap[r.idSolicitud].separated += qty;
-                }
+        // C. "Consume" Already Separated Amount from the Queue (FIFO)
+        // We assume separations apply to the oldest requests first
+        let remainingSepInfo = alreadySeparatedGlobal;
+        const queue = [];
+
+        for (const item of solicitedItems) {
+            if (remainingSepInfo >= item.qty) {
+                // Fully separated
+                item.available = 0;
+                remainingSepInfo -= item.qty;
+            } else if (remainingSepInfo > 0) {
+                // Partially separated
+                item.available = item.qty - remainingSepInfo;
+                remainingSepInfo = 0;
+                queue.push(item);
+            } else {
+                // Not touched
+                item.available = item.qty;
+                queue.push(item);
             }
-        });
+        }
 
-        // Current Pending Queue
-        const queue = Object.values(requestMap)
-            .filter(item => (item.initial - item.separated) > 0.001) // Tolerance
-            .sort((a, b) => a.ts - b.ts); // FIFO
+        // Apply Tolerance
+        const validQueue = queue.filter(item => item.available > 0.001);
 
         // Check if we have enough
-        const totalAvailable = queue.reduce((sum, item) => sum + (item.initial - item.separated), 0);
+        const totalAvailable = validQueue.reduce((sum, item) => sum + item.available, 0);
 
         if (newQty > totalAvailable + 0.001) {
             alert(`Cantidad excede lo pendiente (${totalAvailable.toFixed(3)})`);
@@ -5709,11 +5665,10 @@ class App {
         const batchPayload = [];
         let remainingToSep = newQty;
 
-        for (const item of queue) {
+        for (const item of validQueue) {
             if (remainingToSep <= 0) break;
 
-            const available = item.initial - item.separated;
-            const take = Math.min(available, remainingToSep);
+            const take = Math.min(item.available, remainingToSep);
 
             batchPayload.push({
                 idSolicitud: item.id,
@@ -5819,7 +5774,7 @@ class App {
             headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify({
                 action: 'separateRequestBatch',
-                payload: { queue: batchPayload }
+                payload: batchPayload
             })
         })
             .then(response => response.json())
