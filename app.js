@@ -5644,7 +5644,7 @@ class App {
         const productRequests = this.data.requests.filter(r =>
             String(r.codigo).trim() === String(codeOrId).trim() &&
             r.usuario.toLowerCase() === targetZone &&
-            (String(r.idSolicitud).startsWith('temp-') || (parseDate(r.fecha) && parseDate(r.fecha).getTime() >= BASELINE_DATE.getTime() - 86400000)) // Allow 1 day buffer
+            (String(r.idSolicitud).startsWith('temp-') || r.categoria === 'solicitado') // Allow all solicited items
         );
 
         // Build Queue from 'solicitado'
