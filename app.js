@@ -5588,13 +5588,7 @@ class App {
     // Scoped Column Filtering
     filterColumnList(input, columnClass) {
         const term = input.value.toLowerCase().trim();
-        // Traverse up to find the closest container if needed, but here filtering by class is safer
-        // because we passed 'column-pending' or 'column-separated' specifically.
-        // However, we must ensure we only target the visible ones in the current view.
-
-        // Find the specific column container where this input lives would be even better to support multiple zones if ever needed
-        // But scoping by class is fine for now as there's only one active zone view at a time.
-        const container = input.closest(`.${columnClass} `);
+        const container = input.closest(`.${columnClass}`);
 
         if (!container) return;
 
@@ -5603,302 +5597,305 @@ class App {
         requestAnimationFrame(() => {
             cards.forEach(card => {
                 const searchable = card.dataset.search || "";
-
                 if (!term || searchable.includes(term)) {
                     card.style.display = 'block';
                 } else {
                     card.style.display = 'none';
+                }
+            });
+        });
+    }
 
     async moveToSeparated(btnElement, codeOrId) {
-                        // Param is now 'codeOrId'. For Pending, it is CODE. For Separated, it is ID.
-                        // We act on PENDING items here.
+        // Param is now 'codeOrId'. For Pending, it is CODE. For Separated, it is ID.
+        // We act on PENDING items here.
 
-                        const qtyInput = document.getElementById(`qty-${codeOrId}`);
-                        if (!qtyInput) {
-                            console.error('Input not found for:', codeOrId);
-                            return;
-                        }
+        const qtyInput = document.getElementById(`qty-${codeOrId}`);
+        if (!qtyInput) {
+            console.error('Input not found for:', codeOrId);
+            return;
+        }
 
-                        let newQty = parseFloat(qtyInput.value);
-                        if (isNaN(newQty) || newQty <= 0) { alert('Cantidad inválida'); return; }
+        let newQty = parseFloat(qtyInput.value);
+        if (isNaN(newQty) || newQty <= 0) { alert('Cantidad inválida'); return; }
 
-                        // Find Aggregated Item by iterating requests again? 
-                        // Better: We stored it in 'renderZonePickup'. But 'this.data' is raw requests.
-                        // We need to re-aggregate or find the item.
-                        // EASIEST: The 'pendingList' creation logic stores everything. 
-                        // But we don't have access to 'pendingList' here cleanly without re-running logic.
-                        // Let's re-find the product requests to be safe and authoritative.
+        // Find Aggregated Item by iterating requests again? 
+        // Better: We stored it in 'renderZonePickup'. But 'this.data' is raw requests.
+        // We need to re-aggregate or find the item.
+        // EASIEST: The 'pendingList' creation logic stores everything. 
+        // But we don't have access to 'pendingList' here cleanly without re-running logic.
+        // Let's re-find the product requests to be safe and authoritative.
 
-                        // 1. RE-AGGREGATE single product to get Queue
-                        // We need the Queue to allocate logic.
-                        const targetZone = document.querySelector('.client-buttons-group .btn-zone.active').dataset.client.toLowerCase();
+        // 1. RE-AGGREGATE single product to get Queue
+        // We need the Queue to allocate logic.
+        const targetZone = document.querySelector('.client-buttons-group .btn-zone.active').dataset.client.toLowerCase();
 
-                        // Filter Requests for this Product & Zone & Date
-                        const BASELINE_DATE = new Date(2025, 11, 29);
-                        const parseDate = (str) => {
-                            if (!str) return null;
-                            const [datePart] = str.split(' ');
-                            const [d, m, y] = datePart.split('/').map(Number);
-                            return new Date(y, m - 1, d);
-                        };
+        // Filter Requests for this Product & Zone & Date
+        const BASELINE_DATE = new Date(2025, 11, 29);
+        const parseDate = (str) => {
+            if (!str) return null;
+            const [datePart] = str.split(' ');
+            const [d, m, y] = datePart.split('/').map(Number);
+            return new Date(y, m - 1, d);
+        };
 
-                        // NOTE: We match by CODE. 
-                        // codeOrId passed from Pending Card is the CODE.
-                        const productRequests = this.data.requests.filter(r =>
-                            String(r.codigo).trim() === String(codeOrId).trim() &&
-                            r.usuario.toLowerCase() === targetZone &&
-                            (String(r.idSolicitud).startsWith('temp-') || (parseDate(r.fecha) && parseDate(r.fecha).getTime() >= BASELINE_DATE.getTime()))
-                        );
+        // NOTE: We match by CODE. 
+        // codeOrId passed from Pending Card is the CODE.
+        const productRequests = this.data.requests.filter(r =>
+            String(r.codigo).trim() === String(codeOrId).trim() &&
+            r.usuario.toLowerCase() === targetZone &&
+            (String(r.idSolicitud).startsWith('temp-') || (parseDate(r.fecha) && parseDate(r.fecha).getTime() >= BASELINE_DATE.getTime()))
+        );
 
-                        // Build Queue from 'solicitado'
-                        // And subtract 'separado' logic?
-                        // Actually, we need to find WHICH requests are 'solicitado' and available.
-                        // But wait, the aggregation logic already subtracted 'separado' from 'requested'.
-                        // So we strictly look for 'solicitado' items.
-                        // Any 'separado' items are "done".
+        // Build Queue from 'solicitado'
+        // And subtract 'separado' logic?
+        // Actually, we need to find WHICH requests are 'solicitado' and available.
+        // But wait, the aggregation logic already subtracted 'separado' from 'requested'.
+        // So we strictly look for 'solicitado' items.
+        // Any 'separado' items are "done".
 
-                        // If we have partial separation?
-                        // The system appends 'separado' rows, but the original 'solicitado' row remains.
-                        // So if Request A (5) exists. And we have separated 3 (linked to A). 
-                        // Then Request A effectively has 2 remaining.
+        // If we have partial separation?
+        // The system appends 'separado' rows, but the original 'solicitado' row remains.
+        // So if Request A (5) exists. And we have separated 3 (linked to A). 
+        // Then Request A effectively has 2 remaining.
 
-                        // COMPLEXITY: We need to calculate REMAINING for each request.
-                        // Map ID -> Remaining Qty
-                        const requestMap = {};
+        // COMPLEXITY: We need to calculate REMAINING for each request.
+        // Map ID -> Remaining Qty
+        const requestMap = {};
 
-                        productRequests.forEach(r => {
-                            const cat = r.categoria.toLowerCase();
-                            const qty = parseFloat(r.cantidad);
+        productRequests.forEach(r => {
+            const cat = r.categoria.toLowerCase();
+            const qty = parseFloat(r.cantidad);
 
-                            if (cat === 'solicitado') {
-                                if (!requestMap[r.idSolicitud]) requestMap[r.idSolicitud] = { id: r.idSolicitud, initial: 0, separated: 0, ts: 0 };
-                                requestMap[r.idSolicitud].initial += qty;
-                                // Parse TS for sorting
-                                const [datePart, timePart] = r.fecha.split(' ');
-                                const [d, m, y] = datePart.split('/').map(Number);
-                                let h = 0, min = 0, sec = 0;
-                                if (timePart) [h, min, sec] = timePart.split(':').map(Number);
-                                requestMap[r.idSolicitud].ts = new Date(y, m - 1, d, h, min, sec).getTime();
+            if (cat === 'solicitado') {
+                if (!requestMap[r.idSolicitud]) requestMap[r.idSolicitud] = { id: r.idSolicitud, initial: 0, separated: 0, ts: 0 };
+                requestMap[r.idSolicitud].initial += qty;
+                // Parse TS for sorting
+                const [datePart, timePart] = r.fecha.split(' ');
+                const [d, m, y] = datePart.split('/').map(Number);
+                let h = 0, min = 0, sec = 0;
+                if (timePart) [h, min, sec] = timePart.split(':').map(Number);
+                requestMap[r.idSolicitud].ts = new Date(y, m - 1, d, h, min, sec).getTime();
 
-                            } else if (cat === 'separado' || cat === 'despachado') {
-                                // Separated rows might not link to specific ID in some legacy cases, but assume they do or we grouped them.
-                                // In our system 'separateRequest' links via ID.
-                                // Wait, we need to know WHICH request ID this separation belongs to.
-                                // The 'separateRequest' payload has 'idSolicitud'.
-                                // The 'solicitudes' sheet doesn't store 'parent ID' in a dedicated column, 
-                                // IT USES COLUMN A (ID).
-                                // When we append a row for 'SEPARADO', do we use the SAME ID?
-                                // YES. separateRequest(payload) -> appends row with `idSolicitud` (the same ID).
-                                // So multiple rows share the same ID.
+            } else if (cat === 'separado' || cat === 'despachado') {
+                // Separated rows might not link to specific ID in some legacy cases, but assume they do or we grouped them.
+                // In our system 'separateRequest' links via ID.
+                // Wait, we need to know WHICH request ID this separation belongs to.
+                // The 'separateRequest' payload has 'idSolicitud'.
+                // The 'solicitudes' sheet doesn't store 'parent ID' in a dedicated column, 
+                // IT USES COLUMN A (ID).
+                // When we append a row for 'SEPARADO', do we use the SAME ID?
+                // YES. separateRequest(payload) -> appends row with `idSolicitud` (the same ID).
+                // So multiple rows share the same ID.
 
-                                if (!requestMap[r.idSolicitud]) requestMap[r.idSolicitud] = { id: r.idSolicitud, initial: 0, separated: 0, ts: 0 };
+                if (!requestMap[r.idSolicitud]) requestMap[r.idSolicitud] = { id: r.idSolicitud, initial: 0, separated: 0, ts: 0 };
 
-                                if (cat === 'separado' || cat === 'despachado') {
-                                    requestMap[r.idSolicitud].separated += qty;
-                                }
-                            }
-                        });
-
-                        // Current Pending Queue
-                        const queue = Object.values(requestMap)
-                            .filter(item => (item.initial - item.separated) > 0.001) // Tolerance
-                            .sort((a, b) => a.ts - b.ts); // FIFO
-
-                        // Check if we have enough
-                        const totalAvailable = queue.reduce((sum, item) => sum + (item.initial - item.separated), 0);
-
-                        if (newQty > totalAvailable + 0.001) {
-                            alert(`Cantidad excede lo pendiente (${totalAvailable.toFixed(2)})`);
-                            return;
-                        }
-
-                        // ALLOCATE
-                        const batchPayload = [];
-                        let remainingToSep = newQty;
-
-                        for (const item of queue) {
-                            if (remainingToSep <= 0) break;
-
-                            const available = item.initial - item.separated;
-                            const take = Math.min(available, remainingToSep);
-
-                            batchPayload.push({
-                                idSolicitud: item.id,
-                                qtyToSeparate: take
-                            });
-
-                            remainingToSep -= take;
-                        }
-
-                        if (batchPayload.length === 0) {
-                            alert("No se pudo asignar cantidad a ninguna solicitud.");
-                            return;
-                        }
-
-
-                        // --- ANIMATION & OPTIMISTIC UPDATE ---
-                        const card = btnElement.closest('.request-card');
-
-                        // Optimistic: We create ONE "Temp Separated" item that represents this batch.
-                        // To simplify, we just treat it as a new 'separado' record.
-                        // But what ID? We can give it a temp ID. 
-                        // The aggregator sums 'separado'. So it will just add to the total.
-                        // It will be effective immediately.
-
-                        // We piggybacking on one of the real requests to get metadata (desc, code, etc)
-                        const sourceRequest = this.data.requests.find(r => r.idSolicitud === batchPayload[0].idSolicitud);
-
-                        const tempId = 'temp-' + Date.now();
-                        const now = new Date();
-                        const day = String(now.getDate()).padStart(2, '0');
-                        const month = String(now.getMonth() + 1).padStart(2, '0');
-                        const year = now.getFullYear();
-                        const time = now.toTimeString().split(' ')[0]; // HH:mm:ss
-                        const formattedDate = `${day}/${month}/${year} ${time}`;
-
-                        const mockSeparated = {
-                            ...sourceRequest,
-                            idSolicitud: tempId, // unique temp
-                            categoria: 'separado',
-                            cantidad: newQty, // Full amount
-                            fecha: formattedDate,
-                            _isBatchMock: true // Marker
-                        };
-
-                        // VISUALS
-                        if (card) {
-                            const rect = card.getBoundingClientRect();
-                            const clone = card.cloneNode(true);
-                            clone.style.position = 'fixed';
-                            clone.style.top = rect.top + 'px';
-                            clone.style.left = rect.left + 'px';
-                            clone.style.width = rect.width + 'px';
-                            clone.style.height = rect.height + 'px';
-                            clone.style.zIndex = '9999';
-                            clone.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-                            clone.style.opacity = '1';
-                            clone.style.pointerEvents = 'none';
-                            clone.removeAttribute('id');
-                            clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
-
-                            document.body.appendChild(clone);
-                            card.style.visibility = 'hidden';
-                            btnElement.innerHTML = '<i class="fa-solid fa-check"></i>';
-                            btnElement.disabled = true;
-
-                            const targetCol = document.querySelector('.column-separated');
-                            if (targetCol) {
-                                const targetRect = targetCol.getBoundingClientRect();
-                                requestAnimationFrame(() => {
-                                    clone.style.top = (targetRect.top + 50) + 'px';
-                                    clone.style.left = (targetRect.left + 50) + 'px';
-                                    clone.style.transform = 'scale(0.2)';
-                                    clone.style.opacity = '0.5';
-                                });
-                            }
-
-                            setTimeout(() => { clone.remove(); }, 400);
-                        }
-
-                        // DATA UPDATE
-                        this.data.requests.push(mockSeparated);
-                        if (this.resetAutoRefresh) this.resetAutoRefresh();
-
-                        // RE-RENDER
-                        setTimeout(() => {
-                            const activeBtn = document.querySelector('.client-buttons-group .btn-zone.active');
-                            if (activeBtn) {
-                                const zone = activeBtn.dataset.client;
-                                const zoneContainer = document.getElementById('zone-content');
-                                if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
-                            }
-                        }, 400);
-
-
-                        // SERVER SYNC
-                        fetch(API_URL, {
-                            method: 'POST',
-                            redirect: 'follow',
-                            headers: { "Content-Type": "text/plain;charset=utf-8" },
-                            body: JSON.stringify({
-                                action: 'separateRequestBatch',
-                                payload: { queue: batchPayload }
-                            })
-                        })
-                            .then(response => response.json())
-                            .then(result => {
-                                if (result.status === 'success') {
-                                    console.log('Batch separation success', result);
-                                    // We don't need to swap IDs specifically because this was a batch.
-                                    // The server created multiple rows.
-                                    // On next refresh, we will get the real rows.
-                                    // The Temp item is fine to stay until refresh.
-                                } else {
-                                    throw new Error(result.message || 'Error en batch');
-                                }
-                            })
-                            .catch(err => {
-                                console.error("Batch Sep Failed", err);
-                                alert("Error guardando separación: " + err.message);
-                                // Rollback
-                                const index = this.data.requests.findIndex(r => r.idSolicitud === tempId);
-                                if (index > -1) this.data.requests.splice(index, 1);
-
-                                // Re-render
-                                const activeBtn = document.querySelector('.client-buttons-group .btn-zone.active');
-                                if (activeBtn) {
-                                    const zone = activeBtn.dataset.client;
-                                    const zoneContainer = document.getElementById('zone-content');
-                                    if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
-                                }
-                            });
-
-                    }
+                if (cat === 'separado' || cat === 'despachado') {
+                    requestMap[r.idSolicitud].separated += qty;
                 }
+            }
+        });
+
+        // Current Pending Queue
+        const queue = Object.values(requestMap)
+            .filter(item => (item.initial - item.separated) > 0.001) // Tolerance
+            .sort((a, b) => a.ts - b.ts); // FIFO
+
+        // Check if we have enough
+        const totalAvailable = queue.reduce((sum, item) => sum + (item.initial - item.separated), 0);
+
+        if (newQty > totalAvailable + 0.001) {
+            alert(`Cantidad excede lo pendiente (${totalAvailable.toFixed(2)})`);
+            return;
+        }
+
+        // ALLOCATE
+        const batchPayload = [];
+        let remainingToSep = newQty;
+
+        for (const item of queue) {
+            if (remainingToSep <= 0) break;
+
+            const available = item.initial - item.separated;
+            const take = Math.min(available, remainingToSep);
+
+            batchPayload.push({
+                idSolicitud: item.id,
+                qtyToSeparate: take
+            });
+
+            remainingToSep -= take;
+        }
+
+        if (batchPayload.length === 0) {
+            alert("No se pudo asignar cantidad a ninguna solicitud.");
+            return;
+        }
+
+
+        // --- ANIMATION & OPTIMISTIC UPDATE ---
+        const card = btnElement.closest('.request-card');
+
+        // Optimistic: We create ONE "Temp Separated" item that represents this batch.
+        // To simplify, we just treat it as a new 'separado' record.
+        // But what ID? We can give it a temp ID. 
+        // The aggregator sums 'separado'. So it will just add to the total.
+        // It will be effective immediately.
+
+        // We piggybacking on one of the real requests to get metadata (desc, code, etc)
+        const sourceRequest = this.data.requests.find(r => r.idSolicitud === batchPayload[0].idSolicitud);
+
+        const tempId = 'temp-' + Date.now();
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        const time = now.toTimeString().split(' ')[0]; // HH:mm:ss
+        const formattedDate = `${day}/${month}/${year} ${time}`;
+
+        const mockSeparated = {
+            ...sourceRequest,
+            idSolicitud: tempId, // unique temp
+            categoria: 'separado',
+            cantidad: newQty, // Full amount
+            fecha: formattedDate,
+            _isBatchMock: true // Marker
+        };
+
+        // VISUALS
+        if (card) {
+            const rect = card.getBoundingClientRect();
+            const clone = card.cloneNode(true);
+            clone.style.position = 'fixed';
+            clone.style.top = rect.top + 'px';
+            clone.style.left = rect.left + 'px';
+            clone.style.width = rect.width + 'px';
+            clone.style.height = rect.height + 'px';
+            clone.style.zIndex = '9999';
+            clone.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            clone.style.opacity = '1';
+            clone.style.pointerEvents = 'none';
+            clone.removeAttribute('id');
+            clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+
+            document.body.appendChild(clone);
+            card.style.visibility = 'hidden';
+            btnElement.innerHTML = '<i class="fa-solid fa-check"></i>';
+            btnElement.disabled = true;
+
+            const targetCol = document.querySelector('.column-separated');
+            if (targetCol) {
+                const targetRect = targetCol.getBoundingClientRect();
+                requestAnimationFrame(() => {
+                    clone.style.top = (targetRect.top + 50) + 'px';
+                    clone.style.left = (targetRect.left + 50) + 'px';
+                    clone.style.transform = 'scale(0.2)';
+                    clone.style.opacity = '0.5';
+                });
+            }
+
+            setTimeout(() => { clone.remove(); }, 400);
+        }
+
+        // DATA UPDATE
+        this.data.requests.push(mockSeparated);
+        if (this.resetAutoRefresh) this.resetAutoRefresh();
+
+        // RE-RENDER
+        setTimeout(() => {
+            const activeBtn = document.querySelector('.client-buttons-group .btn-zone.active');
+            if (activeBtn) {
+                const zone = activeBtn.dataset.client;
+                const zoneContainer = document.getElementById('zone-content');
+                if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
+            }
+        }, 400);
+
+
+        // SERVER SYNC
+        fetch(API_URL, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({
+                action: 'separateRequestBatch',
+                payload: { queue: batchPayload }
+            })
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.status === 'success') {
+                    console.log('Batch separation success', result);
+                    // We don't need to swap IDs specifically because this was a batch.
+                    // The server created multiple rows.
+                    // On next refresh, we will get the real rows.
+                    // The Temp item is fine to stay until refresh.
+                } else {
+                    throw new Error(result.message || 'Error en batch');
+                }
+            })
+            .catch(err => {
+                console.error("Batch Sep Failed", err);
+                alert("Error guardando separación: " + err.message);
+                // Rollback
+                const index = this.data.requests.findIndex(r => r.idSolicitud === tempId);
+                if (index > -1) this.data.requests.splice(index, 1);
+
+                // Re-render
+                const activeBtn = document.querySelector('.client-buttons-group .btn-zone.active');
+                if (activeBtn) {
+                    const zone = activeBtn.dataset.client;
+                    const zoneContainer = document.getElementById('zone-content');
+                    if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
+                }
+            });
+
+    }
+}
 
     async dispatchAll(zone) {
-                    if (!confirm('¿Despachar todos los ítems separados?')) return;
+    if (!confirm('¿Despachar todos los ítems separados?')) return;
 
-                    if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
-                    const toDispatch = this.data.requests
-                        .filter(r => r.usuario === zone && r.categoria === 'separado')
-                        .map(r => ({ idSolicitud: r.idSolicitud, categoria: 'despachado' }));
+    const toDispatch = this.data.requests
+        .filter(r => r.usuario === zone && r.categoria === 'separado')
+        .map(r => ({ idSolicitud: r.idSolicitud, categoria: 'despachado' }));
 
-                    if (toDispatch.length === 0) {
-                        alert('No hay ítems para despachar');
-                        if (btn) btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Despachar Todo';
-                        return;
-                    }
+    if (toDispatch.length === 0) {
+        alert('No hay ítems para despachar');
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Despachar Todo';
+        return;
+    }
 
-                    try {
-                        await fetch(API_URL, {
-                            method: 'POST',
-                            redirect: 'follow',
-                            headers: { "Content-Type": "text/plain;charset=utf-8" },
-                            body: JSON.stringify({ action: 'updateRequests', payload: toDispatch })
-                        });
+    try {
+        await fetch(API_URL, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: 'updateRequests', payload: toDispatch })
+        });
 
-                        await this.fetchRequests();
+        await this.fetchRequests();
 
-                        // Refresh View
-                        const zoneContainer = document.getElementById('zone-content');
-                        if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
+        // Refresh View
+        const zoneContainer = document.getElementById('zone-content');
+        if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
 
-                        alert('Despacho realizado con éxito');
+        alert('Despacho realizado con éxito');
 
-                    } catch (e) {
-                        console.error(e);
-                        alert('Error al despachar: ' + e.message);
-                        if (btn) btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Despachar Todo';
-                    }
-                }
+    } catch (e) {
+        console.error(e);
+        alert('Error al despachar: ' + e.message);
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Despachar Todo';
+    }
+}
 
-                /**
-                 * MODAL & FORMS
-                 */
-                openNewRequestModal() {
-                    const modalHtml = `
+/**
+ * MODAL & FORMS
+ */
+openNewRequestModal() {
+    const modalHtml = `
                     <div class="modal-card">
                 <div class="modal-header">
                     <h3>Nueva Solicitud</h3>
@@ -5924,256 +5921,237 @@ class App {
             </div>
                     `;
 
-                    this.openModal(modalHtml);
+    this.openModal(modalHtml);
 
-                    // Bind Form Submit
-                    document.getElementById('new-request-form').addEventListener('submit', (e) => {
-                        e.preventDefault();
-                        this.handleSaveRequest();
-                    });
+    // Bind Form Submit
+    document.getElementById('new-request-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.handleSaveRequest();
+    });
 
-                    // Scanner Logic (Enter triggers lookup)
-                    const codeInput = document.getElementById('req-code');
-                    const qtyInput = document.getElementById('req-qty');
-                    const preview = document.getElementById('product-preview');
+    // Scanner Logic (Enter triggers lookup)
+    const codeInput = document.getElementById('req-code');
+    const qtyInput = document.getElementById('req-qty');
+    const preview = document.getElementById('product-preview');
 
-                    codeInput.focus(); // Auto-focus on open
+    codeInput.focus(); // Auto-focus on open
 
-                    codeInput.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault(); // Prevent form submit
-                            const code = codeInput.value.trim();
-                            const desc = this.getProductDescription(code);
+    codeInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault(); // Prevent form submit
+            const code = codeInput.value.trim();
+            const desc = this.getProductDescription(code);
 
-                            if (desc !== 'Producto Desconocido') {
-                                preview.textContent = `✅ ${desc} `;
-                                preview.style.color = 'var(--primary-color)';
-                                qtyInput.focus();
-                            } else {
-                                preview.textContent = '❌ Producto no encontrado';
-                                preview.style.color = 'red';
-                            }
-                        }
-                    });
+            if (desc !== 'Producto Desconocido') {
+                preview.textContent = `✅ ${desc} `;
+                preview.style.color = 'var(--primary-color)';
+                qtyInput.focus();
+            } else {
+                preview.textContent = '❌ Producto no encontrado';
+                preview.style.color = 'red';
+            }
+        }
+    });
 
-                    // Also lookup on blur
-                    codeInput.addEventListener('blur', () => {
-                        const code = codeInput.value.trim();
-                        if (code) {
-                            const desc = this.getProductDescription(code);
-                            if (desc !== 'Producto Desconocido') {
-                                preview.textContent = `✅ ${desc} `;
-                                preview.style.color = 'var(--primary-color)';
-                            }
-                        }
-                    });
-                }
+    // Also lookup on blur
+    codeInput.addEventListener('blur', () => {
+        const code = codeInput.value.trim();
+        if (code) {
+            const desc = this.getProductDescription(code);
+            if (desc !== 'Producto Desconocido') {
+                preview.textContent = `✅ ${desc} `;
+                preview.style.color = 'var(--primary-color)';
+            }
+        }
+    });
+}
 
     async handleSaveRequest() {
-                    const code = document.getElementById('req-code').value;
-                    const qty = document.getElementById('req-qty').value;
-                    const btn = document.querySelector('#new-request-form button[type="submit"]');
+    const code = document.getElementById('req-code').value;
+    const qty = document.getElementById('req-qty').value;
+    const btn = document.querySelector('#new-request-form button[type="submit"]');
 
-                    btn.innerHTML = 'Guardando...';
-                    btn.disabled = true;
+    btn.innerHTML = 'Guardando...';
+    btn.disabled = true;
 
-                    try {
-                        const response = await fetch(API_URL, {
-                            method: 'POST',
-                            redirect: 'follow',
-                            headers: { "Content-Type": "text/plain;charset=utf-8" },
-                            body: JSON.stringify({
-                                action: 'saveRequest',
-                                payload: {
-                                    codigo: code,
-                                    cantidad: qty,
-                                    usuario: this.currentUser.username
-                                }
-                            })
-                        });
-
-                        const result = await response.json();
-
-                        if (result.status === 'success') {
-                            this.closeModal();
-                            alert('Solicitud guardada con éxito');
-                            this.renderDispatchRequests(document.getElementById('dispatch-content')); // Refresh
-                        } else {
-                            alert('Error: ' + result.message);
-                            btn.disabled = false;
-                            btn.innerHTML = 'Guardar Solicitud';
-                        }
-                    } catch (e) {
-                        console.error(e);
-                        alert('Error de conexión');
-                        btn.disabled = false;
-                        btn.innerHTML = 'Guardar Solicitud';
-                    }
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({
+                action: 'saveRequest',
+                payload: {
+                    codigo: code,
+                    cantidad: qty,
+                    usuario: this.currentUser.username
                 }
+            })
+        });
 
-                openModal(htmlContent) {
-                    this.modalContainer.innerHTML = htmlContent;
-                    this.modalContainer.classList.add('active');
-                }
+        const result = await response.json();
 
-                closeModal() {
-                    this.modalContainer.classList.remove('active');
-                    this.modalContainer.innerHTML = '';
-                }
+        if (result.status === 'success') {
+            this.closeModal();
+            alert('Solicitud guardada con éxito');
+            this.renderDispatchRequests(document.getElementById('dispatch-content')); // Refresh
+        } else {
+            alert('Error: ' + result.message);
+            btn.disabled = false;
+            btn.innerHTML = 'Guardar Solicitud';
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Error de conexión');
+        btn.disabled = false;
+        btn.innerHTML = 'Guardar Solicitud';
+    }
+}
+
+openModal(htmlContent) {
+    this.modalContainer.innerHTML = htmlContent;
+    this.modalContainer.classList.add('active');
+}
+
+closeModal() {
+    this.modalContainer.classList.remove('active');
+    this.modalContainer.innerHTML = '';
+}
 
     // --- PREPEDIDOS LOGIC ---
     async loadPrepedidos() {
-                    // Change Header Title to 'Prepedidos'
-                    const titleEl = document.getElementById('page-title');
-                    if (titleEl) titleEl.textContent = 'Prepedidos';
+    // Change Header Title to 'Prepedidos'
+    const titleEl = document.getElementById('page-title');
+    if (titleEl) titleEl.textContent = 'Prepedidos';
 
-                    const container = document.getElementById('prepedidos-container');
+    const container = document.getElementById('prepedidos-container');
 
-                    // 1. Mostrar caché si existe (Instantáneo)
-                    if (this.providersData) {
-                        this.renderProviders(this.providersData);
-                    } else {
-                        // Solo mostrar spinner si no hay datos previos
-                        container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 3rem; color:#666;"><i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><p style="margin-top:1rem;">Cargando lista de proveedores...</p></div>';
-                    }
+    // 1. Mostrar caché si existe (Instantáneo)
+    if (this.providersData) {
+        this.renderProviders(this.providersData);
+    } else {
+        // Solo mostrar spinner si no hay datos previos
+        container.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding: 3rem; color:#666;"><i class="fa-solid fa-circle-notch fa-spin fa-2x"></i><p style="margin-top:1rem;">Cargando lista de proveedores...</p></div>';
+    }
 
-                    // 2. Fetch actualizado siempre (Background refresh)
-                    await this.fetchProvidersBackground();
+    // 2. Fetch actualizado siempre (Background refresh)
+    await this.fetchProvidersBackground();
 
-                    // 3. Iniciar Auto-Refresh si no está activo
-                    if (!this.providerRefreshInterval) {
-                        this.startProviderAutoRefresh();
-                    }
-                }
+    // 3. Iniciar Auto-Refresh si no está activo
+    if (!this.providerRefreshInterval) {
+        this.startProviderAutoRefresh();
+    }
+}
 
-                startProviderAutoRefresh() {
-                    // Evitar múltiples intervalos
-                    if (this.providerRefreshInterval) clearInterval(this.providerRefreshInterval);
+startProviderAutoRefresh() {
+    // Evitar múltiples intervalos
+    if (this.providerRefreshInterval) clearInterval(this.providerRefreshInterval);
 
-                    console.log("Iniciando auto-refresh de proveedores (60s)...");
-                    this.providerRefreshInterval = setInterval(() => {
-                        // Solo refrescar si la pestaña está activa (opcional, pero buena práctica)
-                        // O simplemente verificar si estamos en la vista de prepedidos (si tu app es SPA real)
-                        // Aquí asumimos siempre refrescar.
-                        this.fetchProvidersBackground();
-                    }, 60000); // 60 segundos
-                }
+    console.log("Iniciando auto-refresh de proveedores (60s)...");
+    this.providerRefreshInterval = setInterval(() => {
+        // Solo refrescar si la pestaña está activa (opcional, pero buena práctica)
+        // O simplemente verificar si estamos en la vista de prepedidos (si tu app es SPA real)
+        // Aquí asumimos siempre refrescar.
+        this.fetchProvidersBackground();
+    }, 60000); // 60 segundos
+}
 
     async fetchProvidersBackground() {
-                    try {
-                        const response = await fetch(API_URL, {
-                            method: 'POST',
-                            redirect: 'follow',
-                            headers: { "Content-Type": "text/plain;charset=utf-8" },
-                            body: JSON.stringify({ action: 'getProviders' })
-                        });
-                        const result = await response.json();
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: 'getProviders' })
+        });
+        const result = await response.json();
 
-                        if (result.status === 'success') {
-                            this.providersData = result.data; // Guardar en caché
+        if (result.status === 'success') {
+            this.providersData = result.data; // Guardar en caché
 
-                            // Si estamos viendo la pantalla de prepedidos, actualizar UI silenciosamente
-                            // (Verificamos si existe el contenedor en el DOM)
-                            const container = document.getElementById('prepedidos-container');
-                            if (container) {
-                                this.renderProviders(this.providersData);
-                            }
-                        } else {
-                            console.error("Error refresh providers:", result.message);
-                        }
-                    } catch (e) {
-                        console.error("Error background fetch:", e);
-                    }
-                }
+            // Si estamos viendo la pantalla de prepedidos, actualizar UI silenciosamente
+            // (Verificamos si existe el contenedor en el DOM)
+            const container = document.getElementById('prepedidos-container');
+            if (container) {
+                this.renderProviders(this.providersData);
+            }
+        } else {
+            console.error("Error refresh providers:", result.message);
+        }
+    } catch (e) {
+        console.error("Error background fetch:", e);
+    }
+}
 
-                renderProviders(providers) {
-                    // 1. Setup Container and Search Bar
-                    const mainContainer = document.getElementById('prepedidos-container'); // This is the GRID container
-                    if (!mainContainer) return;
+renderProviders(providers) {
+    // 1. Setup Container and Search Bar
+    const mainContainer = document.getElementById('prepedidos-container'); // This is the GRID container
+    if (!mainContainer) return;
 
-                    // Verify if we have our Search Wrapper. If not, create it.
-                    // We need to insert the Search Bar BEFOFE the grid. 
-                    // Ideally, 'prepedidos-container' should be wrapped or we insert before it. 
-                    // Let's assume 'prepedidos-container' is the grid itself. We need to inject controls above it.
+    // Verify if we have our Search Wrapper. If not, create it.
+    // We need to insert the Search Bar BEFOFE the grid. 
+    // Ideally, 'prepedidos-container' should be wrapped or we insert before it. 
+    // Let's assume 'prepedidos-container' is the grid itself. We need to inject controls above it.
 
-                    // 1. Setup SEARCH BAR in HEADER (Moved from body)
-                    const headerActions = document.getElementById('header-dynamic-actions');
-                    if (headerActions) {
-                        // Only inject if not already there (check by ID)
-                        if (!document.getElementById('provider-search-input')) {
-                            headerActions.innerHTML = `
+    // 1. Setup SEARCH BAR in HEADER (Moved from body)
+    const headerActions = document.getElementById('header-dynamic-actions');
+    if (headerActions) {
+        // Only inject if not already there (check by ID)
+        if (!document.getElementById('provider-search-input')) {
+            headerActions.innerHTML = `
                     <div class="search-bar-header">
                         <i class="fa-solid fa-search search-icon"></i>
                         <input type="text" id="provider-search-input" placeholder="Buscar proveedor...">
                     </div>
                 `;
-                            // Add Event Listener
-                            document.getElementById('provider-search-input').addEventListener('input', (e) => {
-                                this.filterProviders(e.target.value);
-                            });
-                        }
-                    }
+            // Add Event Listener
+            document.getElementById('provider-search-input').addEventListener('input', (e) => {
+                this.filterProviders(e.target.value);
+            });
+        }
+    }
 
-                    // Remove old controls if they exist in body (cleanup)
-                    const oldControls = document.getElementById('provider-controls-wrapper');
-                    if (oldControls) oldControls.remove();
+    // Remove old controls if they exist in body (cleanup)
+    const oldControls = document.getElementById('provider-controls-wrapper');
+    if (oldControls) oldControls.remove();
 
-                    /* REMOVED
-                    let controlsContainer = document.getElementById('provider-controls-wrapper');
-                    if (!controlsContainer) {
-                        controlsContainer = document.createElement('div');
-                        controlsContainer.id = 'provider-controls-wrapper';
-                        controlsContainer.className = 'provider-controls';
-                        controlsContainer.innerHTML = `
-                            <div class="provider-search-container">
-                                <i class="fa-solid fa-search search-icon"></i>
-                                <input type="text" id="provider-search-input" class="provider-search-input" placeholder="Buscar proveedor...">
-                            </div>
-                        `;
-                        // Insert before the grid
-                        mainContainer.parentNode.insertBefore(controlsContainer, mainContainer);
-                 
-                        // Add Event Listener
-                        document.getElementById('provider-search-input').addEventListener('input', (e) => {
-                            this.filterProviders(e.target.value);
-                        });
-                    } */
 
-                    // Ensure Grid Layout
-                    mainContainer.style.display = 'grid';
-                    mainContainer.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
-                    mainContainer.style.gap = '20px';
 
-                    const daysMap = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
-                    const todayName = daysMap[new Date().getDay()];
+    // Ensure Grid Layout
+    mainContainer.style.display = 'grid';
+    mainContainer.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
+    mainContainer.style.gap = '20px';
 
-                    // 2. SORTING: Today's Orders First
-                    // Clone array to avoid mutating original cache
-                    const sortedProviders = [...providers].sort((a, b) => {
-                        const aDay = a.diaPedido ? a.diaPedido.toUpperCase().trim() : '';
-                        const bDay = b.diaPedido ? b.diaPedido.toUpperCase().trim() : '';
+    const daysMap = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+    const todayName = daysMap[new Date().getDay()];
 
-                        const aIsToday = (aDay === todayName);
-                        const bIsToday = (bDay === todayName);
+    // 2. SORTING: Today's Orders First
+    // Clone array to avoid mutating original cache
+    const sortedProviders = [...providers].sort((a, b) => {
+        const aDay = a.diaPedido ? a.diaPedido.toUpperCase().trim() : '';
+        const bDay = b.diaPedido ? b.diaPedido.toUpperCase().trim() : '';
 
-                        if (aIsToday && !bIsToday) return -1;
-                        if (!aIsToday && bIsToday) return 1;
-                        return a.nombre.localeCompare(b.nombre);
-                    });
+        const aIsToday = (aDay === todayName);
+        const bIsToday = (bDay === todayName);
 
-                    // 3. RENDER
-                    mainContainer.innerHTML = sortedProviders.map(p => {
-                        const imgUrl = (p.imagen && p.imagen.trim() !== '') ? p.imagen : 'recursos/supplierDefault.png';
-                        const diaPedido = p.diaPedido ? p.diaPedido.toUpperCase() : '-';
-                        const diaEntrega = p.diaEntrega ? p.diaEntrega.toUpperCase() : '-';
+        if (aIsToday && !bIsToday) return -1;
+        if (!aIsToday && bIsToday) return 1;
+        return a.nombre.localeCompare(b.nombre);
+    });
 
-                        const isToday = (diaPedido === todayName);
+    // 3. RENDER
+    mainContainer.innerHTML = sortedProviders.map(p => {
+        const imgUrl = (p.imagen && p.imagen.trim() !== '') ? p.imagen : 'recursos/supplierDefault.png';
+        const diaPedido = p.diaPedido ? p.diaPedido.toUpperCase() : '-';
+        const diaEntrega = p.diaEntrega ? p.diaEntrega.toUpperCase() : '-';
 
-                        const orderClass = isToday ? 'pill-today-order' : 'pill-default';
-                        const deliveryClass = (diaEntrega === todayName) ? 'pill-today-delivery' : 'pill-default';
-                        const cardClass = isToday ? 'provider-card provider-card-today' : 'provider-card';
+        const isToday = (diaPedido === todayName);
 
-                        return `
+        const orderClass = isToday ? 'pill-today-order' : 'pill-default';
+        const deliveryClass = (diaEntrega === todayName) ? 'pill-today-delivery' : 'pill-default';
+        const cardClass = isToday ? 'provider-card provider-card-today' : 'provider-card';
+
+        return `
         <div class="${cardClass}" data-name="${p.nombre.toLowerCase()}">
             ${isToday ? '<i class="fa-solid fa-thumbtack provider-clip-icon"></i>' : ''}
             <div class="provider-card-header">
@@ -6199,34 +6177,34 @@ class App {
                 </button>
             </div>
         </div>`;
-                    }).join('');
-                }
+    }).join('');
+}
 
-                // --- NEW: PROVIDER HISTORY MODAL ---
-                filterProviders(searchTerm) {
-                    const term = searchTerm.toLowerCase().trim();
-                    const cards = document.querySelectorAll('.provider-card');
+// --- NEW: PROVIDER HISTORY MODAL ---
+filterProviders(searchTerm) {
+    const term = searchTerm.toLowerCase().trim();
+    const cards = document.querySelectorAll('.provider-card');
 
-                    cards.forEach(card => {
-                        const name = card.getAttribute('data-name');
-                        if (name && name.includes(term)) {
-                            card.style.display = 'block';
-                        } else {
-                            card.style.display = 'none';
-                        }
-                    });
-                }
+    cards.forEach(card => {
+        const name = card.getAttribute('data-name');
+        if (name && name.includes(term)) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
 
     async openProviderOrderModal(providerName) {
-                    // Find provider data to get phone - Robust Lookup
-                    const providerData = this.providersData ? this.providersData.find(p => p.nombre.trim().toUpperCase() === providerName.trim().toUpperCase()) : null;
+    // Find provider data to get phone - Robust Lookup
+    const providerData = this.providersData ? this.providersData.find(p => p.nombre.trim().toUpperCase() === providerName.trim().toUpperCase()) : null;
 
-                    console.log(`[WhatsApp Debug] Lookup for "${providerName}":`, providerData ? `Found T: ${providerData.telefono}` : 'Not Found');
+    console.log(`[WhatsApp Debug] Lookup for "${providerName}":`, providerData ? `Found T: ${providerData.telefono}` : 'Not Found');
 
-                    const providerPhone = providerData ? providerData.telefono : '';
+    const providerPhone = providerData ? providerData.telefono : '';
 
-                    // 1. Show Loading Modal
-                    const loadingHtml = `
+    // 1. Show Loading Modal
+    const loadingHtml = `
             <div class="modal-card">
                 <div class="modal-header">
                     <h3>Historial: ${providerName}</h3>
@@ -6237,34 +6215,34 @@ class App {
                     <p style="margin-top:1rem;">Cargando historial de compras...</p>
                 </div>
             </div>`;
-                    this.openModal(loadingHtml);
+    this.openModal(loadingHtml);
 
-                    // 2. Fetch Data
-                    try {
-                        const response = await fetch(API_URL, {
-                            method: 'POST',
-                            redirect: 'follow',
-                            headers: { "Content-Type": "text/plain;charset=utf-8" },
-                            body: JSON.stringify({ action: 'getProviderPurchases', payload: { provider: providerName } })
-                        });
-                        const result = await response.json();
+    // 2. Fetch Data
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: 'getProviderPurchases', payload: { provider: providerName } })
+        });
+        const result = await response.json();
 
-                        if (result.status === 'success') {
-                            this.renderProviderHistoryTable(providerName, result.data, providerPhone);
-                        } else {
-                            alert('Error: ' + result.message);
-                            this.closeModal();
-                        }
-                    } catch (e) {
-                        console.error(e);
-                        alert('Error de conexión al obtener historial.');
-                        this.closeModal();
-                    }
-                }
+        if (result.status === 'success') {
+            this.renderProviderHistoryTable(providerName, result.data, providerPhone);
+        } else {
+            alert('Error: ' + result.message);
+            this.closeModal();
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Error de conexión al obtener historial.');
+        this.closeModal();
+    }
+}
 
-                renderProviderHistoryTable(providerName, products, providerPhone) {
-                    if (!products || products.length === 0) {
-                        const emptyHtml = `
+renderProviderHistoryTable(providerName, products, providerPhone) {
+    if (!products || products.length === 0) {
+        const emptyHtml = `
             <div class="modal-card">
                 <div class="modal-header">
                     <h3>Historial: ${providerName}</h3>
@@ -6277,155 +6255,155 @@ class App {
                     <button class="btn-secondary" onclick="app.closeModal()">Cerrar</button>
                 </div>
             </div>`;
-                        this.openModal(emptyHtml);
-                        return;
-                    }
+        this.openModal(emptyHtml);
+        return;
+    }
 
-                    // Sort by Name to ensure substitutes are adjacent (visually helpful)
-                    products.sort((a, b) => a.nombre.localeCompare(b.nombre));
+    // Sort by Name to ensure substitutes are adjacent (visually helpful)
+    products.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-                    // Helper to parse factor from name (e.g. "250GR" -> 0.25, "1KG" -> 1)
-                    const getApproxFactor = (name) => {
-                        const n = name.toUpperCase().replace(/\s/g, '');
-                        // regex for weights
-                        const matchKg = n.match(/(\d+(?:\.\d+)?)KG/);
-                        if (matchKg) return parseFloat(matchKg[1]);
+    // Helper to parse factor from name (e.g. "250GR" -> 0.25, "1KG" -> 1)
+    const getApproxFactor = (name) => {
+        const n = name.toUpperCase().replace(/\s/g, '');
+        // regex for weights
+        const matchKg = n.match(/(\d+(?:\.\d+)?)KG/);
+        if (matchKg) return parseFloat(matchKg[1]);
 
-                        const matchGr = n.match(/(\d+(?:\.\d+)?)GR/);
-                        if (matchGr) return parseFloat(matchGr[1]) / 1000;
+        const matchGr = n.match(/(\d+(?:\.\d+)?)GR/);
+        if (matchGr) return parseFloat(matchGr[1]) / 1000;
 
-                        const matchG = n.match(/(\d+(?:\.\d+)?)G\b/); // 'G' word boundary
-                        if (matchG) return parseFloat(matchG[1]) / 1000;
+        const matchG = n.match(/(\d+(?:\.\d+)?)G\b/); // 'G' word boundary
+        if (matchG) return parseFloat(matchG[1]) / 1000;
 
-                        const matchL = n.match(/(\d+(?:\.\d+)?)L\b/);
-                        if (matchL) return parseFloat(matchL[1]);
+        const matchL = n.match(/(\d+(?:\.\d+)?)L\b/);
+        if (matchL) return parseFloat(matchL[1]);
 
-                        const matchMl = n.match(/(\d+(?:\.\d+)?)ML/);
-                        if (matchMl) return parseFloat(matchMl[1]) / 1000;
+        const matchMl = n.match(/(\d+(?:\.\d+)?)ML/);
+        if (matchMl) return parseFloat(matchMl[1]) / 1000;
 
-                        return 1; // Default
-                    };
+        return 1; // Default
+    };
 
-                    // 1. Group Substitutes (Same Name, Not Derived)
-                    const subGroups = {};
-                    products.forEach(p => {
-                        if (p.isDerived) return;
-                        const name = p.nombre.trim().toLowerCase();
-                        if (!subGroups[name]) subGroups[name] = [];
-                        subGroups[name].push(p);
-                    });
+    // 1. Group Substitutes (Same Name, Not Derived)
+    const subGroups = {};
+    products.forEach(p => {
+        if (p.isDerived) return;
+        const name = p.nombre.trim().toLowerCase();
+        if (!subGroups[name]) subGroups[name] = [];
+        subGroups[name].push(p);
+    });
 
-                    // 2. Aggregate Stock for Substitutes
-                    Object.values(subGroups).forEach(group => {
-                        if (group.length > 0) {
-                            const master = group[0];
-                            master.isSubstituteLeader = true;
-                            master._aggregatedStock = group.reduce((sum, item) => sum + (parseFloat(item.stock) || 0), 0);
+    // 2. Aggregate Stock for Substitutes
+    Object.values(subGroups).forEach(group => {
+        if (group.length > 0) {
+            const master = group[0];
+            master.isSubstituteLeader = true;
+            master._aggregatedStock = group.reduce((sum, item) => sum + (parseFloat(item.stock) || 0), 0);
 
-                            for (let i = 1; i < group.length; i++) {
-                                group[i].isSubstituteSlave = true;
-                            }
-                        }
-                    });
+            for (let i = 1; i < group.length; i++) {
+                group[i].isSubstituteSlave = true;
+            }
+        }
+    });
 
-                    // 3. Link Derived Products & Sum Demand
-                    const origins = products.filter(p => !p.isDerived && p.isSubstituteLeader);
-                    const derived = products.filter(p => p.isDerived);
+    // 3. Link Derived Products & Sum Demand
+    const origins = products.filter(p => !p.isDerived && p.isSubstituteLeader);
+    const derived = products.filter(p => p.isDerived);
 
-                    derived.forEach(child => {
-                        const childNameClean = child.nombre.toUpperCase();
-                        let bestMatch = null;
-                        let maxScore = 0;
+    derived.forEach(child => {
+        const childNameClean = child.nombre.toUpperCase();
+        let bestMatch = null;
+        let maxScore = 0;
 
-                        origins.forEach(origin => {
-                            // Remove generic words to find "Root"
-                            const originName = origin.nombre.toUpperCase().replace(/\b(GRANEL|PREMIUM|SACO|BOLSA|CJA|EXO)\b/g, '').trim();
-                            const originWords = originName.split(/\s+/).filter(w => w.length > 2);
-                            let hitCount = 0;
+        origins.forEach(origin => {
+            // Remove generic words to find "Root"
+            const originName = origin.nombre.toUpperCase().replace(/\b(GRANEL|PREMIUM|SACO|BOLSA|CJA|EXO)\b/g, '').trim();
+            const originWords = originName.split(/\s+/).filter(w => w.length > 2);
+            let hitCount = 0;
 
-                            originWords.forEach(w => {
-                                if (childNameClean.includes(w)) hitCount++; // Simple word inclusion
-                            });
+            originWords.forEach(w => {
+                if (childNameClean.includes(w)) hitCount++; // Simple word inclusion
+            });
 
-                            // Threshold: at least 70% of words match
-                            if (hitCount > 0 && hitCount >= originWords.length * 0.7) {
-                                if (hitCount > maxScore) {
-                                    maxScore = hitCount;
-                                    bestMatch = origin;
-                                }
-                            }
-                        });
+            // Threshold: at least 70% of words match
+            if (hitCount > 0 && hitCount >= originWords.length * 0.7) {
+                if (hitCount > maxScore) {
+                    maxScore = hitCount;
+                    bestMatch = origin;
+                }
+            }
+        });
 
-                        if (bestMatch) {
-                            if (!bestMatch._childDemand) bestMatch._childDemand = 0;
+        if (bestMatch) {
+            if (!bestMatch._childDemand) bestMatch._childDemand = 0;
 
-                            // Child Basic Need = (Min - Stock)
-                            const childBasicNeed = Math.max(0, (parseFloat(child.min) || 0) - (parseFloat(child.stock) || 0));
+            // Child Basic Need = (Min - Stock)
+            const childBasicNeed = Math.max(0, (parseFloat(child.min) || 0) - (parseFloat(child.stock) || 0));
 
-                            // Apply Factor (Parsed from Name)
-                            const conversionFactor = getApproxFactor(child.nombre);
+            // Apply Factor (Parsed from Name)
+            const conversionFactor = getApproxFactor(child.nombre);
 
-                            // Add to Parent Demand in Parent Units
-                            bestMatch._childDemand += (childBasicNeed * conversionFactor);
-                        }
-                    });
+            // Add to Parent Demand in Parent Units
+            bestMatch._childDemand += (childBasicNeed * conversionFactor);
+        }
+    });
 
-                    // 4. Final Calculation per Row
-                    products.forEach(p => {
-                        const min = parseFloat(p.min) || 0;
-                        const stock = parseFloat(p.stock) || 0;
-                        const factor = parseFloat(p.factorCompras) || 1;
+    // 4. Final Calculation per Row
+    products.forEach(p => {
+        const min = parseFloat(p.min) || 0;
+        const stock = parseFloat(p.stock) || 0;
+        const factor = parseFloat(p.factorCompras) || 1;
 
-                        p._displayPedido = '';
-                        p._inputAttr = '';
-                        p._rowStyle = '';
+        p._displayPedido = '';
+        p._inputAttr = '';
+        p._rowStyle = '';
 
-                        if (p.isDerived) {
-                            p._inputAttr = 'disabled readonly';
-                            p._rowStyle = 'background:#f5f5f5; color:#aaa; border-color:#eee;';
-                        } else if (p.isSubstituteSlave) {
-                            p._inputAttr = 'disabled readonly';
-                            p._rowStyle = 'background:#f5f5f5; color:#aaa; border-color:#eee;';
-                        } else if (p.isSubstituteLeader) {
-                            const childDemand = p._childDemand || 0;
-                            const aggStock = p._aggregatedStock !== undefined ? p._aggregatedStock : stock;
+        if (p.isDerived) {
+            p._inputAttr = 'disabled readonly';
+            p._rowStyle = 'background:#f5f5f5; color:#aaa; border-color:#eee;';
+        } else if (p.isSubstituteSlave) {
+            p._inputAttr = 'disabled readonly';
+            p._rowStyle = 'background:#f5f5f5; color:#aaa; border-color:#eee;';
+        } else if (p.isSubstituteLeader) {
+            const childDemand = p._childDemand || 0;
+            const aggStock = p._aggregatedStock !== undefined ? p._aggregatedStock : stock;
 
-                            const numerator = (min + childDemand) - aggStock;
-                            const pedidoVal = Math.max(0, Math.ceil(numerator / factor));
+            const numerator = (min + childDemand) - aggStock;
+            const pedidoVal = Math.max(0, Math.ceil(numerator / factor));
 
-                            p._displayPedido = pedidoVal;
-                        }
-                    });
+            p._displayPedido = pedidoVal;
+        }
+    });
 
-                    const rows = products.map(p => {
-                        let rowClass = '';
-                        let codeColor = '#666';
-                        let icon = '';
+    const rows = products.map(p => {
+        let rowClass = '';
+        let codeColor = '#666';
+        let icon = '';
 
-                        // Restore definitions for use in template
-                        const min = parseFloat(p.min) || 0;
-                        const stock = parseFloat(p.stock) || 0;
+        // Restore definitions for use in template
+        const min = parseFloat(p.min) || 0;
+        const stock = parseFloat(p.stock) || 0;
 
-                        if (p.isRelated) {
-                            codeColor = '#d35400';
-                            icon = '<i class="fa-solid fa-link" title="Producto Relacionado/Sustituto" style="font-size:0.7rem; margin-left:4px;"></i>';
-                        } else if (p.isDerived) {
-                            codeColor = '#8e44ad';
-                            icon = '<i class="fa-solid fa-industry" title="Producto Derivado/Envasado" style="font-size:0.7rem; margin-left:4px;"></i>';
-                        }
+        if (p.isRelated) {
+            codeColor = '#d35400';
+            icon = '<i class="fa-solid fa-link" title="Producto Relacionado/Sustituto" style="font-size:0.7rem; margin-left:4px;"></i>';
+        } else if (p.isDerived) {
+            codeColor = '#8e44ad';
+            icon = '<i class="fa-solid fa-industry" title="Producto Derivado/Envasado" style="font-size:0.7rem; margin-left:4px;"></i>';
+        }
 
-                        // Logic for Highlight & Auto-Selection
-                        const pedidoVal = parseFloat(p._displayPedido);
-                        let isPositiveOrder = false;
-                        if (!isNaN(pedidoVal) && pedidoVal > 0) {
-                            isPositiveOrder = true;
-                            rowClass += ' row-neon-pulse'; // Custom class for animation
-                        }
+        // Logic for Highlight & Auto-Selection
+        const pedidoVal = parseFloat(p._displayPedido);
+        let isPositiveOrder = false;
+        if (!isNaN(pedidoVal) && pedidoVal > 0) {
+            isPositiveOrder = true;
+            rowClass += ' row-neon-pulse'; // Custom class for animation
+        }
 
-                        // Reduced width for input (approx half of 60px -> 35px)
-                        let pedidoStyle = `width:35px; text-align:center; padding:2px; border:1px solid #ccc; border-radius:4px; ${p._rowStyle || ''}`;
+        // Reduced width for input (approx half of 60px -> 35px)
+        let pedidoStyle = `width:35px; text-align:center; padding:2px; border:1px solid #ccc; border-radius:4px; ${p._rowStyle || ''}`;
 
-                        return `
+        return `
         <tr class="${rowClass}">
             <td style="text-align:center;">
                 <input type="checkbox" class="history-select-check" value="${p.codigo}" 
@@ -6452,7 +6430,7 @@ class App {
         </tr>
     `}).join('');
 
-                    const modalHtml = `
+    const modalHtml = `
         <style>
             @keyframes neonGreenPulse {
                 0% { background-color: rgba(57, 255, 20, 0.05); box-shadow: inset 0 0 2px rgba(57, 255, 20, 0.2); }
@@ -6509,100 +6487,100 @@ class App {
                 </div>
             </div>`;
 
-                    this.openModal(modalHtml);
+    this.openModal(modalHtml);
 
-                    // IMMEDIATE UPDATE to set counter based on auto-checked items
-                    this.updateHistoryCounter();
+    // IMMEDIATE UPDATE to set counter based on auto-checked items
+    this.updateHistoryCounter();
 
-                    // Bind Checkbox events for counter
-                    setTimeout(() => {
-                        const checks = document.querySelectorAll('.history-select-check:not([disabled])');
-                        checks.forEach(c => {
-                            c.addEventListener('change', () => this.updateHistoryCounter());
-                        });
-                    }, 100);
-                }
+    // Bind Checkbox events for counter
+    setTimeout(() => {
+        const checks = document.querySelectorAll('.history-select-check:not([disabled])');
+        checks.forEach(c => {
+            c.addEventListener('change', () => this.updateHistoryCounter());
+        });
+    }, 100);
+}
 
-                toggleHistoryAll(source) {
-                    document.querySelectorAll('.history-select-check').forEach(c => c.checked = source.checked);
-                    this.updateHistoryCounter();
-                }
+toggleHistoryAll(source) {
+    document.querySelectorAll('.history-select-check').forEach(c => c.checked = source.checked);
+    this.updateHistoryCounter();
+}
 
-                updateHistoryCounter() {
-                    const count = document.querySelectorAll('.history-select-check:checked').length;
-                    document.getElementById('history-selected-count').innerText = `${count} seleccionados`;
-                }
+updateHistoryCounter() {
+    const count = document.querySelectorAll('.history-select-check:checked').length;
+    document.getElementById('history-selected-count').innerText = `${count} seleccionados`;
+}
 
-                generatePrepedidoFromHistory() {
-                    const selected = [];
-                    document.querySelectorAll('.history-select-check:checked').forEach(c => {
-                        const qty = parseFloat(c.dataset.pedido);
-                        if (qty > 0) {
-                            selected.push({
-                                codigo: c.value,
-                                desc: c.dataset.desc,
-                                cantidad: qty,
-                                factor: c.dataset.factor
-                            });
-                        }
-                    });
+generatePrepedidoFromHistory() {
+    const selected = [];
+    document.querySelectorAll('.history-select-check:checked').forEach(c => {
+        const qty = parseFloat(c.dataset.pedido);
+        if (qty > 0) {
+            selected.push({
+                codigo: c.value,
+                desc: c.dataset.desc,
+                cantidad: qty,
+                factor: c.dataset.factor
+            });
+        }
+    });
 
-                    if (selected.length === 0) return alert('Seleccione al menos un producto con cantidad válida.');
+    if (selected.length === 0) return alert('Seleccione al menos un producto con cantidad válida.');
 
-                    // Close History Modal
-                    this.closeModal();
+    // Close History Modal
+    this.closeModal();
 
-                    // PRINT TICKET LOGIC (80mm)
-                    this.printPrepedidoTicket(selected);
-                }
+    // PRINT TICKET LOGIC (80mm)
+    this.printPrepedidoTicket(selected);
+}
 
-                sendPrepedidoWhatsApp(phone) {
-                    if (!phone) {
-                        return alert('Este proveedor no tiene registrado un número de teléfono para WhatsApp.');
-                    }
+sendPrepedidoWhatsApp(phone) {
+    if (!phone) {
+        return alert('Este proveedor no tiene registrado un número de teléfono para WhatsApp.');
+    }
 
-                    const selected = [];
-                    document.querySelectorAll('.history-select-check:checked').forEach(c => {
-                        const qty = parseFloat(c.dataset.pedido);
-                        if (qty > 0) {
-                            selected.push({
-                                desc: c.dataset.desc,
-                                cantidad: qty
-                            });
-                        }
-                    });
+    const selected = [];
+    document.querySelectorAll('.history-select-check:checked').forEach(c => {
+        const qty = parseFloat(c.dataset.pedido);
+        if (qty > 0) {
+            selected.push({
+                desc: c.dataset.desc,
+                cantidad: qty
+            });
+        }
+    });
 
-                    if (selected.length === 0) return alert('Seleccione al menos un producto con cantidad válida para enviar.');
+    if (selected.length === 0) return alert('Seleccione al menos un producto con cantidad válida para enviar.');
 
-                    // Time-based Greeting
-                    const hour = new Date().getHours();
-                    let greeting = 'Buenos días';
-                    if (hour >= 12 && hour < 19) greeting = 'Buenas tardes';
-                    else if (hour >= 19) greeting = 'Buenas noches';
+    // Time-based Greeting
+    const hour = new Date().getHours();
+    let greeting = 'Buenos días';
+    if (hour >= 12 && hour < 19) greeting = 'Buenas tardes';
+    else if (hour >= 19) greeting = 'Buenas noches';
 
-                    // Format Message
-                    let msg = `${greeting}, le envío esta lista para que me despache:\n\n`;
-                    selected.forEach(item => {
-                        msg += `${item.cantidad} - ${item.desc}\n`;
-                    });
-                    msg += `\nSoy de Inversiones MOS por favor me despacha.`;
+    // Format Message
+    let msg = `${greeting}, le envío esta lista para que me despache:\n\n`;
+    selected.forEach(item => {
+        msg += `${item.cantidad} - ${item.desc}\n`;
+    });
+    msg += `\nSoy de Inversiones MOS por favor me despacha.`;
 
-                    // Clean phone (remove spaces, etc) and append prefix
-                    const cleanPhone = phone.replace(/\D/g, '');
-                    // Assuming database numbers are local (9 Digits), add +51
-                    // If they already have 51, handle it? User said "add +51 and the number". 
-                    // Safer to just add 51 if length is 9.
-                    let finalPhone = cleanPhone;
-                    if (cleanPhone.length === 9) finalPhone = '51' + cleanPhone;
+    // Clean phone (remove spaces, etc) and append prefix
+    const cleanPhone = phone.replace(/\D/g, '');
+    // Assuming database numbers are local (9 Digits), add +51
+    // If they already have 51, handle it? User said "add +51 and the number". 
+    // Safer to just add 51 if length is 9.
+    let finalPhone = cleanPhone;
+    if (cleanPhone.length === 9) finalPhone = '51' + cleanPhone;
 
-                    const url = `https://wa.me/${finalPhone}?text=${encodeURIComponent(msg)}`;
-                    window.open(url, '_blank');
-                }
+    const url = `https://wa.me/${finalPhone}?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+}
 
-                printPrepedidoTicket(items) {
-                    const dateStr = new Date().toLocaleString();
+printPrepedidoTicket(items) {
+    const dateStr = new Date().toLocaleString();
 
-                    let rowsHtml = items.map(item => `
+    let rowsHtml = items.map(item => `
             <tr>
                 <td style="text-align:center; font-weight:bold; font-size:1.1rem;">${item.cantidad}</td>
                 <td style="padding-left:5px;">
@@ -6613,8 +6591,8 @@ class App {
             <tr style="height:5px;"></tr>
         `).join('');
 
-                    const printWindow = window.open('', '', 'width=400,height=600');
-                    printWindow.document.write(`
+    const printWindow = window.open('', '', 'width=400,height=600');
+    printWindow.document.write(`
             <html>
                 <head>
                     <title>Ticket Prepedido</title>
@@ -6668,43 +6646,43 @@ class App {
                 </body>
             </html>
         `);
-                    printWindow.document.close();
-                }
+    printWindow.document.close();
+}
 
-                filterPrepedidos(input) {
-                    const term = input.value.toLowerCase().trim();
-                    const container = document.getElementById('prepedidos-container');
-                    const cards = container.querySelectorAll('.provider-card');
+filterPrepedidos(input) {
+    const term = input.value.toLowerCase().trim();
+    const container = document.getElementById('prepedidos-container');
+    const cards = container.querySelectorAll('.provider-card');
 
-                    requestAnimationFrame(() => {
-                        cards.forEach(card => {
-                            // We search in the whole card text content (Name is in h3)
-                            const text = card.textContent.toLowerCase();
-                            if (!term || text.includes(term)) {
-                                card.style.display = 'flex';
-                            } else {
-                                card.style.display = 'none';
-                            }
-                        });
-                    });
-                }
+    requestAnimationFrame(() => {
+        cards.forEach(card => {
+            // We search in the whole card text content (Name is in h3)
+            const text = card.textContent.toLowerCase();
+            if (!term || text.includes(term)) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+}
 
     // --- ENVASADOR MODULE LOGIC ---
 
     async loadPackingModule() {
-                    // 1. Set Title
-                    const title = document.getElementById('page-title');
-                    if (title) title.innerText = 'Envasador';
+    // 1. Set Title
+    const title = document.getElementById('page-title');
+    if (title) title.innerText = 'Envasador';
 
-                    // 2. Inject Search Bar (Neon Style)
-                    const headerActions = document.getElementById('header-dynamic-actions');
-                    if (headerActions) {
-                        // Force flex layout for inline badge and search
-                        headerActions.style.display = 'flex';
-                        headerActions.style.alignItems = 'center';
-                        headerActions.style.gap = '1rem';
+    // 2. Inject Search Bar (Neon Style)
+    const headerActions = document.getElementById('header-dynamic-actions');
+    if (headerActions) {
+        // Force flex layout for inline badge and search
+        headerActions.style.display = 'flex';
+        headerActions.style.alignItems = 'center';
+        headerActions.style.gap = '1rem';
 
-                        headerActions.innerHTML = `
+        headerActions.innerHTML = `
                  <div class="search-neon-wrapper" style="position: relative; width: 300px;">
                     <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#999;"></i>
                     <input type="text" id="packing-search" 
@@ -6713,243 +6691,243 @@ class App {
                         onkeyup="app.filterPackingList(this.value)">
                 </div>
             `;
-                    }
+    }
 
-                    // 3. Initial Load
-                    // Start Auto-Refresh (60s) FIRST to ensure it's registered
-                    if (this.packingRefreshInterval) clearInterval(this.packingRefreshInterval);
-                    this.packingRefreshInterval = setInterval(() => {
-                        console.log('Auto-refreshing Packing List...');
-                        this.fetchPackingList(true);
-                    }, 60000);
+    // 3. Initial Load
+    // Start Auto-Refresh (60s) FIRST to ensure it's registered
+    if (this.packingRefreshInterval) clearInterval(this.packingRefreshInterval);
+    this.packingRefreshInterval = setInterval(() => {
+        console.log('Auto-refreshing Packing List...');
+        this.fetchPackingList(true);
+    }, 60000);
 
-                    // 4. Check & Fetch Master Products if Missing logic
-                    const container = document.getElementById('packing-list-container');
-                    if (!this.products || this.products.length === 0) {
-                        console.warn('LoadPackingModule: Master list empty. Fetching now...');
-                        if (container) container.innerHTML = '<div style="text-align:center; padding:2rem; color:#666;"><i class="fa-solid fa-sync fa-spin"></i> Sincronizando datos maestros...</div>';
-                        await this.fetchProducts();
-                    }
+    // 4. Check & Fetch Master Products if Missing logic
+    const container = document.getElementById('packing-list-container');
+    if (!this.products || this.products.length === 0) {
+        console.warn('LoadPackingModule: Master list empty. Fetching now...');
+        if (container) container.innerHTML = '<div style="text-align:center; padding:2rem; color:#666;"><i class="fa-solid fa-sync fa-spin"></i> Sincronizando datos maestros...</div>';
+        await this.fetchProducts();
+    }
 
-                    this.fetchPackingList();
-                }
+    this.fetchPackingList();
+}
 
     async fetchPackingList(forceRefresh = false) {
-                    const isBackground = forceRefresh; // If forcing refresh (e.g. preload), treat as background/silent or handle UI accordingly?
-                    // Actually, if forceRefresh is true, we want to fetch.
-                    // If false, check cache.
+    const isBackground = forceRefresh; // If forcing refresh (e.g. preload), treat as background/silent or handle UI accordingly?
+    // Actually, if forceRefresh is true, we want to fetch.
+    // If false, check cache.
 
-                    const container = document.getElementById('packing-list-container');
+    const container = document.getElementById('packing-list-container');
 
-                    // CACHE HIT
-                    if (!forceRefresh && this.packingList) {
-                        console.log('Using Cached Packing List');
-                        if (container && container.innerHTML.includes('loading')) container.innerHTML = '';
-                        this.renderPackingList(this.packingList);
-                        // Trigger history calc if needed (should be cached too)
-                        if (this.envasados) this.calculateDailyTotals();
-                        else this.fetchEnvasadosHistory();
-                        return;
-                    }
+    // CACHE HIT
+    if (!forceRefresh && this.packingList) {
+        console.log('Using Cached Packing List');
+        if (container && container.innerHTML.includes('loading')) container.innerHTML = '';
+        this.renderPackingList(this.packingList);
+        // Trigger history calc if needed (should be cached too)
+        if (this.envasados) this.calculateDailyTotals();
+        else this.fetchEnvasadosHistory();
+        return;
+    }
 
-                    if (!container && !isBackground) return;
+    if (!container && !isBackground) return;
 
-                    if (!isBackground && container) {
-                        container.innerHTML = '<div style="text-align:center; padding:2rem; color:#999;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando lista...</div>';
-                    }
+    if (!isBackground && container) {
+        container.innerHTML = '<div style="text-align:center; padding:2rem; color:#999;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando lista...</div>';
+    }
 
-                    try {
-                        const response = await fetch(API_URL, {
-                            method: 'POST',
-                            redirect: 'follow',
-                            headers: { "Content-Type": "text/plain;charset=utf-8" },
-                            body: JSON.stringify({ action: 'getPackingList' })
-                        });
-                        const result = await response.json();
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: 'getPackingList' })
+        });
+        const result = await response.json();
 
-                        if (result.status === 'success') {
-                            this.packingList = result.data; // Store in memory
+        if (result.status === 'success') {
+            this.packingList = result.data; // Store in memory
 
-                            // Fetch History to calculate totals (force if we just refreshed packing list?)
-                            await this.fetchEnvasadosHistory(forceRefresh);
+            // Fetch History to calculate totals (force if we just refreshed packing list?)
+            await this.fetchEnvasadosHistory(forceRefresh);
 
-                            this.renderPackingList(this.packingList);
-                        } else {
-                            if (container && !isBackground) container.innerHTML = `<div class="error-msg">${result.message}</div>`;
-                        }
+            this.renderPackingList(this.packingList);
+        } else {
+            if (container && !isBackground) container.innerHTML = `<div class="error-msg">${result.message}</div>`;
+        }
 
-                    } catch (e) {
-                        console.error(e);
-                        if (container && !isBackground) container.innerHTML = `<div class="error-msg">Error de conexión</div>`;
-                    }
-                }
+    } catch (e) {
+        console.error(e);
+        if (container && !isBackground) container.innerHTML = `<div class="error-msg">Error de conexión</div>`;
+    }
+}
 
     async fetchEnvasadosHistory(forceRefresh = false) {
-                    if (!forceRefresh && this.envasados) {
-                        this.calculateDailyTotals();
-                        return;
-                    }
-                    try {
-                        const response = await fetch(API_URL, {
-                            method: 'POST',
-                            redirect: 'follow',
-                            headers: { "Content-Type": "text/plain;charset=utf-8" },
-                            body: JSON.stringify({ action: 'getEnvasados' })
-                        });
-                        const result = await response.json();
-                        if (result.status === 'success') {
-                            this.envasados = result.data;
-                            this.calculateDailyTotals();
-                        }
-                    } catch (e) {
-                        console.error("Error fetching envasados history:", e);
-                    }
-                }
+    if (!forceRefresh && this.envasados) {
+        this.calculateDailyTotals();
+        return;
+    }
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: 'getEnvasados' })
+        });
+        const result = await response.json();
+        if (result.status === 'success') {
+            this.envasados = result.data;
+            this.calculateDailyTotals();
+        }
+    } catch (e) {
+        console.error("Error fetching envasados history:", e);
+    }
+}
 
-                calculateDailyTotals() {
-                    if (!this.envasados) return;
+calculateDailyTotals() {
+    if (!this.envasados) return;
 
-                    // Helper to parse "dd/MM/yyyy HH:mm:ss"
-                    const parseDate = (str) => {
-                        if (!str) return '';
-                        const parts = str.toString().split(' ')[0].split('/');
-                        if (parts.length < 3) return '';
-                        return `${parseInt(parts[0])}/${parseInt(parts[1])}/${parts[2]}`;
-                    };
+    // Helper to parse "dd/MM/yyyy HH:mm:ss"
+    const parseDate = (str) => {
+        if (!str) return '';
+        const parts = str.toString().split(' ')[0].split('/');
+        if (parts.length < 3) return '';
+        return `${parseInt(parts[0])}/${parseInt(parts[1])}/${parts[2]}`;
+    };
 
-                    const currentUser = this.currentUser ? this.currentUser.username : '';
-                    this.dailyTotals = {};
-                    this.globalDailyTotal = 0;
+    const currentUser = this.currentUser ? this.currentUser.username : '';
+    this.dailyTotals = {};
+    this.globalDailyTotal = 0;
 
-                    const now = new Date();
-                    const currentDateStr = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+    const now = new Date();
+    const currentDateStr = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
 
-                    console.log('--- Daily Totals Debug ---');
-                    console.log('Current User:', currentUser);
-                    console.log('Current Date ID:', currentDateStr);
+    console.log('--- Daily Totals Debug ---');
+    console.log('Current User:', currentUser);
+    console.log('Current Date ID:', currentDateStr);
 
-                    this.envasados.forEach(record => {
-                        const recordDateStr = parseDate(record.fecha);
+    this.envasados.forEach(record => {
+        const recordDateStr = parseDate(record.fecha);
 
-                        // DEBUG: Log first few records
-                        if (this.envasados.length < 50 || Math.random() < 0.05) {
-                            console.log(`Checking: User=${record.usuario} (Expected ${currentUser}), Date=${recordDateStr} (Expected ${currentDateStr}), Qty=${record.cantidad}`);
-                        }
+        // DEBUG: Log first few records
+        if (this.envasados.length < 50 || Math.random() < 0.05) {
+            console.log(`Checking: User=${record.usuario} (Expected ${currentUser}), Date=${recordDateStr} (Expected ${currentDateStr}), Qty=${record.cantidad}`);
+        }
 
-                        if (record.usuario !== currentUser) return;
-                        if (recordDateStr !== currentDateStr) return;
+        if (record.usuario !== currentUser) return;
+        if (recordDateStr !== currentDateStr) return;
 
-                        const qty = Number(record.cantidad) || 0;
-                        if (!this.dailyTotals[record.idProducto]) this.dailyTotals[record.idProducto] = 0;
-                        this.dailyTotals[record.idProducto] += qty;
-                        this.globalDailyTotal += qty;
-                    });
+        const qty = Number(record.cantidad) || 0;
+        if (!this.dailyTotals[record.idProducto]) this.dailyTotals[record.idProducto] = 0;
+        this.dailyTotals[record.idProducto] += qty;
+        this.globalDailyTotal += qty;
+    });
 
-                    console.log('Calculated Totals:', this.dailyTotals);
-                    console.log('Global Total:', this.globalDailyTotal);
-                    console.log('--------------------------');
+    console.log('Calculated Totals:', this.dailyTotals);
+    console.log('Global Total:', this.globalDailyTotal);
+    console.log('--------------------------');
 
-                    this.updateHeaderTotal();
-                }
+    this.updateHeaderTotal();
+}
 
-                updateHeaderTotal() {
-                    const headerActions = document.getElementById('header-dynamic-actions');
-                    // We need to inject the total next to the title or inside the actions area.
-                    // Let's create a badge if it doesn't exist, or update it.
-                    // Find existing badge
-                    let badge = document.getElementById('daily-total-badge');
-                    if (!badge && headerActions) {
-                        // Insert before the search wrapper
-                        const badgeHtml = `
+updateHeaderTotal() {
+    const headerActions = document.getElementById('header-dynamic-actions');
+    // We need to inject the total next to the title or inside the actions area.
+    // Let's create a badge if it doesn't exist, or update it.
+    // Find existing badge
+    let badge = document.getElementById('daily-total-badge');
+    if (!badge && headerActions) {
+        // Insert before the search wrapper
+        const badgeHtml = `
                 <div id="daily-total-badge" style="display:flex; align-items:center; gap:0.5rem; margin-right:1rem; color:var(--neon-green); font-weight:bold; font-size:1.1rem;">
                     <i class="fa-solid fa-clipboard-check"></i>
                     <span id="daily-total-value">0</span>
                 </div>
             `;
-                        headerActions.insertAdjacentHTML('afterbegin', badgeHtml);
-                        badge = document.getElementById('daily-total-badge');
-                    }
+        headerActions.insertAdjacentHTML('afterbegin', badgeHtml);
+        badge = document.getElementById('daily-total-badge');
+    }
 
-                    if (badge) {
-                        document.getElementById('daily-total-value').innerText = this.globalDailyTotal || 0;
-                    }
-                }
-
-
-                renderPackingList(list) {
-                    const container = document.getElementById('packing-list-container');
-                    if (!container) return;
-
-                    if (!list || list.length === 0) {
-                        container.innerHTML = '<div style="text-align:center; padding:2rem; color:#666;">No hay productos en lista de envasado</div>';
-                        return;
-                    }
-
-                    // --- PRE-PROCESS & SORT ---
-                    const masterProducts = this.products || []; // Array from fetchProducts
-
-                    const processedList = list.map(item => {
-                        // Find Match (Case-Insensitive & Trimmed)
-                        const targetCode = String(item.codigo).trim().toLowerCase();
-                        const master = masterProducts.find(p => String(p.codigo).trim().toLowerCase() === targetCode);
-
-                        let stockReal = 0;
-                        let stockMin = 0;
-                        let batteryLevel = 0;
-                        let batteryClass = 'critical'; // Default red
-                        let missingMin = false;
-
-                        if (master) {
-                            stockReal = Number(master.stock) || 0;
-                            stockMin = Number(master.min);
-
-                            // Check for missing/invalid Min Stock
-                            if (master.min === undefined || master.min === null || master.min === '' || isNaN(stockMin) || stockMin <= 0) {
-                                missingMin = true;
-                                stockMin = 100; // Fake base for calc avoids div/0, but marked as missing
-                                batteryLevel = 0; // Force low
-                            } else {
-                                batteryLevel = Math.round((stockReal / stockMin) * 100);
-                                if (batteryLevel > 100) batteryLevel = 100;
-                            }
-
-                            if (batteryLevel >= 50) batteryClass = 'full';
-                            else if (batteryLevel >= 25) batteryClass = 'medium';
-                            else if (batteryLevel >= 10) batteryClass = 'low';
-                            else batteryClass = 'critical';
-                        }
-
-                        return {
-                            ...item,
-                            stockReal,
-                            stockMin,
-                            batteryLevel,
-                            batteryClass,
-                            missingMin,
-                            masterDesc: master ? master.descripcion : item.descripcion
-                        };
-                    });
-
-                    // SORT: Ascending Battery Level (Critical First)
-                    processedList.sort((a, b) => a.batteryLevel - b.batteryLevel);
+    if (badge) {
+        document.getElementById('daily-total-value').innerText = this.globalDailyTotal || 0;
+    }
+}
 
 
-                    // --- GRID LAYOUT ---
-                    let html = '<div class="packing-grid">';
+renderPackingList(list) {
+    const container = document.getElementById('packing-list-container');
+    if (!container) return;
 
-                    html += processedList.map(item => {
+    if (!list || list.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:2rem; color:#666;">No hay productos en lista de envasado</div>';
+        return;
+    }
 
-                        // Battery Visuals
-                        const isCritical = item.batteryClass === 'critical';
-                        // If missing Min, show Alert Icon overlay
-                        const alertOverlay = item.missingMin ?
-                            `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#ef4444; font-size:1.5rem; text-shadow:0 1px 3px rgba(255,255,255,0.8); z-index:2;" title="Stock Mínimo no definido">
+    // --- PRE-PROCESS & SORT ---
+    const masterProducts = this.products || []; // Array from fetchProducts
+
+    const processedList = list.map(item => {
+        // Find Match (Case-Insensitive & Trimmed)
+        const targetCode = String(item.codigo).trim().toLowerCase();
+        const master = masterProducts.find(p => String(p.codigo).trim().toLowerCase() === targetCode);
+
+        let stockReal = 0;
+        let stockMin = 0;
+        let batteryLevel = 0;
+        let batteryClass = 'critical'; // Default red
+        let missingMin = false;
+
+        if (master) {
+            stockReal = Number(master.stock) || 0;
+            stockMin = Number(master.min);
+
+            // Check for missing/invalid Min Stock
+            if (master.min === undefined || master.min === null || master.min === '' || isNaN(stockMin) || stockMin <= 0) {
+                missingMin = true;
+                stockMin = 100; // Fake base for calc avoids div/0, but marked as missing
+                batteryLevel = 0; // Force low
+            } else {
+                batteryLevel = Math.round((stockReal / stockMin) * 100);
+                if (batteryLevel > 100) batteryLevel = 100;
+            }
+
+            if (batteryLevel >= 50) batteryClass = 'full';
+            else if (batteryLevel >= 25) batteryClass = 'medium';
+            else if (batteryLevel >= 10) batteryClass = 'low';
+            else batteryClass = 'critical';
+        }
+
+        return {
+            ...item,
+            stockReal,
+            stockMin,
+            batteryLevel,
+            batteryClass,
+            missingMin,
+            masterDesc: master ? master.descripcion : item.descripcion
+        };
+    });
+
+    // SORT: Ascending Battery Level (Critical First)
+    processedList.sort((a, b) => a.batteryLevel - b.batteryLevel);
+
+
+    // --- GRID LAYOUT ---
+    let html = '<div class="packing-grid">';
+
+    html += processedList.map(item => {
+
+        // Battery Visuals
+        const isCritical = item.batteryClass === 'critical';
+        // If missing Min, show Alert Icon overlay
+        const alertOverlay = item.missingMin ?
+            `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#ef4444; font-size:1.5rem; text-shadow:0 1px 3px rgba(255,255,255,0.8); z-index:2;" title="Stock Mínimo no definido">
                     <i class="fa-solid fa-triangle-exclamation fa-beat-fade"></i>
                  </div>` : '';
 
-                        const percentageText = item.missingMin ? '<span style="color:red; font-size:0.8rem;">Min?</span>' : `${item.batteryLevel}%`;
+        const percentageText = item.missingMin ? '<span style="color:red; font-size:0.8rem;">Min?</span>' : `${item.batteryLevel}%`;
 
-                        return `
+        return `
             <div class="packing-card" onclick="app.openSideDrawer('${item.codigo}')">
                 <div class="packing-card-header">
                     <div class="code-badge">${item.codigo}</div>
@@ -6957,8 +6935,8 @@ class App {
                             onclick="event.stopPropagation(); app.showRegisterModal('${item.codigo}')" 
                             title="Registrar Envasado">
                         ${(this.dailyTotals && this.dailyTotals[item.codigo] > 0) ?
-                                `<span style="font-weight:800; font-size:0.85rem;">${this.dailyTotals[item.codigo]}</span>` :
-                                `<i class="fa-solid fa-plus"></i>`}
+                `<span style="font-weight:800; font-size:0.85rem;">${this.dailyTotals[item.codigo]}</span>` :
+                `<i class="fa-solid fa-plus"></i>`}
                     </button>
                 </div>
                 
@@ -6988,63 +6966,63 @@ class App {
                 </div>
             </div>
             `;
-                    }).join('');
+    }).join('');
 
-                    html += '</div>';
-                    container.innerHTML = html;
-                }
+    html += '</div>';
+    container.innerHTML = html;
+}
 
-                filterPackingList(term) {
-                    if (!this.packingList) return;
-                    const q = term.toLowerCase().trim();
+filterPackingList(term) {
+    if (!this.packingList) return;
+    const q = term.toLowerCase().trim();
 
-                    const filtered = this.packingList.filter(item =>
-                        item.codigo.toLowerCase().includes(q) ||
-                        item.nombre.toLowerCase().includes(q) ||
-                        item.origen.toLowerCase().includes(q)
-                    );
-                    this.renderPackingList(filtered);
-                }
+    const filtered = this.packingList.filter(item =>
+        item.codigo.toLowerCase().includes(q) ||
+        item.nombre.toLowerCase().includes(q) ||
+        item.origen.toLowerCase().includes(q)
+    );
+    this.renderPackingList(filtered);
+}
 
-                // Alias for click handler compatibility
-                openSideDrawer(code) {
-                    this.openPackingDrawer(code);
-                }
+// Alias for click handler compatibility
+openSideDrawer(code) {
+    this.openPackingDrawer(code);
+}
 
-                openPackingDrawer(code) {
-                    const item = this.packingList.find(p => p.codigo === code);
-                    if (!item) return;
+openPackingDrawer(code) {
+    const item = this.packingList.find(p => p.codigo === code);
+    if (!item) return;
 
-                    // Find Master Product for Details (Image, Stock)
-                    const master = this.products ? this.products.find(p => String(p.codigo).trim().toLowerCase() === String(code).trim().toLowerCase()) : null;
-                    const stockReal = master ? (Number(master.stock) || 0) : 0;
-                    const stockMin = master ? (Number(master.min) || 0) : 0;
+    // Find Master Product for Details (Image, Stock)
+    const master = this.products ? this.products.find(p => String(p.codigo).trim().toLowerCase() === String(code).trim().toLowerCase()) : null;
+    const stockReal = master ? (Number(master.stock) || 0) : 0;
+    const stockMin = master ? (Number(master.min) || 0) : 0;
 
-                    const drawer = document.getElementById('packing-drawer');
-                    const backdrop = document.getElementById('packing-drawer-backdrop');
+    const drawer = document.getElementById('packing-drawer');
+    const backdrop = document.getElementById('packing-drawer-backdrop');
 
-                    // Helper to format Drive Image URL
-                    const formatDriveImage = (url) => {
-                        if (!url) return '';
-                        // If it's already a direct link or not drive, return as is
-                        if (!url.includes('drive.google.com')) return url;
+    // Helper to format Drive Image URL
+    const formatDriveImage = (url) => {
+        if (!url) return '';
+        // If it's already a direct link or not drive, return as is
+        if (!url.includes('drive.google.com')) return url;
 
-                        // Extract ID from: /file/d/ID/view or /open?id=ID or /uc?id=ID
-                        let id = '';
-                        const match1 = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-                        const match2 = url.match(/id=([a-zA-Z0-9_-]+)/);
+        // Extract ID from: /file/d/ID/view or /open?id=ID or /uc?id=ID
+        let id = '';
+        const match1 = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        const match2 = url.match(/id=([a-zA-Z0-9_-]+)/);
 
-                        if (match1) id = match1[1];
-                        else if (match2) id = match2[1];
+        if (match1) id = match1[1];
+        else if (match2) id = match2[1];
 
-                        if (id) return `https://drive.google.com/uc?export=view&id=${id}`;
-                        return url;
-                    };
+        if (id) return `https://drive.google.com/uc?export=view&id=${id}`;
+        return url;
+    };
 
-                    const imageUrl = master && master.imagen ? formatDriveImage(master.imagen) : '';
+    const imageUrl = master && master.imagen ? formatDriveImage(master.imagen) : '';
 
-                    // Populate Drawer
-                    drawer.innerHTML = `
+    // Populate Drawer
+    drawer.innerHTML = `
             <div class="drawer-header">
                 <h3>${item.nombre}</h3>
                 <button class="close-drawer-btn" onclick="app.closePackingDrawer()"><i class="fa-solid fa-xmark"></i></button>
@@ -7053,13 +7031,13 @@ class App {
                 
                 <!-- IMAGE SECTION -->
                 ${imageUrl ?
-                            `<div style="text-align:center; margin-bottom:1rem;">
+            `<div style="text-align:center; margin-bottom:1rem;">
                         <img src="${imageUrl}" alt="${item.nombre}" 
                              referrerpolicy="no-referrer" 
                              style="max-height:150px; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.3);"
                              onerror="this.style.display='none'; console.warn('Failed to load image:', '${imageUrl}')">
                      </div>` : ''
-                        }
+        }
 
                 <div class="drawer-section">
                     <label>Código</label>
@@ -7099,116 +7077,116 @@ class App {
             </div >
             `;
 
-                    // Show
-                    backdrop.classList.add('active');
-                    drawer.classList.add('active');
+    // Show
+    backdrop.classList.add('active');
+    drawer.classList.add('active');
 
-                    // Close on Backdrop Click
-                    backdrop.onclick = () => this.closePackingDrawer();
-                }
+    // Close on Backdrop Click
+    backdrop.onclick = () => this.closePackingDrawer();
+}
 
-                closePackingDrawer() {
-                    const drawer = document.getElementById('packing-drawer');
-                    const backdrop = document.getElementById('packing-drawer-backdrop');
-                    if (drawer) drawer.classList.remove('active');
-                    if (backdrop) backdrop.classList.remove('active');
-                }
+closePackingDrawer() {
+    const drawer = document.getElementById('packing-drawer');
+    const backdrop = document.getElementById('packing-drawer-backdrop');
+    if (drawer) drawer.classList.remove('active');
+    if (backdrop) backdrop.classList.remove('active');
+}
 
-                showRegisterModal(productCode) {
-                    // Simple Prompt for MVP (User asked for button "+" to input quantity)
-                    // We can use a custom modal but prompt is safer for quick implementation unless specified.
-                    // Let's stick to prompt for reliability first, or inject a modal if needed.
-                    // User said: "al darle click al boton "+" se pueda poner la cantidad"
+showRegisterModal(productCode) {
+    // Simple Prompt for MVP (User asked for button "+" to input quantity)
+    // We can use a custom modal but prompt is safer for quick implementation unless specified.
+    // Let's stick to prompt for reliability first, or inject a modal if needed.
+    // User said: "al darle click al boton "+" se pueda poner la cantidad"
 
-                    const qty = prompt(`Ingrese cantidad envasada para ${productCode}:`);
-                    if (qty && !isNaN(qty) && Number(qty) > 0) {
-                        this.registerEnvasado(productCode, Number(qty));
-                    }
-                }
+    const qty = prompt(`Ingrese cantidad envasada para ${productCode}:`);
+    if (qty && !isNaN(qty) && Number(qty) > 0) {
+        this.registerEnvasado(productCode, Number(qty));
+    }
+}
 
     async registerEnvasado(productCode, quantity) {
-                    if (!confirm(`¿Confirmar envasado de ${quantity} unidades para ${productCode}?`)) return;
+    if (!confirm(`¿Confirmar envasado de ${quantity} unidades para ${productCode}?`)) return;
 
-                    // Find Item metadata (Origin, Factor)
-                    const item = this.packingList.find(p => p.codigo === productCode);
-                    if (!item) return alert('Error: Producto no encontrado en lista local.');
+    // Find Item metadata (Origin, Factor)
+    const item = this.packingList.find(p => p.codigo === productCode);
+    if (!item) return alert('Error: Producto no encontrado en lista local.');
 
-                    this.showToast('Registrando envasado...', 'info');
+    this.showToast('Registrando envasado...', 'info');
 
-                    try {
-                        const user = this.currentUser ? this.currentUser.username : 'Unknown';
-                        const payload = {
-                            idProducto: productCode,
-                            cantidad: quantity,
-                            usuario: user,
-                            factor: item.factor,
-                            origen: item.origen
-                        };
+    try {
+        const user = this.currentUser ? this.currentUser.username : 'Unknown';
+        const payload = {
+            idProducto: productCode,
+            cantidad: quantity,
+            usuario: user,
+            factor: item.factor,
+            origen: item.origen
+        };
 
-                        const response = await fetch(API_URL, {
-                            method: 'POST',
-                            redirect: 'follow',
-                            headers: { "Content-Type": "text/plain;charset=utf-8" },
-                            body: JSON.stringify({ action: 'saveEnvasado', payload: payload })
-                        });
-                        const result = await response.json();
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({ action: 'saveEnvasado', payload: payload })
+        });
+        const result = await response.json();
 
-                        if (result.status === 'success') {
-                            this.showToast('Envasado registrado con éxito', 'success');
-                            this.closePackingDrawer();
+        if (result.status === 'success') {
+            this.showToast('Envasado registrado con éxito', 'success');
+            this.closePackingDrawer();
 
-                            // Refresh Totals & UI immediately
-                            await this.fetchEnvasadosHistory();
-                            if (this.state.currentModule === 'envasador') {
-                                this.renderPackingList(this.packingList);
-                            }
-                        } else {
-                            alert('Error al guardar: ' + result.message);
-                        }
-                    } catch (e) {
-                        console.error(e);
-                        alert('Error de conexión al guardar.');
-                    }
-                }
+            // Refresh Totals & UI immediately
+            await this.fetchEnvasadosHistory();
+            if (this.state.currentModule === 'envasador') {
+                this.renderPackingList(this.packingList);
+            }
+        } else {
+            alert('Error al guardar: ' + result.message);
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Error de conexión al guardar.');
+    }
+}
     /* STOCK HISTORY MODAL */
     async showProductHistory(code, desc) {
-                    // Show Loading Modal
-                    const loadingHtml = `<div style="text-align:center; padding:3rem;"><i class="fa-solid fa-clock-rotate-left fa-spin fa-2x"></i><br><br>Cargando historial...</div>`;
-                    this.openModal(loadingHtml);
+    // Show Loading Modal
+    const loadingHtml = `<div style="text-align:center; padding:3rem;"><i class="fa-solid fa-clock-rotate-left fa-spin fa-2x"></i><br><br>Cargando historial...</div>`;
+    this.openModal(loadingHtml);
 
-                    try {
-                        const response = await fetch(API_URL, {
-                            method: 'POST',
-                            redirect: 'follow',
-                            headers: { "Content-Type": "text/plain;charset=utf-8" },
-                            body: JSON.stringify({
-                                action: 'getProductHistory',
-                                payload: { codigo: code }
-                            })
-                        });
-                        const result = await response.json();
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({
+                action: 'getProductHistory',
+                payload: { codigo: code }
+            })
+        });
+        const result = await response.json();
 
-                        if (result.status === 'success') {
-                            this.renderHistoryModal(code, desc, result.data);
-                        } else {
-                            this.openModal(`<div class="error-msg">Error: ${result.message}</div>`);
-                        }
-                    } catch (e) {
-                        this.openModal(`<div class="error-msg">Error de conexión: ${e.message}</div>`);
-                    }
-                }
+        if (result.status === 'success') {
+            this.renderHistoryModal(code, desc, result.data);
+        } else {
+            this.openModal(`<div class="error-msg">Error: ${result.message}</div>`);
+        }
+    } catch (e) {
+        this.openModal(`<div class="error-msg">Error de conexión: ${e.message}</div>`);
+    }
+}
 
-                renderHistoryModal(code, desc, data) {
-                    const { initial, movements } = data;
-                    let runningBalance = initial;
+renderHistoryModal(code, desc, data) {
+    const { initial, movements } = data;
+    let runningBalance = initial;
 
-                    // Sort just in case backend didn't
-                    // movements.sort... (backend does it)
+    // Sort just in case backend didn't
+    // movements.sort... (backend does it)
 
-                    let rowsHtml = '';
+    let rowsHtml = '';
 
-                    // Initial Row
-                    rowsHtml += `
+    // Initial Row
+    rowsHtml += `
             <tr style="background:#f0f0f0; font-weight:bold;">
                 <td>Inicio</td>
                 <td>Stock Inicial</td>
@@ -7218,44 +7196,44 @@ class App {
             </tr>
         `;
 
-                    movements.forEach(mov => {
-                        let change = mov.qty;
-                        // Logic:
-                        // INGRESO: +qty
-                        // SALIDA: -qty
-                        // AJUSTE: qty (can be neg or pos)
+    movements.forEach(mov => {
+        let change = mov.qty;
+        // Logic:
+        // INGRESO: +qty
+        // SALIDA: -qty
+        // AJUSTE: qty (can be neg or pos)
 
-                        let colorClass = '';
-                        let icon = '';
-                        let amountDisplay = '';
+        let colorClass = '';
+        let icon = '';
+        let amountDisplay = '';
 
-                        if (mov.type === 'INGRESO') {
-                            runningBalance += change;
-                            colorClass = 'text-green';
-                            icon = '<i class="fa-solid fa-arrow-right-to-bracket"></i>';
-                            amountDisplay = `+${change}`;
-                        } else if (mov.type === 'SALIDA') {
-                            runningBalance -= change; // Assuming backend sends positive qty for details
-                            colorClass = 'text-red';
-                            icon = '<i class="fa-solid fa-arrow-right-from-bracket"></i>';
-                            amountDisplay = `-${change}`;
-                        } else { // AJUSTE
-                            runningBalance += change;
-                            colorClass = 'text-orange';
-                            icon = '<i class="fa-solid fa-wrench"></i>';
-                            amountDisplay = change > 0 ? `+${change}` : `${change}`;
-                        }
+        if (mov.type === 'INGRESO') {
+            runningBalance += change;
+            colorClass = 'text-green';
+            icon = '<i class="fa-solid fa-arrow-right-to-bracket"></i>';
+            amountDisplay = `+${change}`;
+        } else if (mov.type === 'SALIDA') {
+            runningBalance -= change; // Assuming backend sends positive qty for details
+            colorClass = 'text-red';
+            icon = '<i class="fa-solid fa-arrow-right-from-bracket"></i>';
+            amountDisplay = `-${change}`;
+        } else { // AJUSTE
+            runningBalance += change;
+            colorClass = 'text-orange';
+            icon = '<i class="fa-solid fa-wrench"></i>';
+            amountDisplay = change > 0 ? `+${change}` : `${change}`;
+        }
 
-                        // Date Formatting
-                        let dateStr = mov.date;
-                        try {
-                            const dateObj = new Date(mov.date);
-                            if (!isNaN(dateObj)) {
-                                dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            }
-                        } catch (e) { }
+        // Date Formatting
+        let dateStr = mov.date;
+        try {
+            const dateObj = new Date(mov.date);
+            if (!isNaN(dateObj)) {
+                dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+        } catch (e) { }
 
-                        rowsHtml += `
+        rowsHtml += `
                 <tr>
                     <td style="font-size:0.85rem; color:#666;">${dateStr}</td>
                     <td>
@@ -7266,9 +7244,9 @@ class App {
                     <td style="font-weight:bold; text-align:right;">${runningBalance}</td>
                 </tr>
             `;
-                    });
+    });
 
-                    const modalHtml = `
+    const modalHtml = `
             <div class="modal-card" style="max-width: 600px; width: 95%;">
                 <div class="modal-header">
                     <h3>${desc}</h3>
@@ -7320,51 +7298,51 @@ class App {
             </style>
         `;
 
-                    this.openModal(modalHtml);
-                }
+    this.openModal(modalHtml);
+}
 
     async saveAdjustment(code) {
-                    const qtyToSave = parseFloat(document.getElementById('adj-qty').value);
-                    const reason = document.getElementById('adj-reason').value;
+    const qtyToSave = parseFloat(document.getElementById('adj-qty').value);
+    const reason = document.getElementById('adj-reason').value;
 
-                    if (isNaN(qtyToSave) || qtyToSave === 0) return alert('Ingrese una cantidad válida (positiva o negativa).');
-                    if (!reason) return alert('Ingrese un motivo.');
+    if (isNaN(qtyToSave) || qtyToSave === 0) return alert('Ingrese una cantidad válida (positiva o negativa).');
+    if (!reason) return alert('Ingrese un motivo.');
 
-                    const btn = document.querySelector('#adjust-form button');
-                    btn.disabled = true;
-                    btn.innerHTML = 'Guardando...';
+    const btn = document.querySelector('#adjust-form button');
+    btn.disabled = true;
+    btn.innerHTML = 'Guardando...';
 
-                    try {
-                        const response = await fetch(API_URL, {
-                            method: 'POST',
-                            redirect: 'follow',
-                            headers: { "Content-Type": "text/plain;charset=utf-8" },
-                            body: JSON.stringify({
-                                action: 'saveAdjustment',
-                                payload: { code, qty: qtyToSave, reason }
-                            })
-                        });
-                        const result = await response.json();
-                        if (result.status === 'success') {
-                            this.showToast('Ajuste guardado', 'success');
-                            // Reload History
-                            const desc = document.querySelector('.modal-header h3').innerText;
-                            this.showProductHistory(code, desc);
-                        } else {
-                            alert('Error: ' + result.message);
-                            btn.disabled = false;
-                            btn.innerHTML = 'Guardar Ajuste';
-                        }
-                    } catch (e) {
-                        console.error(e);
-                        alert('Error de conexión');
-                        btn.disabled = false;
-                        btn.innerHTML = 'Guardar Ajuste';
-                    }
-                }
-                // --- QUICK DISPATCH MODULE ---
-                openQuickDispatchModal(code, desc) {
-                    const modalHtml = `
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            redirect: 'follow',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({
+                action: 'saveAdjustment',
+                payload: { code, qty: qtyToSave, reason }
+            })
+        });
+        const result = await response.json();
+        if (result.status === 'success') {
+            this.showToast('Ajuste guardado', 'success');
+            // Reload History
+            const desc = document.querySelector('.modal-header h3').innerText;
+            this.showProductHistory(code, desc);
+        } else {
+            alert('Error: ' + result.message);
+            btn.disabled = false;
+            btn.innerHTML = 'Guardar Ajuste';
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Error de conexión');
+        btn.disabled = false;
+        btn.innerHTML = 'Guardar Ajuste';
+    }
+}
+// --- QUICK DISPATCH MODULE ---
+openQuickDispatchModal(code, desc) {
+    const modalHtml = `
             <div class="modal-card">
                 <div class="modal-header">
                     <h3>Despacho Rápido: ${desc}</h3>
@@ -7375,8 +7353,8 @@ class App {
                         <label style="display:block; font-weight:bold; margin-bottom:0.5rem;">1. Seleccione Cliente / Zona</label>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;" id="qd-clients">
                             ${(this.clients && this.clients.length > 0 ? this.clients : ['ZONA1', 'ZONA2', 'TIENDA', 'PERSONAL']).map((c, i) =>
-                        `<button type="button" class="btn-secondary option-btn ${i === 0 ? 'selected' : ''}" onclick="app.selectQuickClient(this, '${c}')">${c}</button>`
-                    ).join('')}
+        `<button type="button" class="btn-secondary option-btn ${i === 0 ? 'selected' : ''}" onclick="app.selectQuickClient(this, '${c}')">${c}</button>`
+    ).join('')}
                         </div>
                      </div>
 
@@ -7396,98 +7374,98 @@ class App {
                 .option-btn.selected { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
             </style>
         `;
-                    this.openModal(modalHtml);
-                    setTimeout(() => document.getElementById('qd-qty').focus(), 100);
-                }
+    this.openModal(modalHtml);
+    setTimeout(() => document.getElementById('qd-qty').focus(), 100);
+}
 
-                selectQuickClient(btn, val) {
-                    document.querySelectorAll('#qd-clients .option-btn').forEach(b => b.classList.remove('selected'));
-                    btn.classList.add('selected');
-                }
+selectQuickClient(btn, val) {
+    document.querySelectorAll('#qd-clients .option-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+}
 
     async handleQuickDispatch(code, desc) {
-                    const clientBtn = document.querySelector('#qd-clients .selected');
-                    const client = clientBtn ? clientBtn.innerText : 'ZONA1';
-                    const qty = parseFloat(document.getElementById('qd-qty').value);
+    const clientBtn = document.querySelector('#qd-clients .selected');
+    const client = clientBtn ? clientBtn.innerText : 'ZONA1';
+    const qty = parseFloat(document.getElementById('qd-qty').value);
 
-                    if (!qty || qty <= 0) return alert('Cantidad inválida');
+    if (!qty || qty <= 0) return alert('Cantidad inválida');
 
-                    const btn = document.querySelector('.modal-body .btn-primary');
-                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
-                    btn.disabled = true;
+    const btn = document.querySelector('.modal-body .btn-primary');
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+    btn.disabled = true;
 
-                    try {
-                        const response = await fetch(API_URL, {
-                            method: 'POST', redirect: 'follow',
-                            headers: { "Content-Type": "text/plain;charset=utf-8" },
-                            body: JSON.stringify({
-                                action: 'saveQuickDispatch',
-                                payload: { code, desc, client, qty, usuario: this.currentUser.username }
-                            })
-                        });
-                        const result = await response.json();
-                        if (result.status === 'success') {
-                            this.closeModal();
-                            this.showToast('Despacho Guardado (2do Plano)', 'success');
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST', redirect: 'follow',
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({
+                action: 'saveQuickDispatch',
+                payload: { code, desc, client, qty, usuario: this.currentUser.username }
+            })
+        });
+        const result = await response.json();
+        if (result.status === 'success') {
+            this.closeModal();
+            this.showToast('Despacho Guardado (2do Plano)', 'success');
 
-                            // OPTIMISTIC UPDATE: Update stock locally for instant feedback
-                            if (this.data.products[code]) {
-                                // Update Local State
-                                this.data.products[code].stock = (parseFloat(this.data.products[code].stock) - qty).toFixed(2);
+            // OPTIMISTIC UPDATE: Update stock locally for instant feedback
+            if (this.data.products[code]) {
+                // Update Local State
+                this.data.products[code].stock = (parseFloat(this.data.products[code].stock) - qty).toFixed(2);
 
-                                // Update DOM (All instances: Front card, Back card, etc.)
-                                const stockElements = document.querySelectorAll(`.stock-display-${code}`);
-                                stockElements.forEach(el => {
-                                    el.innerText = this.data.products[code].stock;
-                                    // Optional: Flash red to indicate change
-                                    el.style.color = 'red';
-                                    setTimeout(() => el.style.color = '', 1000);
-                                });
-                            }
+                // Update DOM (All instances: Front card, Back card, etc.)
+                const stockElements = document.querySelectorAll(`.stock-display-${code}`);
+                stockElements.forEach(el => {
+                    el.innerText = this.data.products[code].stock;
+                    // Optional: Flash red to indicate change
+                    el.style.color = 'red';
+                    setTimeout(() => el.style.color = '', 1000);
+                });
+            }
 
-                            // REMOVED: this.fetchProducts(); // Too slow, relying on optimistic update
-                        } else {
-                            alert('Error: ' + result.message);
-                            btn.disabled = false;
-                            btn.innerHTML = 'Confirmar y Despachar';
-                        }
-                    } catch (e) {
-                        console.error(e);
-                        alert('Error de conexión');
-                        btn.disabled = false;
-                        btn.innerHTML = 'Confirmar y Despachar';
-                    }
-                }
+            // REMOVED: this.fetchProducts(); // Too slow, relying on optimistic update
+        } else {
+            alert('Error: ' + result.message);
+            btn.disabled = false;
+            btn.innerHTML = 'Confirmar y Despachar';
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Error de conexión');
+        btn.disabled = false;
+        btn.innerHTML = 'Confirmar y Despachar';
+    }
+}
 
-                printQuickTicket(data, existingWin) {
-                    let win = existingWin;
-                    if (!win || win.closed) {
-                        win = window.open('', 'Imprimir Ticket', 'width=450,height=600');
-                    }
-                    if (!win) return alert('Habilite Popups');
+printQuickTicket(data, existingWin) {
+    let win = existingWin;
+    if (!win || win.closed) {
+        win = window.open('', 'Imprimir Ticket', 'width=450,height=600');
+    }
+    if (!win) return alert('Habilite Popups');
 
-                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${data.idGuia}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${data.idGuia}`;
 
-                    this.writeReceiptHtml(win, {
-                        title: 'LEVO ERP',
-                        subtitle: 'GUÍA DE SALIDA',
-                        meta: {
-                            'ID': data.idGuia.substring(0, 13) + '...',
-                            'Fecha': data.fecha,
-                            'Destino': data.cliente,
-                            'Usuario': data.usuario || this.currentUser.username
-                        },
-                        items: data.items,
-                        qr: qrUrl
-                    });
-                }
+    this.writeReceiptHtml(win, {
+        title: 'LEVO ERP',
+        subtitle: 'GUÍA DE SALIDA',
+        meta: {
+            'ID': data.idGuia.substring(0, 13) + '...',
+            'Fecha': data.fecha,
+            'Destino': data.cliente,
+            'Usuario': data.usuario || this.currentUser.username
+        },
+        items: data.items,
+        qr: qrUrl
+    });
+}
 
-                // Shared Helper for Receipt HTML
-                // Shared Helper for Receipt HTML (Optimized for 80mm Thermal)
-                writeReceiptHtml(win, data) {
-                    // data: { title, subtitle, meta: {}, items: [{desc, code, qty}], qr }
+// Shared Helper for Receipt HTML
+// Shared Helper for Receipt HTML (Optimized for 80mm Thermal)
+writeReceiptHtml(win, data) {
+    // data: { title, subtitle, meta: {}, items: [{desc, code, qty}], qr }
 
-                    const itemsHtml = data.items.map(item => `
+    const itemsHtml = data.items.map(item => `
             <div class="item-row">
                 <div class="item-desc">
                     <span class="desc-text">${item.desc}</span>
@@ -7497,15 +7475,15 @@ class App {
             </div>
         `).join('');
 
-                    // Filter out ID from meta if it exists (user said QR is enough)
-                    const metaEntries = Object.entries(data.meta).filter(([key]) => key !== 'ID');
+    // Filter out ID from meta if it exists (user said QR is enough)
+    const metaEntries = Object.entries(data.meta).filter(([key]) => key !== 'ID');
 
-                    const metaHtml = metaEntries.map(([key, val]) => `
+    const metaHtml = metaEntries.map(([key, val]) => `
             <div class="meta-row"><span class="label">${key}:</span> <span class="val">${val}</span></div>
         `).join('');
 
-                    win.document.open();
-                    win.document.write(`
+    win.document.open();
+    win.document.write(`
             <!DOCTYPE html>
             <html>
             <head>
@@ -7568,15 +7546,15 @@ class App {
             </body>
             </html>
         `);
-                    win.document.close();
-                }
-            }
-                // Initialize App
+    win.document.close();
+}
+}
+// Initialize App
 
-                try {
-                window.app = new App();
-            } catch (err) {
-                console.error('Critical Init Error:', err);
-                alert('Error crítico al iniciar la aplicación: ' + err.message);
-            }
+try {
+    window.app = new App();
+} catch (err) {
+    console.error('Critical Init Error:', err);
+    alert('Error crítico al iniciar la aplicación: ' + err.message);
+}
 
