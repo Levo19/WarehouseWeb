@@ -1728,6 +1728,9 @@ class App {
 
     /* --- PRODUCT HISTORY --- */
     async viewProductHistory(code, name) {
+        // Cache args for reload
+        this._lastHistoryArgs = { code, name };
+
         // 1. Create/Show Modal with Loading State
         const modalId = 'history-modal';
         const existing = document.getElementById(modalId);
@@ -1794,6 +1797,49 @@ class App {
             console.error('History Error', e);
             const el = document.getElementById('history-content');
             if (el) el.innerHTML = `<div style="text-align:center; color:red; padding:2rem;">Error de Carga: ${e.message}</div>`;
+        }
+    }
+
+    async editStockAdjustment(rowId, currentQty, code, btn) {
+        const newQtyStr = prompt("Ingrese la cantidad corregida:", currentQty);
+        if (newQtyStr === null) return; // Cancelled
+
+        const newQty = parseFloat(newQtyStr);
+        if (isNaN(newQty)) return alert("Cantidad inválida");
+
+        if (btn) {
+            // const originalHtml = btn.innerHTML; // Unused
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+        }
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: 'updateStockAdjustment',
+                    payload: { rowId, newQty, reason: 'Corrección manual' }
+                })
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+                alert("Ajuste corregido. Recargando historial...");
+                document.getElementById('history-modal').remove();
+                if (this._lastHistoryArgs) {
+                    this.viewProductHistory(this._lastHistoryArgs.code, this._lastHistoryArgs.name);
+                }
+            } else {
+                alert("Error: " + result.message);
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-pencil"></i>';
+                if (btn) btn.disabled = false;
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error de conexión");
+            if (btn) btn.innerHTML = '<i class="fa-solid fa-pencil"></i>';
+            if (btn) btn.disabled = false;
         }
     }
 
