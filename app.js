@@ -23,33 +23,28 @@ class App {
     }
 
     init() {
-        console.log("🚀 APP VERSION 78 - FEATURE: SMART NOTIFICATIONS");
+        console.log("🚀 LEVO ERP Initializing...");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
-        // Load data if logged in
-        // Load data if logged in
-        // Load data if logged in
-        // NOTE: checkSession might trigger setUser later, so init check is unreliable
-        console.log("👤 INIT CHECK:", this.currentUser);
+
         if (this.currentUser) {
             this.preloadAllData();
         }
 
-        // Background Auto-Refresh (Every 45s)
-        // Background Auto-Refresh (Disabled per user request)
-        // ...
+        // Background Auto-Refresh (Managed in startBackgroundSync)
 
         // MOBILE SIDEBAR LOGIC
         const mobileBtn = document.getElementById('mobile-menu-btn');
-        const sidebar = document.querySelector('.sidebar');
         const overlay = document.getElementById('sidebar-overlay');
         const navLinks = document.querySelectorAll('.nav-link');
+        const sidebar = document.querySelector('.sidebar');
 
-        function toggleSidebar() {
+        // Use arrow function to maintain 'this' context if needed, though here it's just UI
+        const toggleSidebar = () => {
             if (sidebar) sidebar.classList.toggle('active');
             if (overlay) overlay.classList.toggle('active');
-        }
+        };
 
         if (mobileBtn) {
             mobileBtn.addEventListener('click', (e) => {
@@ -241,8 +236,6 @@ class App {
             mainApp.appendChild(loader);
         }
 
-        console.log("✅ USER STARTUP COMPLETE (v80 - Safe Loader)");
-
         // Setup Notifications System
         this.renderNotificationIcon();
 
@@ -257,12 +250,7 @@ class App {
         // Remove Loader
         if (loader) loader.remove();
 
-        // AUTO-REFRESH (Every 60s)
-        if (this.refreshInterval) clearInterval(this.refreshInterval);
-        this.refreshInterval = setInterval(() => {
-            console.log('Background Refresh...');
-            this.loadMovimientosData(true);
-        }, 60000);
+        this.startBackgroundSync();
 
         this.navigateTo('dashboard');
     }
@@ -398,7 +386,6 @@ class App {
     }
 
     updateNotifications(forceAlert = false) {
-        console.log("🔔 UPDATE NOTIFICATIONS ENTERED");
 
         let badge = document.getElementById('notification-badge');
         let bell = document.getElementById('header-notification-bell');
@@ -425,7 +412,6 @@ class App {
 
         // SELF-HEALING: If bell exists but badge doesn't, create it NOW.
         if (bell && !badge) {
-            console.warn("⚠️ BADGE MISSING IN UPDATE - CREATING IT NOW");
             const newBadge = document.createElement('span');
             newBadge.id = 'notification-badge';
             newBadge.style.cssText = `position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border-radius: 50%; padding: 2px 5px; font-size: 10px; display: none;`;
@@ -433,12 +419,6 @@ class App {
             bell.style.position = 'relative';
             badge = newBadge; // Update reference
         }
-
-        console.log("🔔 DOM CHECK v75:", {
-            foundBadge: !!badge,
-            foundBell: !!bell,
-            foundList: !!list
-        });
 
         if (!bell) {
             console.error("❌ CRITICAL: BELL BUTTON NOT FOUND EVEN BY ICON");
@@ -487,7 +467,7 @@ class App {
         const lastCount = this.lastNotificationCount || 0;
 
         // Check Notifications Logic
-        console.log(`🔔 CHECK LOGIC: Total=${count}, Cleared=${this.state.notificationsClearedCount}, LastFetch=${lastCount}`);
+        // const lastCount = this.lastNotificationCount || 0; // Removed redeclaration
 
         // Effective New Count = Total - Cleared (But never less than 0)
         let effectiveCount = Math.max(0, count - this.state.notificationsClearedCount);
@@ -558,13 +538,11 @@ class App {
     }
 
     handleNotificationClick(productId) {
-        console.log("🔔 Notification Clicked:", productId);
         this.navigateTo('dashboard');
         // The navigateTo call will trigger clearNotifications via logic below, but we enforce it here too
     }
 
     clearNotifications() {
-        console.log("🔔 Clearing Notifications (Mark as Read)");
 
         // 1. STATEFUL UPDATE: Mark current total as "Cleared"
         const prods = this.data.nuevosProductos
@@ -628,8 +606,8 @@ class App {
      * Dispatch Module Functions
      */
     switchDispatchTab(tabName) {
-        // Legacy Support or Redirection
-        // Now we render the Module Entry point (Zone Selection)
+        // Deprecated: Logic moved to view controller
+        console.warn('switchDispatchTab is deprecated.');
     }
 
     // New Entry point for navigation
@@ -780,17 +758,28 @@ class App {
 
     startBackgroundSync() {
         // Run every 60 seconds
-        setInterval(async () => {
+        if (this.syncInterval) clearInterval(this.syncInterval);
+
+        this.syncInterval = setInterval(async () => {
             // Only sync if tab is visible (Browser optimization)
             if (document.hidden) return;
 
-            console.log('Background Sync...');
-            await this.fetchProducts({ isBackground: true });
-            await this.fetchRequests({ isBackground: true });
-            await this.fetchPackingList(true);
+            // Simple check to avoid overlapping if fetch takes > 60s
+            if (this.isSyncing) return;
+            this.isSyncing = true;
 
-            // Trigger Smart View Update
-            this.updateCurrentView();
+            try {
+                await Promise.all([
+                    this.fetchProducts({ isBackground: true }),
+                    this.fetchRequests({ isBackground: true }),
+                    this.fetchPackingList(true)
+                ]);
+                this.updateCurrentView();
+            } catch (e) {
+                console.warn('Background sync failed:', e);
+            } finally {
+                this.isSyncing = false;
+            }
         }, 60000);
     }
 
@@ -1812,9 +1801,10 @@ class App {
         const container = document.getElementById('history-content');
         if (!container) return;
 
-        const { initial, movements } = data;
+        // Default to empty array if movements is undefined
+        const { initial = 0, movements = [] } = data || {};
 
-        let runningStock = Number(initial);
+        let runningStock = Number(initial || 0);
         // movements are sorted by date ascending in backend.
 
         const rows = movements.map(m => {
@@ -1880,7 +1870,7 @@ class App {
     printProductHistory(code, name) {
         if (!this._tempHistoryData) return;
 
-        const { initial, movements } = this._tempHistoryData;
+        const { initial = 0, movements = [] } = this._tempHistoryData || {};
         const now = new Date().toLocaleString();
 
         const printWindow = window.open('', '_blank', 'width=800,height=600');
