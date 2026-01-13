@@ -1673,7 +1673,7 @@ class App {
                     <div class="card-back">
                         <div style="display:flex; justify-content:space-between; align-items:start; border-bottom:1px solid #ddd; padding-bottom:0.5rem; margin-bottom:1rem;">
                             <h5 style="margin:0;">Detalles</h5>
-                            <button onclick="event.stopPropagation(); app.showProductHistory('${code}', '${product.desc.replace(/'/g, "")}')" 
+                            <button onclick="event.stopPropagation(); app.viewProductHistory('${code}', '${product.desc.replace(/'/g, "")}')" 
                                     style="
                                         background: rgba(79, 70, 229, 0.1); 
                                         color: var(--primary-color); 
@@ -1727,7 +1727,7 @@ class App {
     }
 
     /* --- PRODUCT HISTORY --- */
-    async showProductHistory(code, name) {
+    async viewProductHistory(code, name) {
         // 1. Create/Show Modal with Loading State
         const modalId = 'history-modal';
         const existing = document.getElementById(modalId);
@@ -1791,9 +1791,9 @@ class App {
                 if (el) el.innerHTML = `<div style="text-align:center; color:red; padding:2rem;">Error: ${result.message}</div>`;
             }
         } catch (e) {
-            console.error(e);
+            console.error('History Error', e);
             const el = document.getElementById('history-content');
-            if (el) el.innerHTML = `<div style="text-align:center; color:red; padding:2rem;">Error de conexión.</div>`;
+            if (el) el.innerHTML = `<div style="text-align:center; color:red; padding:2rem;">Error de Carga: ${e.message}</div>`;
         }
     }
 
