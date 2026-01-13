@@ -1805,43 +1805,51 @@ class App {
         const { initial = 0, movements = [] } = data || {};
 
         let runningStock = Number(initial || 0);
-        // movements are sorted by date ascending in backend.
 
-        const rows = movements.map(m => {
-            // Basic running stock logic (approximate if history is partial)
-            let qty = Number(m.qty);
-            if (m.type === 'INGRESO' || (m.type === 'AJUSTE' && qty > 0)) { // Adjustment Logic depends on sign
-                // In backend, adjustment qty is already signed (+/-)
-                // But for display, 'qty' field is absolute usually? 
-                // Checked backend: Adjustment qty is from Col B, can be negative.
-                // Movement qty from details is always positive.
+        // 1. Sort Ascending (Oldest First) for calculation
+        // Ensure date comparison works for both numbers (timestamps) and strings
+        const sortedMovements = [...movements].sort((a, b) => {
+            const dA = new Date(a.date).getTime();
+            const dB = new Date(b.date).getTime();
+            return dA - dB;
+        });
 
-                // If type INGRESO -> +qty
-                // If type SALIDA -> -qty
-                if (m.type === 'INGRESO') runningStock += qty;
-                else if (m.type === 'SALIDA') runningStock -= qty;
-                else if (m.type === 'AJUSTE') runningStock += qty; // Qty is signed
+        // 2. Calculate Balance for each step
+        const calculatedMovements = sortedMovements.map(m => {
+            const qty = Number(m.qty);
+            let delta = 0;
 
-            } else { // SALIDA
-                runningStock -= qty;
-            }
+            if (m.type === 'INGRESO') delta = qty;
+            else if (m.type === 'SALIDA') delta = -qty;
+            else if (m.type === 'AJUSTE') delta = qty; // Already signed or absolute? Check backend. Backend sends ABSOLUTE magnitude if from Details?
+            // Re-verify backend: Ajustes loop uses 'aData[i][1]' which is usually just a number.
+            // If manual adjustment is negative, it comes as native number.
 
+            runningStock += delta;
+
+            return {
+                ...m,
+                delta: delta,
+                balance: runningStock
+            };
+        });
+
+        // 3. Render Newest First
+        const rows = calculatedMovements.reverse().map(m => {
             // Date Formatting
-            // m.date might be timestamp or string
-            let dateStr = m.date;
-            if (typeof m.date === 'number') dateStr = new Date(m.date).toLocaleString();
+            let dateStr = m.dateStr || new Date(m.date).toLocaleString();
 
-            const isPositive = (m.type === 'INGRESO' || (m.type === 'AJUSTE' && m.qty > 0));
-            const typeColor = m.type === 'INGRESO' ? '#16a34a' : (m.type === 'AJUSTE' ? '#f59e0b' : '#ef4444');
-            const icon = m.type === 'INGRESO' ? 'fa-arrow-right-to-bracket' : (m.type === 'AJUSTE' ? 'fa-scale-balanced' : 'fa-arrow-right-from-bracket');
+            const isPositive = m.delta >= 0;
+            const typeColor = m.delta > 0 ? '#16a34a' : (m.delta < 0 ? '#ef4444' : '#6b7280');
+            const icon = m.delta > 0 ? 'fa-arrow-right-to-bracket' : (m.delta < 0 ? 'fa-arrow-right-from-bracket' : 'fa-circle');
 
-            const displayQty = m.type === 'SALIDA' ? -Math.abs(m.qty) : (m.type === 'AJUSTE' && m.qty > 0 ? `+${m.qty}` : m.qty);
+            const displayQty = (m.delta > 0 ? '+' : '') + m.delta;
 
             return `
                 <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #eee;">
                     <div style="display:flex; align-items:center; gap:0.75rem;">
-                        <div style="width:30px; height:30px; border-radius:50%; background:${typeColor}20; color:${typeColor}; display:flex; align-items:center; justify-content:center;">
-                            <i class="fa-solid ${icon}" style="font-size:0.8rem;"></i>
+                        <div style="width:36px; height:36px; border-radius:50%; background:${typeColor}20; color:${typeColor}; display:flex; align-items:center; justify-content:center;">
+                            <i class="fa-solid ${icon}" style="font-size:0.9rem;"></i>
                         </div>
                         <div>
                             <div style="font-weight:bold; font-size:0.9rem; color:#333;">${m.type}</div>
@@ -1851,10 +1859,13 @@ class App {
                     </div>
                     <div style="text-align:right;">
                         <div style="font-weight:bold; font-size:1rem; color:${typeColor};">${displayQty}</div>
+                        <div style="font-size:0.8rem; color:#666; background:#f3f4f6; padding:0 4px; border-radius:4px; margin-top:2px;">
+                            Saldo: <strong>${m.balance.toFixed(2)}</strong>
+                        </div>
                     </div>
                 </div>
             `;
-        }).reverse().join(''); // Show Newest First for Display
+        }).join('');
 
         container.innerHTML = `
             <div style="padding-bottom:1rem;">
