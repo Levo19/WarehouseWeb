@@ -1858,7 +1858,15 @@ class App {
                         </div>
                     </div>
                     <div style="text-align:right;">
-                        <div style="font-weight:bold; font-size:1rem; color:${typeColor};">${displayQty}</div>
+                        <div style="font-weight:bold; font-size:1rem; color:${typeColor}; white-space:nowrap;">
+                            ${displayQty}
+                            ${m.origin === 'ajuste' ? `
+                                <button onclick="app.editStockAdjustment('${m.rowId}', '${m.qty}', '${data.code || ''}', this)" 
+                                        style="background:none; border:none; color:#f59e0b; cursor:pointer; margin-left:4px;" title="Corregir Ajuste">
+                                    <i class="fa-solid fa-pencil"></i>
+                                </button>
+                            ` : ''}
+                        </div>
                         <div style="font-size:0.8rem; color:#666; background:#f3f4f6; padding:0 4px; border-radius:4px; margin-top:2px;">
                             Saldo: <strong>${m.balance.toFixed(2)}</strong>
                         </div>
