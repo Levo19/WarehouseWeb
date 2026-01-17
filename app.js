@@ -2039,6 +2039,30 @@ class App {
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
         }
 
+        // --- OPTIMISTIC UPDATE START ---
+        // 1. Update Local Data Immediately
+        if (this.data.products[code]) {
+            this.data.products[code].stock = realQty;
+        }
+
+        // 2. Update Dashboard UI Immediately (If visible)
+        const productCard = document.querySelector(`.product-card[data-product-id="${code}"]`);
+        if (productCard) {
+            const stockLabel = Array.from(productCard.querySelectorAll('div')).find(d => d.textContent.includes('Stock:'));
+            if (stockLabel) {
+                stockLabel.innerHTML = `<i class="fa-solid fa-cubes"></i> Stock: ${realQty}`;
+                stockLabel.style.color = realQty > 0 ? '#16a34a' : '#ef4444';
+            }
+        }
+
+        // 3. Remove Adjustment Modal immediately
+        const modal = document.getElementById('smart-adj-modal');
+        if (modal) modal.remove();
+
+        // 4. Show Optimistic Toast
+        this.showToast('Actualizado. Sincronizando...', 'info');
+        // --- OPTIMISTIC UPDATE END ---
+
         try {
             const payload = {
                 code: code,
@@ -2048,6 +2072,7 @@ class App {
                 usuario: this.currentUser.username
             };
 
+            // Background Fetch
             const response = await fetch(API_URL, {
                 method: 'POST',
                 redirect: 'follow',
@@ -2057,24 +2082,16 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                document.getElementById('smart-adj-modal').remove();
-                this.showToast(result.message, 'success');
-                // Refresh History
-                this.viewProductHistory(code); // Reloads modal
-                // Also refresh main list if visible
-                if (this.currentView === 'products') this.loadProductMasterList(true);
+                this.showToast('Sincronización completada', 'success');
+                // Optional: Refresh History if open
             } else {
-                alert('Error: ' + result.message);
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = 'Guardar Ajuste';
-                }
+                alert('Error al guardar en servidor: ' + result.message);
+                // location.reload();
             }
 
         } catch (e) {
             console.error(e);
             alert('Error de conexión');
-            if (btn) btn.disabled = false;
         }
     }
 
