@@ -2045,14 +2045,16 @@ class App {
         }
 
         // 2. Update Dashboard UI Immediately (If visible)
-        const productCard = document.querySelector(`.product-card[data-product-id="${code}"]`);
-        if (productCard) {
-            const stockLabel = Array.from(productCard.querySelectorAll('div')).find(d => d.textContent.includes('Stock:'));
-            if (stockLabel) {
-                stockLabel.innerHTML = `<i class="fa-solid fa-cubes"></i> Stock: ${realQty}`;
-                stockLabel.style.color = realQty > 0 ? '#16a34a' : '#ef4444';
+        // We use the specific class .stock-display-{code} which is unique per product card
+        const stockLabels = document.querySelectorAll(`.stock-display-${code}`);
+        stockLabels.forEach(label => {
+            label.textContent = realQty;
+            // Optional context styling (parent container color)
+            const parent = label.parentElement;
+            if (parent) {
+                parent.style.color = realQty > 0 ? '#16a34a' : (realQty < 0 ? '#ef4444' : '#f59e0b');
             }
-        }
+        });
 
         // 3. Update History Modal Immediately (If open)
         const historyContainer = document.getElementById('history-content');
