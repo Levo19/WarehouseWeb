@@ -1781,6 +1781,7 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
+                result.data.code = code; // Fix Undefined Code
                 this.renderHistoryContent(result.data);
                 // Enable Print Button and attach data
                 const printBtn = document.getElementById('btn-print-history');
