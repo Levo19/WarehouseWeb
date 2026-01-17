@@ -5377,12 +5377,12 @@ class App {
         const targetZone = zone.toLowerCase(); // 'zona1', 'zona2'
 
         this.data.requests.forEach(req => {
-            if (req.usuario.toLowerCase() !== targetZone) return;
+            if (String(req.usuario || '').toLowerCase() !== targetZone) return;
 
             // NEW: Mocks bypass date check. 
             // LOGIC CHANGE: We SHOW old "separado" items so user can delete them.
             // We only filter old "solicitado" (Pending) to avoid clutter.
-            const isSeparated = String(req.categoria).trim().toLowerCase() === 'separado';
+            const isSeparated = String(req.categoria || '').trim().toLowerCase() === 'separado';
             if (!String(req.idSolicitud).startsWith('temp-') && !isOnOrAfterBaseline(req.fecha) && !isSeparated) {
                 return;
             }
