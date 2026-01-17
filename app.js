@@ -1925,10 +1925,15 @@ class App {
         container.innerHTML = `
         <div style="padding-bottom:1rem;">
              <!-- CURRENT STOCK (Top) -->
-            <div style="background:#e0f2fe; padding:1.5rem; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; margin-bottom:1.5rem; border:1px solid #bae6fd; box-shadow:0 10px 15px -3px rgba(14, 165, 233, 0.1);">
+            <div style="background:#e0f2fe; padding:1.5rem; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; margin-bottom:1.5rem; border:1px solid #bae6fd; box-shadow:0 10px 15px -3px rgba(14, 165, 233, 0.1); position:relative;">
                 <span style="font-size:0.9rem; font-weight:bold; color:#0369a1; text-transform:uppercase; letter-spacing:1px;">Stock Actual</span>
                 <span style="font-size:2.5rem; font-weight:800; color:#0284c7; line-height:1;">${currentStock}</span>
                 <span style="font-size:0.8rem; color:#0ea5e9; margin-top:5px;">Unidades confirmadas</span>
+                
+                <button onclick="app.openSmartAdjustmentModal('${data.code}', ${currentStock})" 
+                        style="margin-top:1rem; background:#0284c7; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:0.9rem; display:flex; align-items:center; gap:0.5rem; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                    <i class="fa-solid fa-scale-balanced"></i> Nuevo Ajuste
+                </button>
             </div>
 
             <div style="margin-bottom:1rem; font-size:0.85rem; font-weight:bold; color:#555; border-bottom:2px solid #f1f5f9; padding-bottom:5px;">
@@ -1947,6 +1952,129 @@ class App {
             </div>
         </div>
     `;
+    }
+
+    /**
+     * Open Modal for Smart Stock Adjustment
+     * code: Product Code
+     * currentSystemStock: The calculated stock from history
+     */
+    openSmartAdjustmentModal(code, currentSystemStock) {
+        // Create simple modal overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'smart-adj-modal';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:10000;';
+
+        overlay.innerHTML = `
+            <div style="background:white; padding:2rem; border-radius:12px; width:90%; max-width:400px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);">
+                <h3 style="margin-top:0; color:#333;">Nuevo Ajuste de Stock</h3>
+                <p style="color:#666; font-size:0.9rem;">El sistema calculará automáticamente la diferencia.</p>
+                
+                <div style="margin-bottom:1rem;">
+                    <label style="display:block; font-weight:bold; margin-bottom:5px; color:#555;">Código</label>
+                    <input type="text" value="${code}" disabled style="width:100%; padding:8px; background:#f3f4f6; border:1px solid #ddd; border-radius:6px;">
+                </div>
+
+                <div style="margin-bottom:1rem;">
+                    <label style="display:block; font-weight:bold; margin-bottom:5px; color:#555;">Stock Físico (Real)</label>
+                    <input type="number" id="adj-real-qty" placeholder="¿Cuánto hay en realidad?" 
+                           style="width:100%; padding:10px; border:2px solid #0284c7; border-radius:6px; font-size:1.1rem; font-weight:bold; color:#333;" autofocus>
+                </div>
+
+                <div style="margin-bottom:1.5rem;">
+                    <label style="display:block; font-weight:bold; margin-bottom:5px; color:#555;">Motivo</label>
+                    <select id="adj-reason" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px;">
+                        <option value="Ajuste de Inventario">Ajuste de Inventario</option>
+                        <option value="Merma / Daño">Merma / Daño</option>
+                        <option value="Corrección de Ingreso">Corrección de Ingreso</option>
+                        <option value="Corrección de Salida">Corrección de Salida</option>
+                        <option value="Auditoria">Auditoría</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:1rem;">
+                    <button id="btn-cancel-adj" style="background:none; border:none; color:#666; cursor:pointer;" onclick="document.getElementById('smart-adj-modal').remove()">Cancelar</button>
+                    <button id="btn-save-adj" style="background:#0284c7; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:bold; cursor:pointer;">
+                        Guardar Ajuste
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        // Bind Save Action
+        document.getElementById('btn-save-adj').onclick = () => {
+            const realQtyVal = document.getElementById('adj-real-qty').value;
+            const reason = document.getElementById('adj-reason').value;
+
+            if (realQtyVal === '') return alert('Ingresa la cantidad real');
+
+            const realQty = parseFloat(realQtyVal);
+            if (isNaN(realQty)) return alert('Cantidad inválida');
+
+            this.confirmSmartAdjustment(code, realQty, currentSystemStock, reason);
+        };
+
+        // Focus input
+        setTimeout(() => document.getElementById('adj-real-qty').focus(), 100);
+    }
+
+    async confirmSmartAdjustment(code, realQty, systemQty, reason) {
+        const delta = realQty - systemQty;
+        if (Math.abs(delta) < 0.0001) return alert('El stock real es igual al del sistema. No se necesita ajuste.');
+
+        const msg = delta > 0
+            ? `Se sumarán +${delta.toFixed(2)} unidades.`
+            : `Se restarán ${delta.toFixed(2)} unidades.`;
+
+        if (!confirm(`Confirmar Ajuste:\n\nSistema: ${systemQty}\nReal: ${realQty}\n\nDiferencia: ${msg}\n\n¿Proceder?`)) return;
+
+        // UI Loading
+        const btn = document.getElementById('btn-save-adj');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+        }
+
+        try {
+            const payload = {
+                code: code,
+                realQty: realQty,
+                systemQty: systemQty,
+                reason: reason,
+                usuario: this.currentUser.username
+            };
+
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: 'createStockAdjustment', payload: payload })
+            });
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                document.getElementById('smart-adj-modal').remove();
+                this.showToast(result.message, 'success');
+                // Refresh History
+                this.viewProductHistory(code); // Reloads modal
+                // Also refresh main list if visible
+                if (this.currentView === 'products') this.loadProductMasterList(true);
+            } else {
+                alert('Error: ' + result.message);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Guardar Ajuste';
+                }
+            }
+
+        } catch (e) {
+            console.error(e);
+            alert('Error de conexión');
+            if (btn) btn.disabled = false;
+        }
     }
 
     printProductHistory(code, name) {
