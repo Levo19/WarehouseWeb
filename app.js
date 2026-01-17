@@ -1602,7 +1602,7 @@ class App {
             `;
         }
 
-        // Use filtered entries if provided, otherwise get all
+        // 1. Prepare Entries
         let productEntries = filteredEntries || Object.entries(this.data.products);
 
         // Sort Alphabetically
@@ -1610,42 +1610,90 @@ class App {
             return a.desc.localeCompare(b.desc);
         });
 
-        const productCards = productEntries.map(([code, product]) => {
-            // Image Logic (Optimized for Drive)
-            let imgSrc = product.img ? product.img : 'recursos/defaultImageProduct.png';
+        // 2. Schedule Async Render
+        const gridId = 'product-grid-container-' + Date.now();
+        setTimeout(() => this.populateProductGrid(productEntries, gridId), 0);
 
-            // Optimization: Convert Drive links to direct lh3 links to avoid Rate Limits/HTTP2 errors on thumbnails
-            if (imgSrc.includes('drive.google.com') || imgSrc.includes('docs.google.com')) {
-                const idMatch = imgSrc.match(/[-\w]{25,}/);
-                if (idMatch) {
-                    // Use lh3.googleusercontent.com/d/{ID}=s300 (size 300px)
-                    imgSrc = `https://lh3.googleusercontent.com/d/${idMatch[0]}=s300`;
-                }
+        // 3. Return Scaffold
+        return `
+            <div style="margin-top:1rem; padding-bottom: 3rem;">
+                <div id="${gridId}" style="
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                    gap: 1rem;
+                ">
+                     <div style="grid-column: 1 / -1; text-align:center; padding: 3rem; color:#999;">
+                        <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;"></i>
+                        <div style="margin-top:1rem;">Renderizando ${productEntries.length} productos...</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /* --- ASYNC RENDERER --- */
+    populateProductGrid(entries, containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return; // View changed
+
+        container.innerHTML = ''; // Clear spinner
+
+        const CHUNK_SIZE = 50;
+        let index = 0;
+
+        const renderChunk = () => {
+            // Check if container still exists (user might have navigated away)
+            const liveContainer = document.getElementById(containerId);
+            if (!liveContainer) return;
+
+            const chunk = entries.slice(index, index + CHUNK_SIZE);
+            if (chunk.length === 0) return;
+
+            const html = chunk.map(([code, p]) => this.renderSingleProductCard(code, p)).join('');
+            liveContainer.insertAdjacentHTML('beforeend', html);
+
+            index += CHUNK_SIZE;
+            if (index < entries.length) {
+                // Yield to main thread to keep UI responsive
+                requestAnimationFrame(renderChunk);
             }
+        };
 
-            // Stock Color Logic
-            let stockColor = '#10b981'; // Green
-            if (product.stock <= 5) stockColor = '#ef4444'; // Red
-            else if (product.stock <= 20) stockColor = '#f59e0b'; // Amber
+        renderChunk();
+    }
 
-            const searchString = `${product.desc} ${code} ${product.marca || ''}`.toLowerCase();
-            const isNegative = product.stock < 0;
+    renderSingleProductCard(code, product) {
+        // Image Logic (Optimized for Drive)
+        let imgSrc = product.img ? product.img : 'recursos/defaultImageProduct.png';
 
-            return `
+        // Optimization
+        if (imgSrc.includes('drive.google.com') || imgSrc.includes('docs.google.com')) {
+            const idMatch = imgSrc.match(/[-\w]{25,}/);
+            if (idMatch) {
+                imgSrc = `https://lh3.googleusercontent.com/d/${idMatch[0]}=s300`;
+            }
+        }
+
+        // Stock Color Logic
+        let stockColor = '#10b981'; // Green
+        if (product.stock <= 5) stockColor = '#ef4444'; // Red
+        else if (product.stock <= 20) stockColor = '#f59e0b'; // Amber
+
+        const searchString = `${product.desc} ${code} ${product.marca || ''}`.toLowerCase();
+        const isNegative = product.stock < 0;
+
+        return `
             <div class="product-card ${isNegative ? 'negative-stock' : ''}" data-search="${searchString}" onclick="this.classList.toggle('flipped')">
                 <div class="product-card-inner">
                     ${isNegative ? '<i class="fa-solid fa-bomb stock-bomb-icon"></i>' : ''}
                     
                     <!-- FRONT -->
                     <div class="card-front">
-                        <!-- Header: Historial Button (Top Right) removed, now on back -->
-                        
                         <div style="position:absolute; top:10px; right:10px; background:rgba(255,255,255,0.9); padding:2px 8px; border-radius:12px; font-size:0.7rem; color:#64748b; font-weight:600; border:1px solid #e2e8f0;">
                             ${product.marca || 'GENERICO'}
                         </div>
 
-                        <!-- Add to Dispatch Button (Top Left) -->
-                        <!-- Quick Dispatch Button (Top Left) -->
+                        <!-- Quick Dispatch Button -->
                         <button onclick="event.stopPropagation(); app.openQuickDispatchModal('${code}')" 
                                 style="position:absolute; top:10px; left:10px; background:#f59e0b; color:white; border:none; width:32px; height:32px; border-radius:50%; box-shadow:0 4px 6px -1px rgba(245, 158, 11, 0.4); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.2s;"
                                 onmouseover="this.style.transform='scale(1.1)'"
@@ -1665,21 +1713,23 @@ class App {
                              <div style="margin-top:0.5rem; font-weight:bold; color:${stockColor}; display:flex; align-items:center; gap:0.5rem;">
                                 <i class="fa-solid fa-cubes"></i> Stock: <span class="stock-display-${code}">${product.stock}</span>
                             </div>
-                        <!-- Factor Zona Badge -->
-                        <div onclick="event.stopPropagation(); app.editFactorZona('${code}', '${product.factor || 0}')"
-                             style="position:absolute; bottom:10px; right:10px; font-size:0.7rem; font-weight:bold; 
-                                    background:${(!product.factor || product.factor == 0) ? '#fee2e2' : '#f0f9ff'}; 
-                                    color:${(!product.factor || product.factor == 0) ? '#ef4444' : '#0ea5e9'}; 
-                                    padding:2px 8px; border-radius:12px; border:1px solid ${(!product.factor || product.factor == 0) ? '#fecaca' : '#bae6fd'}; 
-                                    cursor:pointer; display:flex; align-items:center; gap:4px; z-index:5;"
-                             title="Editar Factor Zona">
-                            ${(!product.factor || product.factor == 0)
-                    ? '<i class="fa-solid fa-triangle-exclamation"></i>'
-                    : '<i class="fa-solid fa-ruler-combined"></i> FZ:'} 
-                            ${(!product.factor || product.factor == 0) ? 'Sin Factor' : product.factor}
-                        </div>
+                        
+                            <!-- Factor Zona Badge -->
+                            <div onclick="event.stopPropagation(); app.editFactorZona('${code}', '${product.factor || 0}')"
+                                 style="position:absolute; bottom:10px; right:10px; font-size:0.7rem; font-weight:bold; 
+                                        background:${(!product.factor || product.factor == 0) ? '#fee2e2' : '#f0f9ff'}; 
+                                        color:${(!product.factor || product.factor == 0) ? '#ef4444' : '#0ea5e9'}; 
+                                        padding:2px 8px; border-radius:12px; border:1px solid ${(!product.factor || product.factor == 0) ? '#fecaca' : '#bae6fd'}; 
+                                        cursor:pointer; display:flex; align-items:center; gap:4px; z-index:5;"
+                                 title="Editar Factor Zona">
+                                ${(!product.factor || product.factor == 0)
+                ? '<i class="fa-solid fa-triangle-exclamation"></i>'
+                : '<i class="fa-solid fa-ruler-combined"></i> FZ:'} 
+                                ${(!product.factor || product.factor == 0) ? 'Sin Factor' : product.factor}
+                            </div>
 
-                    </div>
+                        </div> <!-- Close Content -->
+                    </div> <!-- Close Front -->
 
                     <!-- BACK -->
                     <div class="card-back">
@@ -1722,23 +1772,6 @@ class App {
                     </div>
                 </div>
             </div>`;
-        }).join('');
-
-        // Check for duplicates during mapping (debug)
-        console.log(`Rendering ${productEntries.length} products (Review Mode).`);
-
-        return `
-            <div style="margin-top:1rem; padding-bottom: 3rem;">
-                <!-- Full Page Grid -->
-                <div id="product-grid-container" style="
-                    display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-                    gap: 1rem;
-                ">
-                    ${productCards}
-                </div>
-            </div>
-        `;
     }
 
     /* --- PRODUCT HISTORY --- */
