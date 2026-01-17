@@ -1274,7 +1274,7 @@ class App {
 
     getUniqueClients() {
         if (!this.data.requests) return ['zona1', 'zona2']; // Default fallback
-        const clients = new Set(this.data.requests.map(r => r.usuario.toLowerCase()));
+        const clients = new Set(this.data.requests.map(r => (r.user || r.usuario || 'Desconocido').toLowerCase()));
 
         // Ensure default zones always exist if they have no requests? 
         // User said "clients are born from requests". So strictly from requests.
