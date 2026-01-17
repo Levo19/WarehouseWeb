@@ -1853,7 +1853,6 @@ class App {
         let runningStock = Number(initial || 0);
 
         // 1. Sort Ascending (Oldest First) for calculation
-        // Ensure date comparison works for both numbers (timestamps) and strings
         const sortedMovements = [...movements].sort((a, b) => {
             const dA = new Date(a.date).getTime();
             const dB = new Date(b.date).getTime();
@@ -1867,9 +1866,7 @@ class App {
 
             if (m.type === 'INGRESO') delta = qty;
             else if (m.type === 'SALIDA') delta = -qty;
-            else if (m.type === 'AJUSTE') delta = qty; // Already signed or absolute? Check backend. Backend sends ABSOLUTE magnitude if from Details?
-            // Re-verify backend: Ajustes loop uses 'aData[i][1]' which is usually just a number.
-            // If manual adjustment is negative, it comes as native number.
+            else if (m.type === 'AJUSTE') delta = qty;
 
             runningStock += delta;
 
@@ -1879,6 +1876,9 @@ class App {
                 balance: runningStock
             };
         });
+
+        const currentStock = runningStock.toFixed(2);
+        const initialStock = Number(initial || 0).toFixed(2);
 
         // 3. Render Newest First
         const rows = calculatedMovements.reverse().map(m => {
@@ -1892,44 +1892,61 @@ class App {
             const displayQty = (m.delta > 0 ? '+' : '') + m.delta;
 
             return `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #eee;">
-                    <div style="display:flex; align-items:center; gap:0.75rem;">
-                        <div style="width:36px; height:36px; border-radius:50%; background:${typeColor}20; color:${typeColor}; display:flex; align-items:center; justify-content:center;">
-                            <i class="fa-solid ${icon}" style="font-size:0.9rem;"></i>
-                        </div>
-                        <div>
-                            <div style="font-weight:bold; font-size:0.9rem; color:#333;">${m.type}</div>
-                            <div style="font-size:0.75rem; color:#888;">${dateStr}</div>
-                            ${m.ref ? `<div style="font-size:0.75rem; color:#555;">${m.ref}</div>` : ''}
-                        </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #eee;">
+                <div style="display:flex; align-items:center; gap:0.75rem;">
+                    <div style="width:36px; height:36px; border-radius:50%; background:${typeColor}20; color:${typeColor}; display:flex; align-items:center; justify-content:center;">
+                        <i class="fa-solid ${icon}" style="font-size:0.9rem;"></i>
                     </div>
-                    <div style="text-align:right;">
-                        <div style="font-weight:bold; font-size:1rem; color:${typeColor}; white-space:nowrap;">
-                            ${displayQty}
-                            ${m.origin === 'ajuste' ? `
-                                <button onclick="app.editStockAdjustment('${m.rowId}', '${m.qty}', '${data.code || ''}', this)" 
-                                        style="background:none; border:none; color:#f59e0b; cursor:pointer; margin-left:4px;" title="Corregir Ajuste">
-                                    <i class="fa-solid fa-pencil"></i>
-                                </button>
-                            ` : ''}
-                        </div>
-                        <div style="font-size:0.8rem; color:#666; background:#f3f4f6; padding:0 4px; border-radius:4px; margin-top:2px;">
-                            Saldo: <strong>${m.balance.toFixed(2)}</strong>
-                        </div>
+                    <div>
+                        <div style="font-weight:bold; font-size:0.9rem; color:#333;">${m.type}</div>
+                        <div style="font-size:0.75rem; color:#888;">${dateStr}</div>
+                        ${m.ref ? `<div style="font-size:0.75rem; color:#555;">${m.ref}</div>` : ''}
                     </div>
                 </div>
-            `;
-        }).join('');
-
-        container.innerHTML = `
-            <div style="padding-bottom:1rem;">
-                <div style="background:#f1f5f9; padding:1rem; border-radius:8px; display:flex; justify-content:space-between; margin-bottom:1rem;">
-                    <span style="font-weight:bold; color:#555;">Stock Inicial (Registrado)</span>
-                    <span style="font-weight:bold; color:#333;">${initial}</span>
+                <div style="text-align:right;">
+                    <div style="font-weight:bold; font-size:1rem; color:${typeColor}; white-space:nowrap;">
+                        ${displayQty}
+                        ${m.origin === 'ajuste' ? `
+                            <button onclick="app.editStockAdjustment('${m.rowId}', '${m.qty}', '${data.code || ''}', this)" 
+                                    style="background:none; border:none; color:#f59e0b; cursor:pointer; margin-left:4px;" title="Corregir Ajuste">
+                                <i class="fa-solid fa-pencil"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                    <div style="font-size:0.8rem; color:#666; background:#f3f4f6; padding:0 4px; border-radius:4px; margin-top:2px;">
+                        Saldo: <strong>${m.balance.toFixed(2)}</strong>
+                    </div>
                 </div>
-                ${rows.length > 0 ? rows : '<div style="text-align:center; color:#999;">No hay movimientos registrados.</div>'}
             </div>
         `;
+        }).join('');
+
+        // REORDERED HTML: Current Top, Initial Bottom
+        container.innerHTML = `
+        <div style="padding-bottom:1rem;">
+             <!-- CURRENT STOCK (Top) -->
+            <div style="background:#e0f2fe; padding:1.5rem; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; margin-bottom:1.5rem; border:1px solid #bae6fd; box-shadow:0 10px 15px -3px rgba(14, 165, 233, 0.1);">
+                <span style="font-size:0.9rem; font-weight:bold; color:#0369a1; text-transform:uppercase; letter-spacing:1px;">Stock Actual</span>
+                <span style="font-size:2.5rem; font-weight:800; color:#0284c7; line-height:1;">${currentStock}</span>
+                <span style="font-size:0.8rem; color:#0ea5e9; margin-top:5px;">Unidades confirmadas</span>
+            </div>
+
+            <div style="margin-bottom:1rem; font-size:0.85rem; font-weight:bold; color:#555; border-bottom:2px solid #f1f5f9; padding-bottom:5px;">
+                MOVIMIENTOS RECIENTES
+            </div>
+            
+            ${rows.length > 0 ? rows : '<div style="text-align:center; color:#999; padding:1rem;">No hay movimientos recientes.</div>'}
+
+             <!-- INITIAL STOCK (Bottom) -->
+            <div style="margin-top:1.5rem; background:#f8fafc; padding:1rem; border-radius:8px; display:flex; justify-content:space-between; align-items:center; border:1px dashed #cbd5e1; opacity:0.8;">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <i class="fa-solid fa-flag-checkered" style="color:#64748b;"></i>
+                    <span style="font-weight:bold; color:#64748b;">Stock Inicial (Origen)</span>
+                </div>
+                <span style="font-weight:bold; color:#333; font-size:1.1rem;">${initialStock}</span>
+            </div>
+        </div>
+    `;
     }
 
     printProductHistory(code, name) {
