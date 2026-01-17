@@ -1668,6 +1668,22 @@ class App {
                         </div>
                     </div>
 
+                        <!-- Factor Zona Badge -->
+                        <div onclick="event.stopPropagation(); app.editFactorZona('${code}', '${product.factor || 0}')"
+                             style="position:absolute; bottom:10px; right:10px; font-size:0.7rem; font-weight:bold; 
+                                    background:${(!product.factor || product.factor == 0) ? '#fee2e2' : '#f0f9ff'}; 
+                                    color:${(!product.factor || product.factor == 0) ? '#ef4444' : '#0ea5e9'}; 
+                                    padding:2px 8px; border-radius:12px; border:1px solid ${(!product.factor || product.factor == 0) ? '#fecaca' : '#bae6fd'}; 
+                                    cursor:pointer; display:flex; align-items:center; gap:4px; z-index:5;"
+                             title="Editar Factor Zona">
+                            ${(!product.factor || product.factor == 0)
+                    ? '<i class="fa-solid fa-triangle-exclamation"></i>'
+                    : '<i class="fa-solid fa-ruler-combined"></i> FZ:'} 
+                            ${(!product.factor || product.factor == 0) ? 'Sin Factor' : product.factor}
+                        </div>
+
+                    </div>
+
                     <!-- BACK -->
                     <div class="card-back">
                         <div style="display:flex; justify-content:space-between; align-items:start; border-bottom:1px solid #ddd; padding-bottom:0.5rem; margin-bottom:1rem;">
@@ -1696,6 +1712,9 @@ class App {
 
                         <div class="back-label">Código de Sistema</div>
                         <div class="back-value">${code}</div>
+
+                        <div class="back-label">Factor Zona</div>
+                        <div class="back-value">${product.factor || '0'}</div>
 
                         <div class="back-label">Stock Disponible</div>
                         <div class="back-value" style="font-size:1.2rem; color:var(--primary-color);"><span class="stock-display-${code}">${product.stock}</span></div>
@@ -2655,7 +2674,7 @@ class App {
                     </div>
                 </div>
 
-                <!--Photo Display Section-- >
+                <!-- Photo Display Section -->
                 ${info.foto ? `
                 <div style="margin-bottom:1rem; border-radius:8px; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
                     <img src="${this.getOptimizedImageUrl(info.foto)}" 
