@@ -884,10 +884,9 @@ class App {
             if (!options.isBackground) {
                 const container = document.getElementById('zone-workspace');
                 if (container) {
-                    container.innerHTML = `
-            < div style = "text-align:center; padding:2rem; color:red;" >
-                <i class="fa-solid fa-triangle-exclamation"></i> Error al cargar inventario.
-                            < br > <br>
+                    container.innerHTML = `<div style="text-align:center; padding:2rem; color:red;">
+                    <h2><i class="fa-solid fa-bug"></i> Error de Script</h2>
+                    <br><br>
                         <button class="btn-sm" onclick="app.fetchProducts()">
                             <i class="fa-solid fa-rotate-right"></i> Reintentar
                         </button>
@@ -2163,19 +2162,19 @@ class App {
         sortedMovements.forEach(m => {
             const typeColor = m.type === 'INGRESO' ? 'green' : (m.type === 'AJUSTE' ? 'orange' : 'red');
             rowsHtml += `
-                < tr >
+                <tr>
                     <td style="padding:8px; border-bottom:1px solid #ddd;">${m.date}</td>
                     <td style="padding:8px; border-bottom:1px solid #ddd; font-weight:bold; color:${typeColor}">${m.type}</td>
                     <td style="padding:8px; border-bottom:1px solid #ddd;">${m.ref || '-'}</td>
                     <td style="padding:8px; text-align:right; border-bottom:1px solid #ddd; font-weight:bold;">${m.qty}</td>
-                </tr >
+                </tr>
                 `;
         });
 
         printWindow.document.write(`
-                < html >
-                <head>
-                    <title>Historial - ${name}</title>
+                <html>
+                    <head>
+                        <title>Historial - ${name}</title>
                     <style>
                         body { font-family: Arial, sans-serif; padding: 20px; }
                         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
@@ -2214,7 +2213,7 @@ class App {
                         window.onload = function() { window.print(); window.close(); }
                     </script>
                 </body>
-            </html >
+            </html>
                 `);
         printWindow.document.close();
     }
@@ -2222,7 +2221,7 @@ class App {
     // Restore HELPER
     renderProductImage(src) {
         if (!src) return '<img src="recursos/defaultImageProduct.png" class="card-img" loading="lazy">';
-        return `< img src = "${src}" class="card-img" loading = "lazy" onerror = "this.src='recursos/defaultImageProduct.png'" > `;
+        return `<img src="${src}" class="card-img" loading="lazy" onerror="this.src='recursos/defaultImageProduct.png'">`;
     }
 
 
@@ -2239,10 +2238,10 @@ class App {
         if (document.getElementById('btn-mov-guias')) return;
 
         headerActions.innerHTML = `
-                < div class="header-tab-group" >
+                <div class="header-tab-group">
                 <button id="btn-mov-guias" class="btn-header-tab active" onclick="app.switchMovTab('guias')">Guías</button>
                 <button id="btn-mov-preingresos" class="btn-header-tab" onclick="app.switchMovTab('preingresos')">Preingresos</button>
-            </div >
+            </div>
                 `;
     }
 
@@ -2262,7 +2261,7 @@ class App {
 
         // Toggle Content Views
         document.querySelectorAll('.mov-tab-content').forEach(c => c.classList.remove('active'));
-        const target = document.getElementById(`tab - ${tab} `);
+        const target = document.getElementById(`tab-${tab}`);
         if (target) target.classList.add('active');
 
         // Close Detail Panels for Fresh Start
@@ -2316,7 +2315,7 @@ class App {
                     body: JSON.stringify({ action: 'getMovimientosData' })
                 });
 
-                if (!response.ok) throw new Error(`HTTP ${response.status} `);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
                 const result = await response.json();
 
@@ -2360,14 +2359,14 @@ class App {
 
             } catch (e) {
                 attempts++;
-                console.warn(`Attempt ${attempts} failed: ${e.message} `);
+                console.warn(`Attempt ${attempts} failed: ${e.message}`);
 
                 if (attempts >= maxAttempts) {
                     console.error('All fetch attempts failed', e);
                     if (!isBackground && container && (!this.data.movimientos || !this.data.movimientos.guias)) {
-                        container.innerHTML = `< div style = "text-align:center; padding:1rem; color:red;" >
+                        container.innerHTML = `<div style="text-align:center; padding:1rem; color:red;">
                 <i class="fa-solid fa-triangle-exclamation"></i> Error de conexión.Reintentando... (${e.message})
-                       </div > `;
+                       </div>`;
                     }
                 } else {
                     // Wait 2s before retry
@@ -2413,7 +2412,7 @@ class App {
             filtered = filtered.filter(g => {
                 const parts = g.fecha.split(' ')[0].split('/'); // ["16", "12", "2025"]
                 // Date input is YYYY-MM-DD
-                const gDateISO = `${parts[2]} -${parts[1]} -${parts[0]} `;
+                const gDateISO = `${parts[2]}-${parts[1]}-${parts[0]}`;
                 return gDateISO === dateInput;
             });
         }
@@ -2449,8 +2448,8 @@ class App {
 
         let html = '';
         sortedDates.forEach(date => {
-            html += `< h4 style = "margin: 1rem 0 0.5rem 0; color:var(--primary-color); border-bottom:2px solid #f3f4f6; padding-bottom:0.25rem;" > ${date}</h4 > `;
-            html += `< div class="guias-group-list" > `;
+            html += `<h4 style="margin: 1rem 0 0.5rem 0; color:var(--primary-color); border-bottom:2px solid #f3f4f6; padding-bottom:0.25rem;">${date}</h4>`;
+            html += `<div class="guias-group-list">`;
 
             console.log('Rendering Grouped Guias:', list);
 
@@ -2461,7 +2460,7 @@ class App {
                 const tipoClass = tipo.toLowerCase();
 
                 html += `
-                < div id = "guia-row-${g.id}" class="guia-row-card" onclick = "window.app.toggleGuiaDetail('${g.id}')" >
+                <div id="guia-row-${g.id}" class="guia-row-card" onclick="window.app.toggleGuiaDetail('${g.id}')">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <div>
                                 <span class="badge ${tipoClass}">${tipo}</span>
@@ -2477,11 +2476,11 @@ class App {
                             </div>
                         </div>
                         ${g.comentario ? `<div style="font-size:0.8rem; color:#888; font-style:italic; margin-top:0.25rem;">"${g.comentario}"</div>` : ''}
-                    </div >
+                    </div>
                 `;
             });
 
-            html += `</div > `;
+            html += `</div>`;
         });
 
         container.innerHTML = html;
@@ -2496,7 +2495,7 @@ class App {
         document.querySelectorAll('.guia-row-card').forEach(d => d.classList.remove('active'));
 
         // If clicking same, CLOSE
-        if (currentActiveInfo && currentActiveInfo.id === `guia - row - ${id} `) {
+        if (currentActiveInfo && currentActiveInfo.id === `guia-row-${id}`) {
             panel.style.width = '0';
             panel.style.opacity = '0';
             panel.innerHTML = '';
@@ -2507,7 +2506,7 @@ class App {
         }
 
         // OPEN logic
-        const row = document.getElementById(`guia - row - ${id} `);
+        const row = document.getElementById(`guia-row-${id}`);
         if (row) row.classList.add('active'); // Highlight
 
         panel.style.width = '400px'; // Fixed width for detail
@@ -2591,19 +2590,19 @@ class App {
         // info.fecha is "dd/MM/yyyy HH:mm:ss"
         // Get Today "dd/MM/yyyy"
         const now = new Date();
-        const todayStr = `${String(now.getDate()).padStart(2, '0')} /${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} `;
+        const todayStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
         const guideDateStr = info.fecha.split(' ')[0];
         const canEdit = (todayStr === guideDateStr);
 
         const productsHtml = products.length > 0 ? products.map(p => `
-                < div style = "display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #f9f9f9;" >
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #f9f9f9;">
                     <div style="flex:1;">
                         <div style="font-weight:bold; font-size:0.9rem;">${p.descripcion}</div>
                         <div style="font-size:0.8rem; color:#666;">Code: ${p.codigo}</div>
                     </div>
                 ${p.fechaVencimiento ? `<div style="font-size:0.8rem; color:#d97706; margin-right:1rem;"><i class="fa-regular fa-calendar"></i> ${p.fechaVencimiento}</div>` : ''}
             <div style="font-weight:bold;">x${p.cantidad}</div>
-            </div >
+            </div>
                 `).join('') : '<div style="padding:1rem; text-align:center; color:#999;">Sin productos registrados</div>';
 
         // Helper for enriched details logic inside template
@@ -2614,20 +2613,20 @@ class App {
             ? this.data.nuevosProductos.filter(p => p.idGuia === info.id && p.estado !== 'PROCESADO')
             : [];
         const pendingHtml = pendingProducts.length > 0 ? pendingProducts.map(p => `
-                < div style = "display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #fcd34d; background:#fffbeb;" >
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px solid #fcd34d; background:#fffbeb;">
                 <div style="flex:1; padding-left:0.5rem;">
                     <div style="font-weight:bold; font-size:0.9rem; color:#92400e;">${p.descripcion} <span style="font-size:0.7rem; background:#fcd34d; padding:2px 4px; border-radius:4px;">NUEVO</span></div>
                     <div style="font-size:0.8rem; color:#b45309;">Marca: ${p.marca} | Venc: ${p.fechaVencimiento || '-'}</div>
                 </div>
                 <div style="font-weight:bold; color:#92400e; padding-right:0.5rem;">x${p.cantidad}</div>
-            </div >
+            </div>
                 `).join('') : '';
 
         const totalItems = products.length + pendingProducts.length;
 
         panel.innerHTML = `
-                < div style = "padding:1.5rem; background:#f9fafb; min-height:100%; display:flex; flex-direction:column;" >
-                <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:1rem;">
+                <div style="padding:1.5rem; background:#f9fafb; min-height:100%; display:flex; flex-direction:column;">
+                    <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:1rem;">
                     <div>
                         <h3 style="color:var(--primary-color); margin:0;">Detalle de Guía</h3>
                         <div style="font-size:0.9rem; color:#666;">
