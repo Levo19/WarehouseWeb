@@ -1665,9 +1665,6 @@ class App {
                              <div style="margin-top:0.5rem; font-weight:bold; color:${stockColor}; display:flex; align-items:center; gap:0.5rem;">
                                 <i class="fa-solid fa-cubes"></i> Stock: <span class="stock-display-${code}">${product.stock}</span>
                             </div>
-                        </div>
-                    </div>
-
                         <!-- Factor Zona Badge -->
                         <div onclick="event.stopPropagation(); app.editFactorZona('${code}', '${product.factor || 0}')"
                              style="position:absolute; bottom:10px; right:10px; font-size:0.7rem; font-weight:bold; 
