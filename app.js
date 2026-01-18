@@ -2752,28 +2752,31 @@ class App {
 
                 <!-- Photo Display Section -->
                 ${info.foto ? `
-                <div style="margin-bottom:1rem; border-radius:8px; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                <div style="margin-bottom:1rem; border-radius:8px; overflow:hidden; box-shadow:0 2px 4px rgba(0,0,0,0.1); background:#f0f0f0; text-align:center;">
                     <img src="${this.getOptimizedImageUrl(info.foto)}" 
                          onclick="app.openImageModal('${this.getOptimizedImageUrl(info.foto)}')"
-                         style="width:100%; height:auto; display:block; cursor:pointer;" 
-                         alt="Evidencia Guía">
+                         style="max-height:180px; width:100%; object-fit:cover; display:block; cursor:zoom-in; transition:transform 0.2s;" 
+                         onmouseover="this.style.opacity='0.9'"
+                         onmouseout="this.style.opacity='1'"
+                         alt="Evidencia Guía"
+                         title="Click para ampliar">
                 </div>
                 ` : ''
             }
                 
                 ${info.comentario ? `<div style="margin-bottom:1rem; background:#fff; padding:0.5rem; border-radius:4px; border:1px solid #eee; font-style:italic; color:#555;">"${info.comentario}"</div>` : ''}
 
-                <div style="background:white; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.05); overflow:hidden; margin-bottom:1rem; flex:1;">
-                    <div style="padding:0.75rem 1rem; border-bottom:1px solid #eee; background:#fff; font-weight:bold; color:#444;">
+                <div style="background:white; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.05); overflow:hidden; margin-bottom:1rem; flex:1; display:flex; flex-direction:column;">
+                    <div style="padding:0.75rem 1rem; border-bottom:1px solid #eee; background:#fff; font-weight:bold; color:#444; flex-shrink:0;">
                         Productos (${totalItems})
                     </div>
-                    <div style="padding:0.5rem;">
+                    <div class="custom-scrollbar" style="padding:0.5rem; overflow-y:auto; max-height:400px; flex:1;">
                         ${pendingHtml}
                         ${productsHtml}
                     </div>
                 </div>
 
-                <div style="display:flex; justify-content:space-between; margin-top:auto;">
+                <div style="display:flex; justify-content:space-between; margin-top:auto; flex-shrink:0;">
                     <button onclick="app.printGuiaTicket('${info.id}')" class="btn-secondary" style="background:#333; color:white;">
                         <i class="fa-solid fa-print"></i> Imprimir
                     </button>
@@ -3026,24 +3029,141 @@ class App {
 
 
     openImageModal(url) {
-        const modal = document.createElement('div');
-        modal.id = 'image-modal-overlay';
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.width = '100vw';
-        modal.style.height = '100vh';
-        modal.style.backgroundColor = 'rgba(0,0,0,0.85)';
-        modal.style.display = 'flex';
-        modal.style.alignItems = 'center';
-        modal.style.justifyContent = 'center';
-        modal.style.zIndex = '9999';
-        modal.style.cursor = 'zoom-out';
+        // Create Full Screen Overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'image-modal-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100vw';
+        overlay.style.height = '100vh';
+        overlay.style.backgroundColor = 'rgba(0,0,0,0.9)';
+        overlay.style.display = 'flex';
+        overlay.style.flexDirection = 'column';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.zIndex = '1000000'; // Top level
+        overlay.style.overflow = 'hidden';
 
-        modal.innerHTML = `<img src="${url}" style="max-width:90%; max-height:90vh; border-radius:8px; box-shadow:0 0 20px rgba(0,0,0,0.5);">`;
+        // Zoom State
+        let scale = 1;
+        let isDragging = false;
+        let startX, startY, translateX = 0, translateY = 0;
 
-        modal.onclick = () => modal.remove();
-        document.body.appendChild(modal);
+        // Container for Image to handle overflow
+        const imgContainer = document.createElement('div');
+        imgContainer.style.width = '100%';
+        imgContainer.style.height = '100%';
+        imgContainer.style.display = 'flex';
+        imgContainer.style.justifyContent = 'center';
+        imgContainer.style.alignItems = 'center';
+        imgContainer.style.overflow = 'hidden';
+        imgContainer.style.cursor = 'grab';
+
+        const img = document.createElement('img');
+        img.src = url;
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '90%';
+        img.style.transition = 'transform 0.1s ease-out'; // Smooth zoom
+        img.style.userSelect = 'none';
+
+        // --- CONTROLS ---
+        const controls = document.createElement('div');
+        controls.style.position = 'absolute';
+        controls.style.bottom = '20px';
+        controls.style.left = '50%';
+        controls.style.transform = 'translateX(-50%)';
+        controls.style.display = 'flex';
+        controls.style.gap = '15px';
+        controls.style.zIndex = '1000001';
+
+        const btnStyle = "background:rgba(255,255,255,0.2); backdrop-filter:blur(5px); color:white; border:1px solid rgba(255,255,255,0.4); padding:10px 15px; border-radius:30px; cursor:pointer; font-size:1.2rem; transition:all 0.2s;";
+        const hoverStyle = (e) => { e.target.style.background = 'rgba(255,255,255,0.4)'; };
+        const outStyle = (e) => { e.target.style.background = 'rgba(255,255,255,0.2)'; };
+
+        // Zoom Out
+        const btnMinus = document.createElement('button');
+        btnMinus.innerHTML = '<i class="fa-solid fa-magnifying-glass-minus"></i>';
+        btnMinus.setAttribute('style', btnStyle);
+        btnMinus.onmouseover = hoverStyle;
+        btnMinus.onmouseout = outStyle;
+
+        // Reset
+        const btnReset = document.createElement('button');
+        btnReset.innerHTML = '<i class="fa-solid fa-compress"></i>';
+        btnReset.setAttribute('style', btnStyle);
+        btnReset.onmouseover = hoverStyle;
+        btnReset.onmouseout = outStyle;
+
+        // Zoom In
+        const btnPlus = document.createElement('button');
+        btnPlus.innerHTML = '<i class="fa-solid fa-magnifying-glass-plus"></i>';
+        btnPlus.setAttribute('style', btnStyle);
+        btnPlus.onmouseover = hoverStyle;
+        btnPlus.onmouseout = outStyle;
+
+        // Close
+        const btnClose = document.createElement('button');
+        btnClose.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+        btnClose.setAttribute('style', "position:absolute; top:20px; right:20px; background:none; border:none; color:white; font-size:2rem; cursor:pointer; z-index:1000001;");
+
+        // --- LOGIC ---
+        const updateTransform = () => {
+            img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+            imgContainer.style.cursor = scale > 1 ? 'grab' : 'default';
+        };
+
+        btnPlus.onclick = (e) => { e.stopPropagation(); scale += 0.5; updateTransform(); };
+        btnMinus.onclick = (e) => { e.stopPropagation(); if (scale > 0.5) scale -= 0.5; updateTransform(); };
+        btnReset.onclick = (e) => { e.stopPropagation(); scale = 1; translateX = 0; translateY = 0; updateTransform(); };
+        btnClose.onclick = () => overlay.remove();
+
+        // Drag Logic (Desktop)
+        imgContainer.onmousedown = (e) => {
+            if (scale > 1) {
+                isDragging = true;
+                startX = e.clientX - translateX;
+                startY = e.clientY - translateY;
+                imgContainer.style.cursor = 'grabbing';
+            }
+        };
+
+        imgContainer.onmousemove = (e) => {
+            if (isDragging) {
+                e.preventDefault();
+                translateX = e.clientX - startX;
+                translateY = e.clientY - startY;
+                updateTransform();
+            }
+        };
+
+        imgContainer.onmouseup = () => { isDragging = false; if (scale > 1) imgContainer.style.cursor = 'grab'; };
+        imgContainer.onmouseleave = () => { isDragging = false; };
+
+        // Wheel Zoom
+        imgContainer.onwheel = (e) => {
+            e.preventDefault();
+            const delta = Math.sign(e.deltaY) * -0.1;
+            scale = Math.max(0.5, Math.min(5, scale + delta));
+            updateTransform();
+        };
+
+        // Close on background click (if not dragging)
+        imgContainer.onclick = (e) => {
+            if (e.target === imgContainer) overlay.remove();
+        };
+
+        // Assemble
+        controls.appendChild(btnMinus);
+        controls.appendChild(btnReset);
+        controls.appendChild(btnPlus);
+
+        imgContainer.appendChild(img);
+        overlay.appendChild(btnClose);
+        overlay.appendChild(imgContainer);
+        overlay.appendChild(controls);
+
+        document.body.appendChild(overlay);
     }
 
     closeGuiaDetails() {
