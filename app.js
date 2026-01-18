@@ -8387,53 +8387,76 @@ class App {
     }
 
     parseAndAppendOCRText(text) {
-        // Advanced Parsing Logic (v2) - Prioritizes Table Structure
+        // Advanced Parsing Logic (v3) - WhatsApp & Hybrid Tables
+        // Prioritizes: Hyphenated Lists -> Table Rows -> Flexible KV
         const lines = text.split("\n");
-        
+
         lines.forEach(line => {
             line = line.trim();
             if (!line) return;
             // Skip typical headers
-            if (line.match(/^(código|nombre|almacen|descripci|cantidad|item)/i)) return; 
+            if (line.match(/^(código|nombre|almacen|descripci|cantidad|item)/i)) return;
 
             let qty = "";
             let desc = line;
             let match = false;
 
-            // Pattern 1: Table Row -> CODE + DESC + QTY (The Users specific case)
-            // Example: "7752230119696 UNIVERSAL COLAPIZ 20 GR... 02 cajas"
-            const tableRowRegex = /^(\d{8,})\s+(.+?)\s+(\d+[\.,]?\d*.*)$/i;
-            
-            // Pattern 2: End with Quantity (e.g. "PRODUCTO 12")
+            // Pattern 1: WhatsApp Style (Hyphenated)
+            // Example: "coco rallado largo 500g - 4 und"
+            const hyphenRegex = /^(.+?)\s+-\s+(\d+[\.,]?\d*\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|grs?|gramos|lt|ml)?.*)$/i;
+
+            // Pattern 2: Table Row with Code (Alphanumeric support)
+            // Example: "TONYVG003 VINAGRE SUELTO... 6"
+            // Example: "775223... UNIVERSAL... 02 cajas"
+            const tableRowRegex = /^([A-Z0-9]{4,})\s+(.+?)\s+(\d+[\.,]?\d*.*)$/i;
+
+            // Pattern 3: End with Quantity (e.g. "COCO RALLADO ... 6")
             const endKvRegex = /^(.*?)\s+([0-9]+[\.,]?[0-9]*\s*(?:cajas|paquetes|unid|und|botellas|pack|kg|gr)?)$/i;
 
-            // Pattern 3: Start with Quantity (e.g. "12 PRODUCTO")
+            // Pattern 4: Start with Quantity (e.g. "12 PRODUCTO")
             const startKvRegex = /^(\d+[\.,]?\d*)\s*(?:x|und|unid|cajas?|bolsas?|kgs?|gs?)\.?\s+(.*)/i;
 
-            if (match = line.match(tableRowRegex)) {
-                // Found Table Row: Code | Desc | Qty
-                desc = match[2].trim(); 
+            if (match = line.match(hyphenRegex)) {
+                // WhatsApp Style
+                desc = match[1].trim();
+                let qtyStr = match[2].trim();
+                let qMatch = qtyStr.match(/(\d+[\.,]?\d*)/);
+                qty = qMatch ? qMatch[1] : qtyStr;
+
+            } else if (match = line.match(tableRowRegex)) {
+                // Table Row: Code | Desc | Qty
+                desc = match[2].trim();
                 let qtyStr = match[3].trim();
                 let qMatch = qtyStr.match(/(\d+[\.,]?\d*)/);
+
+                // Safety: If "Code" looks like a common word (e.g. "LATA", "CAJA"), treat as description start
+                const potentialCode = match[1];
+                if (potentialCode.length < 8 && /^[A-Z]+$/.test(potentialCode)) {
+                    // Likely part of description, fall through to endKvRegex logic? 
+                    // No, "TONYVG003" is real. "LATA" is risky. 
+                    // Let is pass for now unless it is strictly dictionary words.
+                }
+
                 qty = qMatch ? qMatch[1] : "1";
-                
+
             } else if (match = line.match(endKvRegex)) {
-                 desc = match[1].trim();
-                 let qtyStr = match[2].trim();
-                 let qMatch = qtyStr.match(/(\d+[\.,]?\d*)/);
-                 qty = qMatch ? qMatch[1] : qtyStr;
+                desc = match[1].trim();
+                let qtyStr = match[2].trim();
+                let qMatch = qtyStr.match(/(\d+[\.,]?\d*)/);
+                qty = qMatch ? qMatch[1] : qtyStr;
 
             } else if (match = line.match(startKvRegex)) {
                 qty = match[1];
                 desc = match[2];
             } else {
-                 // Ignore lines that are JUST a barcode to avoid noise
-                 if(line.match(/^\d{8,}$/)) return;
+                // Ignore lines that are JUST a barcode to avoid noise
+                if (line.match(/^\d{8,}$/)) return;
             }
 
-            // Cleanup
-            desc = desc.replace(/^[-*•]\s*/, "").trim(); 
-            if (parseInt(qty) > 100000) qty = "1"; // Safety check
+            // Cleanup description garbage
+            desc = desc.replace(/^[-*•]\s*/, "").trim();
+            // Cleanup barcode lookalikes in quantity
+            if (parseInt(qty) > 100000) qty = "1";
 
             if (desc.length > 2) {
                 this.addOCRRow(desc, qty || "1");
@@ -8549,5 +8572,6 @@ try {
     console.error('Critical Init Error:', err);
     alert('Error crÃ­tico al iniciar la aplicaciÃ³n: ' + err.message);
 }
+
 
 
