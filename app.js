@@ -8408,8 +8408,9 @@ class App {
 
                 // 2. Add to Carousel (Optimistic)
                 const imgId = "ocr-img-" + Date.now() + Math.random().toString(36).substr(2, 5);
+                // Fix: Pass ID only. viewOCRImage can grab src from the DOM element.
                 const thumbHtml = `
-                    <div class="ocr-thumb" onclick="app.viewOCRImage('" + imgId + "', '" + base64 + "')" 
+                    <div class="ocr-thumb" onclick="app.viewOCRImage('${imgId}')" 
                          style="display:flex; gap:0.5rem; align-items:center; padding:0.5rem; background:white; border:1px solid #eee; border-radius:6px; cursor:pointer;"
                          onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='white'">
                         <img id="${imgId}" src="${base64}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;">
@@ -8456,9 +8457,18 @@ class App {
     viewOCRImage(id, src) {
         const preview = document.getElementById('ocr-preview-img');
         const placeholder = document.getElementById('ocr-preview-placeholder');
-        preview.src = src;
-        preview.style.display = 'block';
-        placeholder.style.display = 'none';
+
+        // If src is missing (called via onclick with ID only), grab it from DOM
+        if (!src && id) {
+            const thumb = document.getElementById(id);
+            if (thumb) src = thumb.src;
+        }
+
+        if (src) {
+            preview.src = src;
+            preview.style.display = 'block';
+            placeholder.style.display = 'none';
+        }
     }
 
     parseAndAppendOCRText(text) {
