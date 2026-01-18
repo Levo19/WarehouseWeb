@@ -8202,6 +8202,314 @@ class App {
         `);
         win.document.close();
     }
+    // ==========================================
+    // MODULE: TOOLS (OCR TICKET SCANNER)
+    // ==========================================
+
+    renderToolsModule() {
+        const container = document.getElementById('tools-content');
+        container.innerHTML = `
+            <div style="display:flex; flex-direction:column; height:100%; gap:1rem;">
+                <!-- Header -->
+                <div style="flex:0 0 auto; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:1rem;">
+                    <div>
+                        <h2 style="margin:0; color:var(--primary-color);"><i class="fa-solid fa-wand-magic-sparkles"></i> Escáner de Tickets (OCR)</h2>
+                        <p style="margin:0.25rem 0 0; color:#666; font-size:0.9rem;">Convierte fotos de WhatsApp o Excel en tickets imprimibles.</p>
+                    </div>
+                     <div style="display:flex; gap:0.5rem;">
+                         <button onclick="app.clearOCRWorkspace()" class="btn-secondary">
+                            <i class="fa-solid fa-trash"></i> Limpiar Todo
+                        </button>
+                        <button onclick="app.printOCRTicket()" class="btn-primary" style="background:#333;">
+                            <i class="fa-solid fa-print"></i> Imprimir Ticket
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Main Workspace -->
+                <div style="flex:1; display:flex; gap:1.5rem; overflow:hidden;">
+                    
+                    <!-- LEFT: Upload & Carousel -->
+                    <div style="flex:0 0 320px; display:flex; flex-direction:column; gap:1rem; border-right:1px solid #eee; padding-right:1rem; overflow-y:auto;">
+                        
+                        <!-- Upload Area -->
+                        <div style="border:2px dashed #ccc; border-radius:12px; padding:2rem 1rem; text-align:center; background:#f9fafb; cursor:pointer; transition:all 0.2s;"
+                             onmouseover="this.style.borderColor='var(--primary-color)'; this.style.background='#f0f9ff';"
+                             onmouseout="this.style.borderColor='#ccc'; this.style.background='#f9fafb';"
+                             onclick="document.getElementById('ocr-file-input').click()">
+                            
+                            <i class="fa-solid fa-cloud-arrow-up" style="font-size:2rem; color:#aaa; margin-bottom:0.5rem;"></i>
+                            <div style="font-weight:600; color:#555;">Subir Imágenes</div>
+                            <div style="font-size:0.8rem; color:#888;">WhatsApp, Excel, Fotos</div>
+                            <input type="file" id="ocr-file-input" multiple accept="image/*" style="display:none;" onchange="app.handleOCRUpload(this)">
+                        </div>
+
+                        <!-- Scan Status -->
+                        <div id="ocr-status" style="display:none; padding:1rem; background:#fff3cd; color:#856404; border-radius:8px; font-size:0.9rem;">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i> Procesando imágenes...
+                        </div>
+
+                        <!-- Carousel -->
+                        <h4 style="margin:0.5rem 0 0; color:#444;">Imágenes Cargadas (<span id="ocr-img-count">0</span>)</h4>
+                        <div id="ocr-carousel" style="display:flex; flex-direction:column; gap:0.5rem;">
+                            <!-- Thumbs injected here -->
+                            <div style="text-align:center; color:#ccc; padding:2rem; font-style:italic;">No hay imágenes</div>
+                        </div>
+                    </div>
+
+                    <!-- MIDDLE: Reference Viewer -->
+                    <div style="flex:1; background:#333; border-radius:12px; overflow:hidden; display:flex; justify-content:center; align-items:center; position:relative;">
+                        <img id="ocr-preview-img" src="" style="max-width:100%; max-height:100%; object-fit:contain; display:none;">
+                        <div id="ocr-preview-placeholder" style="color:#666; text-align:center;">
+                            <i class="fa-regular fa-image" style="font-size:3rem; margin-bottom:1rem;"></i>
+                            <div>Selecciona una imagen para verla</div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT: Editor -->
+                    <div style="flex:0 0 400px; display:flex; flex-direction:column; background:white; border-radius:12px; border:1px solid #eee; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+                        <div style="padding:1rem; border-bottom:1px solid #eee; bg:#f8f9fa;">
+                            <h4 style="margin:0;">Datos Extraídos</h4>
+                        </div>
+                        
+                        <div class="custom-scrollbar" style="flex:1; overflow-y:auto; padding:0;">
+                            <table class="data-table" style="width:100%; border-collapse:collapse;">
+                                <thead style="background:#f8f9fa; position:sticky; top:0;">
+                                    <tr>
+                                        <th style="padding:8px; text-align:left; font-size:0.85rem; color:#666;">Descripción</th>
+                                        <th style="padding:8px; width:80px; text-align:right; font-size:0.85rem; color:#666;">Cant.</th>
+                                        <th style="width:40px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ocr-result-body">
+                                    <!-- Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div style="padding:1rem; border-top:1px solid #eee;">
+                            <button onclick="app.addOCRRow()" style="width:100%; padding:0.5rem; background:white; border:1px dashed #ddd; color:#666; border-radius:6px; cursor:pointer; font-size:0.9rem;">
+                                <i class="fa-solid fa-plus"></i> Agregar Fila Manual
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        `;
+    }
+
+    async handleOCRUpload(input) {
+        if (!input.files || input.files.length === 0) return;
+
+        const statusEl = document.getElementById('ocr-status');
+        const carouselEl = document.getElementById('ocr-carousel');
+        const countEl = document.getElementById('ocr-img-count');
+
+        statusEl.style.display = 'block';
+        statusEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Procesando ${input.files.length} imágenes...`;
+
+        // Clear placeholder if first upload
+        if (carouselEl.innerHTML.includes('No hay imágenes')) {
+            carouselEl.innerHTML = '';
+        }
+
+        let processedCount = 0;
+
+        for (const file of Array.from(input.files)) {
+            try {
+                // 1. Convert to Base64
+                const base64 = await this.fileToBase64(file);
+
+                // 2. Add to Carousel (Optimistic)
+                const imgId = 'ocr-img-' + Date.now() + Math.random().toString(36).substr(2, 5);
+                const thumbHtml = `
+                    <div class="ocr-thumb" onclick="app.viewOCRImage('${imgId}', '${base64}')" 
+                         style="display:flex; gap:0.5rem; align-items:center; padding:0.5rem; background:white; border:1px solid #eee; border-radius:6px; cursor:pointer;"
+                         onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='white'">
+                        <img id="${imgId}" src="${base64}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;">
+                        <div style="flex:1; overflow:hidden;">
+                            <div style="font-size:0.8rem; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${file.name}</div>
+                            <div style="font-size:0.7rem; color:green;"><i class="fa-solid fa-check"></i> Cargado</div>
+                        </div>
+                    </div>
+                `;
+                carouselEl.insertAdjacentHTML('beforeend', thumbHtml);
+                countEl.innerText = parseInt(countEl.innerText) + 1;
+
+                // 3. Send to Backend for OCR
+                statusEl.innerHTML = `<i class="fa-solid fa-eye"></i> Leyendo imagen ${processedCount + 1}/${input.files.length}...`;
+
+                const response = await this.callBackend('processImageOCR', { image: base64 });
+
+                if (response.status === 'success' && response.text) {
+                    this.parseAndAppendOCRText(response.text);
+                } else {
+                    console.warn('OCR Failure:', response.message);
+                }
+
+            } catch (err) {
+                console.error('OCR Error:', err);
+            }
+            processedCount++;
+        }
+
+        statusEl.style.display = 'none';
+        input.value = ''; // Reset input
+    }
+
+    viewOCRImage(id, src) {
+        const preview = document.getElementById('ocr-preview-img');
+        const placeholder = document.getElementById('ocr-preview-placeholder');
+        preview.src = src;
+        preview.style.display = 'block';
+        placeholder.style.display = 'none';
+    }
+
+    parseAndAppendOCRText(text) {
+        // Simple Regex Heuristics for "List Style"
+        // Patterns:
+        // "4 und de Coca Cola" -> 4, Coca Cola
+        // "Coca Cola x 4" -> 4, Coca Cola
+        // "10 cajas Leche" -> 10, Leche
+
+        const lines = text.split('\n');
+        const tbody = document.getElementById('ocr-result-body');
+
+        lines.forEach(line => {
+            line = line.trim();
+            if (!line) return;
+
+            let qty = 1;
+            let desc = line;
+            let match = false;
+
+            // Pattern 1: Start with Number (e.g., "10 x Producto" or "10 Producto")
+            // Regex: ^(\d+[\.,]?\d*)\s*(?:x|und|caja|bolsa|kg|g|mg)?\s+(.*)
+            const startNumRegex = /^(\d+[\.,]?\d*)\s*(?:x|und|unid|cajas?|bolsas?|kgs?|gs?)\.?\s+(.*)/i;
+            const simpleStartNum = /^(\d+)\s+(.*)/;
+
+            // Pattern 2: End with Number (e.g., "Producto x 10" or "Producto 10")
+            const endNumRegex = /(.*)\s+(?:x|cant|cnt)?[\s:]*(\d+[\.,]?\d*)$/i;
+
+            if (match = line.match(startNumRegex)) {
+                qty = match[1];
+                desc = match[2];
+            } else if (match = line.match(endNumRegex)) {
+                desc = match[1];
+                qty = match[2];
+            } else if (match = line.match(simpleStartNum)) {
+                // Fallback: "10 Arroz"
+                qty = match[1];
+                desc = match[2];
+            }
+
+            // Cleanup Description
+            desc = desc.replace(/^[-*•]\s*/, '').trim(); // Remove bullets
+
+            this.addOCRRow(desc, qty);
+        });
+    }
+
+    addOCRRow(desc = '', qty = '') {
+        const tbody = document.getElementById('ocr-result-body');
+        const row = document.createElement('tr');
+        row.style.borderBottom = '1px solid #f0f0f0';
+        row.innerHTML = `
+            <td style="padding:4px;">
+                <input type="text" value="${desc}" placeholder="Descripción" 
+                       style="width:100%; border:none; padding:4px; font-size:0.9rem;">
+            </td>
+            <td style="padding:4px;">
+                <input type="number" value="${qty}" placeholder="1" 
+                       style="width:100%; border:none; padding:4px; font-size:1rem; font-weight:bold; text-align:right;">
+            </td>
+            <td style="padding:4px; text-align:center;">
+                <button onclick="this.parentElement.parentElement.remove()" style="border:none; background:none; color:#f87171; cursor:pointer;">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    }
+
+    clearOCRWorkspace() {
+        if (!confirm('¿Borrar todo?')) return;
+        document.getElementById('ocr-carousel').innerHTML = '<div style="text-align:center; color:#ccc; padding:2rem; font-style:italic;">No hay imágenes</div>';
+        document.getElementById('ocr-result-body').innerHTML = '';
+        document.getElementById('ocr-preview-img').style.display = 'none';
+        document.getElementById('ocr-preview-placeholder').style.display = 'block';
+        document.getElementById('ocr-img-count').innerText = '0';
+    }
+
+    printOCRTicket() {
+        const rows = document.querySelectorAll('#ocr-result-body tr');
+        if (rows.length === 0) return alert('No hay datos para imprimir');
+
+        const items = [];
+        rows.forEach(r => {
+            const inputs = r.querySelectorAll('input');
+            const desc = inputs[0].value.trim();
+            const qty = inputs[1].value.trim();
+            if (desc && qty) {
+                items.push({ descripcion: desc, cantidad: qty });
+            }
+        });
+
+        if (items.length === 0) return alert('Lista vacía');
+
+        const printWindow = window.open('', '_blank', 'width=450,height=600');
+
+        let html = `
+            <html>
+            <head>
+                <title>Ticket OCR</title>
+                <style>
+                    body { font-family: 'Courier New', monospace; width: 80mm; margin: 0; padding: 10px; font-size: 12px; }
+                    .header { text-align: center; margin-bottom: 10px; border-bottom: 2px solid black; padding-bottom: 10px; }
+                    .title { font-size: 16px; font-weight: bold; }
+                    .info { font-size: 12px; margin: 2px 0; }
+                    table { width: 100%; border-collapse: collapse; }
+                    td { padding: 4px 0; vertical-align: top; }
+                    .qty { text-align: right; font-weight: bold; font-size: 14px; width: 40px; }
+                    .desc { padding-right: 5px; font-weight: 600; text-transform: uppercase; }
+                    .footer { margin-top: 15px; border-top: 1px dashed black; padding-top: 10px; text-align: center; font-size: 10px; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <div class="title">LISTA DE PEDIDO</div>
+                    <div class="info">FECHA: ${new Date().toLocaleString()}</div>
+                    <div class="info">ORIGEN: ESCÁNER FOTO</div>
+                </div>
+                <table>
+        `;
+
+        items.forEach(item => {
+            html += `
+                <tr style="border-bottom: 1px dashed #ccc;">
+                    <td class="desc">${item.descripcion}</td>
+                    <td class="qty">${item.cantidad}</td>
+                </tr>
+            `;
+        });
+
+        html += `
+                </table>
+                <div class="footer">
+                    Generado por LEVO ERP<br>
+                    (Módulo OCR)
+                </div>
+                <script>
+                    window.onload = function() { window.print(); }
+                </script>
+            </body>
+            </html>
+        `;
+
+        printWindow.document.write(html);
+        printWindow.document.close();
+    }
 }
 // Initialize App
 
