@@ -2556,14 +2556,27 @@ class App {
                 const tipo = g.tipo || 'DESCONOCIDO';
                 const tipoClass = tipo.toLowerCase();
 
+                // COUNTS
+                const detailsCount = this.data.movimientos.detalles
+                    ? this.data.movimientos.detalles.filter(d => d.idGuia === g.id).length
+                    : 0;
+
+                const newCount = this.data.nuevosProductos
+                    ? this.data.nuevosProductos.filter(p => p.idGuia === g.id && p.estado !== 'PROCESADO').length
+                    : 0;
+
                 html += `
                 <div id="guia-row-${g.id}" class="guia-row-card" onclick="window.app.toggleGuiaDetail('${g.id}')">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div>
+                            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
                                 <span class="badge ${tipoClass}">${tipo}</span>
-                                <span style="font-weight:bold; color:#333; margin-left:0.5rem;">${g.proveedor || 'Sin Nombre'}</span>
+                                <span style="font-weight:bold; color:#333; margin-left:0.25rem; margin-right:0.25rem;">${g.proveedor || 'Sin Nombre'}</span>
+                                
+                                ${detailsCount > 0 ? `<span style="font-size:0.75rem; color:#4b5563; background:#f3f4f6; padding:2px 6px; border-radius:12px; display:flex; align-items:center; gap:3px;" title="Productos"><i class="fa-solid fa-box"></i> ${detailsCount}</span>` : ''}
+                                
+                                ${newCount > 0 ? `<span style="font-size:0.75rem; color:#b45309; background:#fef3c7; padding:2px 6px; border-radius:12px; display:flex; align-items:center; gap:3px;" title="Nuevos Productos"><i class="fa-solid fa-star"></i> ${newCount}</span>` : ''}
                             </div>
-                            <div style="font-size:0.8rem; color:#666;">${g.fecha ? g.fecha.split(' ')[1] : ''}</div>
+                            <div style="font-size:0.8rem; color:#666; white-space:nowrap;">${g.fecha ? g.fecha.split(' ')[1] : ''}</div>
                         </div>
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem;">
                             <div style="font-size:0.85rem; color:#555;">Author: ${g.usuario || '-'}</div>
