@@ -8351,7 +8351,16 @@ class App {
                 // 3. Send to Backend for OCR
                 statusEl.innerHTML = `<i class="fa-solid fa-eye"></i> Leyendo imagen ${processedCount + 1}/${input.files.length}...`;
 
-                const response = await this.callBackend('processImageOCR', { image: base64 });
+                const responseRaw = await fetch(API_URL, {
+                    method: 'POST',
+                    redirect: 'follow',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: 'processImageOCR',
+                        payload: { image: base64 }
+                    })
+                });
+                const response = await responseRaw.json();
 
                 if (response.status === 'success' && response.text) {
                     this.parseAndAppendOCRText(response.text);
