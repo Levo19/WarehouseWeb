@@ -420,6 +420,9 @@ class App {
             badge = newBadge; // Update reference
         }
 
+        // Silent fix for Login/Preload state
+        if (!bell || !badge || !list) return;
+
         if (!bell) {
             console.error("âŒ CRITICAL: BELL BUTTON NOT FOUND EVEN BY ICON");
             return;
@@ -8489,10 +8492,30 @@ class App {
             let code = "";
             let match = false;
 
-            // HELPER: Split "10 cajas" -> { qty: "10", uom: "cajas" }
+            // STRICT U.M. WHITELIST (Prevent "und" merging with next line)
+            // Supported: und, unid, caja, paquete, bolsa, kg, gr, lt, ml, oz, lb, lata, botella, pza, saco, pack
+            const knownUnitsRegex = /\b(und|unid|unidades|cajas?|paquetes?|packs?|bolsas?|sacos?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?)\b/i;
+
+            // HELPER: Split "10 cajas" -> { qty: "10", uom: "cajas" } 
+            // Handles "4 undtehuyro" -> qty:4, uom:und (discards tehuyro)
             const extractQtyUom = (str) => {
                 const m = str.match(/^(\d+[\.,]?\d*)\s*(.*)$/);
-                if (m) return { qty: m[1], uom: m[2].trim() };
+                if (m) {
+                    let rawUom = m[2].trim();
+                    // 1. Check for specific known unit match
+                    const unitMatch = rawUom.match(knownUnitsRegex);
+                    if (unitMatch) {
+                        return { qty: m[1], uom: unitMatch[1] }; // Return ONLY the matched unit (e.g. "und")
+                    }
+                    // 2. Fallback: If no known unit, take first alpha-word if short (< 6 chars)
+                    // This prevents capturing a full description from next line
+                    const firstWord = rawUom.split(' ')[0].replace(/[^a-zA-Z]/g, '');
+                    if (firstWord.length > 0 && firstWord.length <= 5) {
+                        return { qty: m[1], uom: firstWord };
+                    }
+
+                    return { qty: m[1], uom: "" }; // Discard long garbage
+                }
                 return { qty: str, uom: "" };
             };
 
