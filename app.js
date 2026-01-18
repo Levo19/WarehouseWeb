@@ -8481,6 +8481,7 @@ class App {
         const lines = text.split("\n");
 
         lines.forEach(line => {
+            console.log("OCR RAW LINE:", line); // DEBUG
             line = line.trim();
             if (!line) return;
             // Skip typical headers
