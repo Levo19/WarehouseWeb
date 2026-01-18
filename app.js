@@ -654,6 +654,9 @@ class App {
         } else if (viewName === 'envasador') {
             this.state.currentModule = 'envasador';
             this.loadPackingModule();
+        } else if (viewName === 'tools') {
+            this.state.currentModule = 'tools';
+            this.renderToolsModule();
         } else if (viewName === 'movements') {
             this.state.currentModule = 'movements';
             if (this.closeGuiaDetails) this.closeGuiaDetails(); // Reset Panel
