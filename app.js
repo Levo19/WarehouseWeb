@@ -8255,6 +8255,13 @@ class App {
                             <div style="font-size:0.8rem; color:#888;">WhatsApp, Excel, Fotos</div>
                             <input type="file" id="ocr-file-input" multiple accept="image/*" style="display:none;" onchange="app.handleOCRUpload(this)">
                         </div>
+                        
+                        <!-- Manual Paste Button (Fallback) -->
+                        <div style="margin-top:0.5rem; text-align:center;">
+                            <button onclick="app.triggerPaste()" style="background:white; border:1px solid #ccc; padding:0.5rem 1rem; border-radius:6px; cursor:pointer; color:#555; font-size:0.85rem; width:100%; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                                <i class="fa-regular fa-clipboard"></i> Pegar desde Portapapeles
+                            </button>
+                        </div>
 
                         <!-- Scan Status -->
                         <div id="ocr-status" style="display:none; padding:1rem; background:#fff3cd; color:#856404; border-radius:8px; font-size:0.9rem;">
@@ -8316,6 +8323,32 @@ class App {
         if (!input.files || input.files.length === 0) return;
         await this.processOCRFiles(input.files);
         input.value = ""; // Reset input
+    }
+
+    async triggerPaste() {
+        try {
+            const items = await navigator.clipboard.read();
+            const files = [];
+            for (const item of items) {
+                // Look for image types
+                const imageType = item.types.find(type => type.startsWith('image/'));
+                if (imageType) {
+                    const blob = await item.getType(imageType);
+                    blob.name = "Clipboard_" + Date.now() + ".png"; // Give it a name
+                    files.push(blob);
+                }
+            }
+            if (files.length > 0) {
+                this.processOCRFiles(files);
+                this.showToast("📋 Imagen obtenida del portapapeles", "success");
+            } else {
+                alert("No se encontró ninguna imagen en el portapapeles. Copia una imagen primero.");
+            }
+        } catch (err) {
+            console.error('Failed to read clipboard', err);
+            // Fallback: If permission denied or HTTP, suggest manual Ctrl+V
+            alert("No se pudo acceder al portapapeles automáticamente (bloqueo de navegador). Intenta usar Ctrl+V directamente.");
+        }
     }
 
     async handleOCRPaste(e) {
