@@ -8527,50 +8527,107 @@ class App {
             // Skip headers (Enhanced)
             if (line.match(/^(código|nombre|almacen|descripci|cantidad|item|lista de zona)/i)) continue;
 
-            // 1. EXTRACT CODE
-            let { code, remainder } = extractCode(line);
-            let desc = remainder;
+            // 1. EXTRACT CODE (STRICT CHECK)
+            // We need to decide if this line is a "Standalone Code" or a "Description"
+            const strictCodeRegex = /^[A-Z0-9]{8,}$|^[A-Z]+[0-9]+[A-Z0-9]*$/; // E.g. TONYVG003 or 77522...
+            let isStandaloneCode = false;
+            let pureCode = "";
+
+            if (line.match(strictCodeRegex) && !line.match(/\s/)) {
+                // It's a code on its own line (no spaces, e.g. "7752230119696")
+                isStandaloneCode = true;
+                pureCode = line;
+            }
+
+            // LOOP STATE MACHINE
+            let code = "";
+            let desc = "";
             let qty = "1";
             let uom = "";
 
-            // 2. EXTRACT QTY FROM CURRENT LINE
-            let tail = extractTail(desc);
-            if (tail.found) {
-                // Potential quantity found (e.g. "20 GR" or "02 cajas")
-                desc = tail.desc;
-                qty = tail.qty;
-                uom = tail.uom;
-            }
+            if (isStandaloneCode) {
+                // CASE A: Line i is CODE.
+                // Lookahead:
+                // i+1 = Description?
+                // i+2 = Quantity?
+                code = pureCode;
 
-            // AGGRESSIVE MERGE CHECK:
-            // Even if we found a quantity (like "20 GR"), check if the NEXT line is a "Strong Orphan Quantity"
-            // (e.g. "02 CAJAS" standing alone). If so, it overrides the "weak" quantity from the description.
-            if (i + 1 < lines.length) {
-                let nextLine = lines[i + 1].trim();
+                // Peek i+1 for Description
+                if (i + 1 < lines.length) {
+                    let line2 = lines[i + 1].trim();
+                    if (!line2.match(strictCodeRegex)) { // Make sure line 2 isn't another code
+                        desc = line2;
 
-                // Strict check: Is next line JUST a quantity?
-                // e.g. "02 cajas", "4 paquetes", "6"
-                // Must start with number, optional space, optional unit, end of string.
-                const strictQtyRegex = /^(\d+[\.,]?\d*)\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]{1,5})?$/i;
+                        // Peek i+2 for Quantity
+                        if (i + 2 < lines.length) {
+                            let line3 = lines[i + 2].trim();
+                            const strictQtyRegex = /^(\d+[\.,]?\d*)\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]{1,5})?$/i;
+                            if (line3.match(strictQtyRegex)) {
+                                // BINGO! 3-Line Merge: Code -> Desc -> Qty
+                                console.log("3-LINE MERGE:", code, desc, line3);
+                                const qTail = extractTail("DUMMY " + line3);
+                                qty = qTail.qty;
+                                uom = qTail.uom;
+                                i += 2; // Skip next 2 lines
 
-                if (nextLine.match(strictQtyRegex)) {
-                    // MERGE!
-                    console.log("AGGRESSIVE MERGE (QTY OVERRIDE):", nextLine);
-                    const nextTail = extractTail("DUMMY " + nextLine);
-                    if (nextTail.found) {
-                        qty = nextTail.qty;
-                        uom = nextTail.uom;
-                        // If we previously extracted "20 GR" from desc, put it back into desc!
-                        if (tail.found) {
-                            // Re-append the "20 GR" we stripped, because it wasn't the quantity?
-                            // Actually, extractTail separates it. 
-                            // If we override, we assume the previous tail was part of the name.
-                            // e.g. "COLAPIZ 20 GR" -> qty="20", uom="GR".
-                            // Overridden by "02 CAJAS".
-                            // We should restore "20 GR" to the description.
-                            desc = desc + " " + tail.qty + " " + tail.uom;
+                                // Early exit to add row
+                                this.addOCRRow(desc, qty, code, uom);
+                                continue;
+                            }
                         }
-                        i++; // SKIP NEXT LINE
+
+                        // If we didn't match 3 lines, maybe it's just Code -> Desc (and Desc has qty inside?)
+                        // Merge 2 lines
+                        console.log("2-LINE MERGE (CODE->DESC):", code, desc);
+                        // Check if Desc has tail-qty
+                        let tail = extractTail(desc);
+                        if (tail.found) {
+                            desc = tail.desc;
+                            qty = tail.qty;
+                            uom = tail.uom;
+                        }
+                        i++; // Skip next line
+                        this.addOCRRow(desc, qty, code, uom);
+                        continue;
+                    }
+                }
+
+                // If no Desc found, just add Code
+                this.addOCRRow("", "1", code, "");
+                continue;
+
+            } else {
+                // CASE B: Line i is DESCRIPTION (or Code+Description on one line).
+                let extraction = extractCode(line);
+                code = extraction.code;
+                desc = extraction.remainder;
+
+                // Extract inner Qty
+                let tail = extractTail(desc);
+                if (tail.found) {
+                    desc = tail.desc;
+                    qty = tail.qty;
+                    uom = tail.uom;
+                }
+
+                // AGGRESSIVE MERGE CHECK (2-Line: Desc -> Qty)
+                if (i + 1 < lines.length) {
+                    let nextLine = lines[i + 1].trim();
+                    const strictQtyRegex = /^(\d+[\.,]?\d*)\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]{1,5})?$/i;
+
+                    if (nextLine.match(strictQtyRegex)) {
+                        // MERGE!
+                        console.log("2-LINE MERGE (DESC->QTY):", desc, nextLine);
+                        const nextTail = extractTail("DUMMY " + nextLine);
+                        if (nextTail.found) {
+                            qty = nextTail.qty;
+                            uom = nextTail.uom;
+                            // Restore previous "weak" qty to desc if needed
+                            if (tail.found) {
+                                desc = desc + " " + tail.qty + " " + tail.uom;
+                            }
+                            i++; // Skip next line
+                        }
                     }
                 }
             }
