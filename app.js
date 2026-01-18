@@ -8305,6 +8305,14 @@ class App {
     async handleOCRUpload(input) {
         if (!input.files || input.files.length === 0) return;
 
+        // HELPER: File to Base64
+        const fileToBase64 = (file) => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+
         const statusEl = document.getElementById('ocr-status');
         const carouselEl = document.getElementById('ocr-carousel');
         const countEl = document.getElementById('ocr-img-count');
@@ -8322,7 +8330,7 @@ class App {
         for (const file of Array.from(input.files)) {
             try {
                 // 1. Convert to Base64
-                const base64 = await this.fileToBase64(file);
+                const base64 = await fileToBase64(file);
 
                 // 2. Add to Carousel (Optimistic)
                 const imgId = 'ocr-img-' + Date.now() + Math.random().toString(36).substr(2, 5);
