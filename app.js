@@ -8476,46 +8476,47 @@ class App {
     }
 
     parseAndAppendOCRText(text) {
-        // V13.1 ADAPTIVE PARSER (Robust Columnar Logic)
-        // Fixes: "Code" appearing in "Description" bucket due to strict regex failure.
+        // V14 FINAL PARSER (Targeted for User's 2 Cases)
+        // Case 1: Table (Code | Desc | Qty | Uom)
+        // Case 2: List (Desc - Qty Uom)
 
-        // 1. PRE-CLEANING: Remove leading bullets, dashes, or noise
         const lines = text.split("\n")
-            .map(l => l.trim().replace(/^[-*•]\s*/, "")) // Remove bullets
+            .map(l => l.trim().replace(/^[-*•]\s*/, "")) // Clean bullets
             .filter(l => l);
 
         if (lines.length === 0) return;
 
-        // --- SHARED HELPERS ---
-        const strictQtyRegex = /^(\d+[\.,]?\d*)\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]{1,5})?$/i;
-
-        // V13 Helper: "Is this line definitely a Code?"
+        // --- HELPERS ---
+        // 1. Code Detector: >5 Digits = Code.
         const isDefinitelyCode = (str) => {
-            // A. Standard Regex (3+ chars, alphanumeric, starts with code)
-            const match = str.match(/^([A-Z0-9\-\.]{3,})(\s.*)?$/);
-            if (match) {
-                const code = match[1];
-                if (/\d/.test(code) && code.length > 3) return { isCode: true, code: code, remainder: match[2] ? match[2].trim() : "" };
-            }
-
-            // B. Aggressive Digit Check (Fallback for Columnar Mode context)
-            // If line has >5 digits, it is almost certainly a code (or phone number, but context implies code)
-            const digitCount = (str.match(/\d/g) || []).length;
-            if (digitCount >= 5) {
-                // Assume entire first word is code
+            // Check for explicit long numeric code
+            if ((str.match(/\d/g) || []).length >= 5) {
                 const parts = str.split(/\s+/);
                 return { isCode: true, code: parts[0], remainder: parts.slice(1).join(" ") };
             }
-
+            // Standard Regex
+            const match = str.match(/^([A-Z0-9\-\.]{3,})(\s.*)?$/);
+            if (match) {
+                const code = match[1];
+                if (/\d/.test(code) && code.length >= 3) return { isCode: true, code: code, remainder: match[2] ? match[2].trim() : "" };
+            }
             return { isCode: false, code: "", remainder: str };
         };
 
+        const strictQtyRegex = /^(\d+[\.,]?\d*)\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]{1,5})?$/i;
+
+        // 2. Tail Extractor (Clean Separators)
+        // Handles "Desc - 4 und" -> Desc="Desc", Qty="4", Uom="und"
         const extractTail = (line) => {
-            const tailRegex = /^(.*)\s+([0-9\.,]+\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]+)?)$/i;
+            // Regex looks for: (Anything) (Separator?) (Number) (Unit?)
+            const tailRegex = /^(.*?)\s*(?:-|:)?\s*([0-9\.,]+\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]+)?)$/i;
             const m = line.match(tailRegex);
             if (m) {
-                const descPart = m[1];
-                const qtyPart = m[2];
+                // Group 1 is Description (cleaned of terminator by lazy matching *?)
+                // Group 2 is Quantity Part
+                const descPart = m[1].trim();
+                const qtyPart = m[2].trim();
+
                 const qm = qtyPart.match(/^(\d+[\.,]?\d*)\s*(.*)$/);
                 if (qm) {
                     return { desc: descPart, qty: qm[1], uom: qm[2].trim(), found: true };
@@ -8524,39 +8525,32 @@ class App {
             return { desc: line, qty: "1", uom: "", found: false };
         };
 
-        // --- PHASE 1: CLASSIFICATION & DETECTION ---
+        // --- MODE DETECTION ---
         const headerRegex = /^(código|nombre|almacen|descripci|cantidad|item|lista de zona)/i;
-
         const map = lines.map(line => {
             if (line.match(headerRegex)) return 'H';
-            const info = isDefinitelyCode(line);
-            if (info.isCode) return 'C';
-            if (line.match(strictQtyRegex)) return 'Q';
+            if (isDefinitelyCode(line).isCode) return 'C';
+            if (line.match(strictQtyRegex)) return 'Q'; // Line that is ONLY quantity
             return 'T';
         });
-
         const signature = map.join('');
-        console.log("OCR LAYOUT SIGNATURE (V13):", signature);
+        console.log("OCR SIG V14:", signature);
 
-        // HEURISTIC: 
-        // If we see "CCC" (3 codes in a row) -> Columnar Mode.
-        // If we see "CCT" (Code, Code, Text) -> Columnar Mode.
-        // If we see more Codes than anything else (dense block) -> Columnar Mode.
+        // If high density of Codes, use Columnar. 
+        // Image 1 is a TABLE, so it might be Columnar if scanned in blocks, or Rows if scanned by line.
+        // We defer to Columnar only if we see the distinctive "CCC" block pattern.
 
-        const codeCount = (signature.match(/C/g) || []).length;
-        const totalCount = signature.length;
-
-        if (signature.includes('CCC') || (codeCount > 3 && signature.indexOf('CCT') > -1) || codeCount > totalCount * 0.4) {
-            console.log("MODE: COLUMNAR / BLOCKS DETECTED");
+        if (signature.includes('CCC') || (signature.length > 5 && (signature.match(/C/g) || []).length > signature.length * 0.5)) {
+            console.log("MODE: COLUMNAR");
             this.parseAsColumns(lines, isDefinitelyCode, extractTail, strictQtyRegex);
         } else {
-            console.log("MODE: ROW INTERLEAVED DETECTED");
+            console.log("MODE: ROWS");
             this.parseAsRows(lines, isDefinitelyCode, extractTail, strictQtyRegex);
         }
     }
 
-    // STRATEGY A: COLUMNAR (BLOCKS) - V13 ROBUST
     parseAsColumns(lines, isDefinitelyCode, extractTail, strictQtyRegex) {
+        // ... (Keep existing Columnar logic, it's robust)
         const codes = [];
         const descs = [];
         const qtys = [];
@@ -8564,23 +8558,16 @@ class App {
 
         lines.forEach(line => {
             if (line.match(headerRegex)) return;
-
-            // V13: AGGRESSIVE CLASSIFICATION FOR BUCKETING
             const info = isDefinitelyCode(line);
-
             if (info.isCode) {
                 codes.push(info.code);
-                // Only push remainder if it looks like real text, not just noise
-                if (info.remainder && info.remainder.length > 2 && !info.remainder.match(/^\d+$/)) {
-                    descs.push(info.remainder);
-                }
+                if (info.remainder && info.remainder.length > 2 && !info.remainder.match(/^\d+$/)) descs.push(info.remainder);
             } else if (line.match(strictQtyRegex)) {
+                // Pure Qtty
                 const t = extractTail("DUMMY " + line);
                 qtys.push({ q: t.qty, u: t.uom });
             } else {
-                // Description Bucket
-                // Check if it's actually a Quantity disguised (e.g. "03 paquetes")
-                // strictQtyRegex should catch most, but let's be safe.
+                // Desc
                 const t = extractTail(line);
                 if (t.found && t.qty !== "1") {
                     descs.push(t.desc);
@@ -8591,37 +8578,24 @@ class App {
             }
         });
 
-        console.log("Buckets V13:", { codes, descs, qtys });
-
-        // 2. Alignment / Zipping
         const maxLen = Math.max(codes.length, descs.length);
-
         for (let i = 0; i < maxLen; i++) {
             let c = codes[i] || "";
             let d = descs[i] || "";
             let q = "1";
             let u = "";
-
-            if (qtys[i]) {
-                q = qtys[i].q;
-                u = qtys[i].u;
-            }
-
-            // Fallback: If code is missing but desc exists (OR vice versa)
-            if (d || c) {
-                this.addOCRRow(d, q, c, u);
-            }
+            if (qtys[i]) { q = qtys[i].q; u = qtys[i].u; }
+            if (d || c) this.addOCRRow(d, q, c, u);
         }
     }
 
-    // STRATEGY B: ROW INTERLEAVED (V11 Logic)
-    parseAsRows(lines, getCodeInfo, extractTail, strictQtyRegex) {
+    parseAsRows(lines, isDefinitelyCode, extractTail, strictQtyRegex) {
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
             if (!line) continue;
             if (line.match(/^(código|nombre|almacen|descripci|cantidad|item|lista de zona)/i)) continue;
 
-            const info = getCodeInfo(line);
+            const info = isDefinitelyCode(line);
 
             let code = "";
             let desc = "";
@@ -8629,68 +8603,83 @@ class App {
             let uom = "";
 
             if (info.isCode) {
+                // CASE 1: The "Full Package" (Code found)
                 code = info.code;
                 desc = info.remainder;
 
+                // Cleanup garbage descriptor
                 if (desc.match(/^(nombre|descripci|cantidad|item)/i)) desc = "";
 
-                if (desc.length < 3) {
-                    if (i + 1 < lines.length) {
-                        const nextLine = lines[i + 1].trim();
-                        const nextInfo = getCodeInfo(nextLine);
-                        if (!nextInfo.isCode && !nextLine.match(strictQtyRegex)) {
+                // Lookahead Strategy
+                // 1. Is desc empty? Check next line.
+                // 2. Is Qty missing? Check next line.
+
+                // Peek next line
+                if (i + 1 < lines.length) {
+                    const nextLine = lines[i + 1].trim();
+                    const nextIsQty = nextLine.match(strictQtyRegex);
+                    const nextIsCode = isDefinitelyCode(nextLine).isCode;
+
+                    if (!nextIsCode) {
+                        if (nextIsQty) {
+                            // Next is Qty. Current desc is correct (or empty).
+                            const t = extractTail("DUMMY " + nextLine);
+                            qty = t.qty; uom = t.uom;
+                            i++;
+                        } else if (!desc || desc.length < 3) {
+                            // Next is Desc.
                             desc = nextLine;
                             i++;
+                            // Check line AFTER desc for Qty
+                            if (i + 1 < lines.length) {
+                                const nextNext = lines[i + 1].trim();
+                                if (nextNext.match(strictQtyRegex)) {
+                                    const t2 = extractTail("DUMMY " + nextNext);
+                                    qty = t2.qty; uom = t2.uom;
+                                    i++;
+                                }
+                            }
                         }
                     }
                 }
 
-                if (i + 1 < lines.length) {
-                    const nextLine = lines[i + 1].trim();
-                    if (nextLine.match(strictQtyRegex)) {
-                        const qTail = extractTail("DUMMY " + nextLine);
-                        qty = qTail.qty;
-                        uom = qTail.uom;
-                        i++;
-                    }
-                }
-
+                // Internal Line check (sticky)
                 if (desc) {
-                    const tail = extractTail(desc);
-                    if (tail.found && qty === "1") {
-                        desc = tail.desc;
-                        qty = tail.qty;
-                        uom = tail.uom;
+                    const t = extractTail(desc);
+                    if (t.found && qty === "1") {
+                        desc = t.desc; qty = t.qty; uom = t.uom;
                     }
                 }
 
             } else {
-                // Description first
+                // CASE 2: The "List" (No Code)
                 code = "";
                 desc = line;
 
+                // Lookahead for orphan quantity
                 if (i + 1 < lines.length) {
                     const nextLine = lines[i + 1].trim();
                     if (nextLine.match(strictQtyRegex)) {
-                        const qTail = extractTail("DUMMY " + nextLine);
-                        qty = qTail.qty;
-                        uom = qTail.uom;
+                        const t = extractTail("DUMMY " + nextLine);
+                        qty = t.qty; uom = t.uom;
                         i++;
                     }
                 }
 
+                // Internal check (Desc - Qty)
                 if (qty === "1") {
-                    const tail = extractTail(desc);
-                    if (tail.found) {
-                        desc = tail.desc;
-                        qty = tail.qty;
-                        uom = tail.uom;
+                    const t = extractTail(desc);
+                    if (t.found) {
+                        desc = t.desc; qty = t.qty; uom = t.uom;
                     }
                 }
             }
 
-            // Cleanup
+            // Cleanups
             if (desc) desc = desc.replace(/^[-*•]\s*/, "").trim();
+            // Remove trailing dash if extractTail missed it (safety)
+            if (desc && desc.endsWith("-")) desc = desc.slice(0, -1).trim();
+
             if (uom) uom = uom.replace(/[^a-zA-Z0-9\.]/g, "");
             if (qty && parseInt(qty) > 10000) qty = "1";
 
