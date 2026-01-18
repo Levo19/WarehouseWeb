@@ -8476,30 +8476,27 @@ class App {
     }
 
     parseAndAppendOCRText(text) {
-        // V11 PARSER: Strict Code & State Machine
-        // Handles: 
-        // 1. "Code -> Desc -> Qty" (3-line split)
-        // 2. "Desc -> Qty" (2-line split)
-        // 3. Strict Code validation (must have digits)
+        // V12 ADAPTIVE PARSER (AI-Like)
+        // Auto-detects layout: Columnar (Blocks) vs Row-Interleaved
 
-        const lines = text.split("\n");
+        const lines = text.split("\n").map(l => l.trim()).filter(l => l);
+        if (lines.length === 0) return;
 
-        // Helper to check for "Valid Code" (Must have digits, >3 chars, no spaces inside the code part)
+        // --- SHARED HELPERS ---
         const getCodeInfo = (str) => {
-            const match = str.match(/^([A-Z0-9\-\.]{3,})(\s.*)?$/); // Capture first word
+            const match = str.match(/^([A-Z0-9\-\.]{3,})(\s.*)?$/);
             if (match) {
                 const possibleCode = match[1];
                 const rest = match[2] ? match[2].trim() : "";
-
-                // RULE: Code must have at least one digit OR be a very specific format.
-                if (/\d/.test(possibleCode)) {
+                if (/\d/.test(possibleCode) && possibleCode.length > 3) {
                     return { isCode: true, code: possibleCode, remainder: rest };
                 }
             }
             return { isCode: false, code: "", remainder: str };
         };
 
-        // Helper to extract Qty form end of line
+        const strictQtyRegex = /^(\d+[\.,]?\d*)\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]{1,5})?$/i;
+
         const extractTail = (line) => {
             const tailRegex = /^(.*)\s+([0-9\.,]+\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]+)?)$/i;
             const m = line.match(tailRegex);
@@ -8514,12 +8511,100 @@ class App {
             return { desc: line, qty: "1", uom: "", found: false };
         };
 
+        // --- PHASE 1: CLASSIFICATION & DETECTION ---
+        // Classify each line: C=Code, Q=Qty, T=Text, H=Header
+        const headerRegex = /^(código|nombre|almacen|descripci|cantidad|item|lista de zona)/i;
+
+        const map = lines.map(line => {
+            if (line.match(headerRegex)) return 'H';
+            if (getCodeInfo(line).isCode) return 'C';
+            if (line.match(strictQtyRegex)) return 'Q';
+            return 'T';
+        });
+
+        const signature = map.join('');
+        console.log("OCR LAYOUT SIGNATURE:", signature); // e.g. "CCCTTQ"
+
+        // HEURISTIC: 
+        // If we see "CCC" (3 codes in a row) -> Columnar Mode.
+        // If we see "CCT" (Code, Code, Text) -> Columnar Mode.
+        // If we see many codes (more than 3) -> Columnar Mode.
+        // Otherwise, assume Row Mode.
+
+        if (signature.includes('CCC') || (signature.match(/C/g) || []).length > 3 && signature.indexOf('CCT') > -1) {
+            console.log("MODE: COLUMNAR / BLOCKS DETECTED");
+            this.parseAsColumns(lines, getCodeInfo, extractTail, strictQtyRegex);
+        } else {
+            console.log("MODE: ROW INTERLEAVED DETECTED");
+            this.parseAsRows(lines, getCodeInfo, extractTail, strictQtyRegex);
+        }
+    }
+
+    // STRATEGY A: COLUMNAR (BLOCKS)
+    parseAsColumns(lines, getCodeInfo, extractTail, strictQtyRegex) {
+        // 1. Bucketing
+        const codes = [];
+        const descs = [];
+        const qtys = [];
+        const headerRegex = /^(código|nombre|almacen|descripci|cantidad|item|lista de zona)/i;
+
+        lines.forEach(line => {
+            if (line.match(headerRegex)) return; // Skip headers
+
+            const info = getCodeInfo(line);
+            if (info.isCode) {
+                // It's a code block
+                codes.push(info.code);
+                // If there's remainder, it might be part of desc? 
+                // In columnar mode, usually codes are pure.
+                if (info.remainder && info.remainder.length > 2) descs.push(info.remainder);
+            } else if (line.match(strictQtyRegex)) {
+                // It's a quantity
+                // Extract clean qty/uom
+                const t = extractTail("DUMMY " + line);
+                qtys.push({ q: t.qty, u: t.uom });
+            } else {
+                // It's a description
+                // Check if it has embedded qty
+                const t = extractTail(line);
+                if (t.found && t.qty !== "1") {
+                    descs.push(t.desc);
+                    qtys.push({ q: t.qty, u: t.uom });
+                } else {
+                    descs.push(line);
+                }
+            }
+        });
+
+        console.log("Buckets:", { codes, descs, qtys });
+
+        // 2. Alignment / Zipping
+        // Use the longest array length
+        const maxLen = Math.max(codes.length, descs.length);
+
+        for (let i = 0; i < maxLen; i++) {
+            let c = codes[i] || "";
+            let d = descs[i] || "";
+            let q = "1";
+            let u = "";
+
+            if (qtys[i]) {
+                q = qtys[i].q;
+                u = qtys[i].u;
+            }
+
+            // Fallback: If code is missing but desc exists (OR vice versa)
+            if (d || c) {
+                this.addOCRRow(d, q, c, u);
+            }
+        }
+    }
+
+    // STRATEGY B: ROW INTERLEAVED (V11 Logic)
+    parseAsRows(lines, getCodeInfo, extractTail, strictQtyRegex) {
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
             if (!line) continue;
-            console.log(`OCR LINE [${i}]:`, line);
-
-            // Skip headers
             if (line.match(/^(código|nombre|almacen|descripci|cantidad|item|lista de zona)/i)) continue;
 
             const info = getCodeInfo(line);
@@ -8530,39 +8615,25 @@ class App {
             let uom = "";
 
             if (info.isCode) {
-                // CASE A: Starts with CODE
                 code = info.code;
                 desc = info.remainder;
 
-                // Cleanup bad remainder (e.g. "Nombre")
-                if (desc.match(/^(nombre|descripci|cantidad|item)/i)) {
-                    desc = "";
-                }
+                if (desc.match(/^(nombre|descripci|cantidad|item)/i)) desc = "";
 
-                // If description is empty or very short, look at NEXT line for description
                 if (desc.length < 3) {
                     if (i + 1 < lines.length) {
                         const nextLine = lines[i + 1].trim();
                         const nextInfo = getCodeInfo(nextLine);
-                        const strictQtyRegex = /^(\d+[\.,]?\d*)\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]{1,5})?$/i;
-
                         if (!nextInfo.isCode && !nextLine.match(strictQtyRegex)) {
-                            // MERGE DESCRIPTION
-                            console.log("MERGING NEXT LINE (DESC):", nextLine);
                             desc = nextLine;
                             i++;
                         }
                     }
                 }
 
-                // NOW check for Quantity (Lookahead)
                 if (i + 1 < lines.length) {
                     const nextLine = lines[i + 1].trim();
-                    const strictQtyRegex = /^(\d+[\.,]?\d*)\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]{1,5})?$/i;
-
                     if (nextLine.match(strictQtyRegex)) {
-                        // MERGE QUANTITY
-                        console.log("MERGING NEXT LINE (QTY):", nextLine);
                         const qTail = extractTail("DUMMY " + nextLine);
                         qty = qTail.qty;
                         uom = qTail.uom;
@@ -8580,17 +8651,13 @@ class App {
                 }
 
             } else {
-                // CASE B: Starts with DESCRIPTION (No Code found)
+                // Description first
                 code = "";
                 desc = line;
 
-                // Check if next line is Quantity
                 if (i + 1 < lines.length) {
                     const nextLine = lines[i + 1].trim();
-                    const strictQtyRegex = /^(\d+[\.,]?\d*)\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]{1,5})?$/i;
-
                     if (nextLine.match(strictQtyRegex)) {
-                        console.log("MERGING NEXT LINE (QTY) [NO CODE]:", nextLine);
                         const qTail = extractTail("DUMMY " + nextLine);
                         qty = qTail.qty;
                         uom = qTail.uom;
@@ -8608,7 +8675,7 @@ class App {
                 }
             }
 
-            // CLEANUP
+            // Cleanup
             if (desc) desc = desc.replace(/^[-*•]\s*/, "").trim();
             if (uom) uom = uom.replace(/[^a-zA-Z0-9\.]/g, "");
             if (qty && parseInt(qty) > 10000) qty = "1";
