@@ -23,7 +23,7 @@ class App {
     }
 
     init() {
-        console.log("🚀 LEVO ERP Initializing...");
+        console.log("ðŸš€ LEVO ERP Initializing...");
         this.cacheDOM();
         this.bindEvents();
         this.checkSession();
@@ -119,7 +119,7 @@ class App {
         this.navLinks.forEach(link => {
             link.addEventListener('click', (e) => {
                 const targetId = link.dataset.target;
-                console.log(`🖱️ CLICK DETECTED on Nav Link: ${targetId}`);
+                console.log(`ðŸ–±ï¸ CLICK DETECTED on Nav Link: ${targetId}`);
                 e.preventDefault();
 
                 // Force Overlay Hide (Defensive)
@@ -193,7 +193,7 @@ class App {
             if (result.status === 'success') {
                 this.setUser(result.user);
             } else {
-                alert(result.message || 'Error al iniciar sesión');
+                alert(result.message || 'Error al iniciar sesiÃ³n');
             }
 
         } catch (error) {
@@ -261,7 +261,7 @@ class App {
 
         // FIXED: Create BADGE if missing (v72)
         if (!document.getElementById('notification-badge')) {
-            console.log("✅ BADGE CREATED (v72) - FORCE INJECT");
+            console.log("âœ… BADGE CREATED (v72) - FORCE INJECT");
             const badge = document.createElement('span');
             badge.id = 'notification-badge';
             badge.style.cssText = `position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border-radius: 50%; padding: 2px 5px; font-size: 10px; display: none;`;
@@ -299,7 +299,7 @@ class App {
                 </div>
                 <div style="padding:10px; text-align:center; border-top:1px solid #eee; background:#fff;">
                      <button style="font-size:0.85rem; color:#3b82f6; background:none; border:none; cursor:pointer; font-weight:600;" onclick="app.clearNotifications()">
-                        <i class="fa-solid fa-check-double"></i> Marcar todo como leído
+                        <i class="fa-solid fa-check-double"></i> Marcar todo como leÃ­do
                     </button>
                 </div>
                 <style>
@@ -315,7 +315,7 @@ class App {
             bellBtn.onclick = (e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                console.log("🔔 Bell Clicked - Toggling Dropdown");
+                console.log("ðŸ”” Bell Clicked - Toggling Dropdown");
                 const isVisible = dropdown.style.display === 'block';
                 dropdown.style.display = isVisible ? 'none' : 'block';
             };
@@ -341,7 +341,7 @@ class App {
     }
 
     showToast(message, type = 'info') {
-        console.error("🔔 TOAST CALLED (ERROR LEVEL):", message, type);
+        console.error("ðŸ”” TOAST CALLED (ERROR LEVEL):", message, type);
         const toast = document.createElement('div');
         // Inline styles for reliability
         const bg = type === 'success' ? '#22c55e' : type === 'error' ? '#ef4444' : '#3b82f6';
@@ -392,12 +392,12 @@ class App {
 
         // ROBUST FINDER: If ID lookup failed, find by Icon Class
         if (!bell) {
-            console.warn("⚠️ Bell ID missing - searching by Icon...");
+            console.warn("âš ï¸ Bell ID missing - searching by Icon...");
             const bellIcon = document.querySelector('.fa-bell');
             if (bellIcon) {
                 bell = bellIcon.closest('button');
                 if (bell) {
-                    console.log("✅ Found Bell Button via Icon! Assigning ID...");
+                    console.log("âœ… Found Bell Button via Icon! Assigning ID...");
                     bell.id = 'header-notification-bell'; // Fix the DOM
                     bell.style.position = 'relative';
 
@@ -421,12 +421,12 @@ class App {
         }
 
         if (!bell) {
-            console.error("❌ CRITICAL: BELL BUTTON NOT FOUND EVEN BY ICON");
+            console.error("âŒ CRITICAL: BELL BUTTON NOT FOUND EVEN BY ICON");
             return;
         }
 
         if (!badge || !list) {
-            console.error("❌ STILL MISSING ELEMENTS - ABORTING");
+            console.error("âŒ STILL MISSING ELEMENTS - ABORTING");
             return;
         }
 
@@ -454,7 +454,7 @@ class App {
         }
 
         if (!badge || !list) {
-            console.error("❌ MISSING NOTIFICATION DOM ELEMENTS - RETURNING");
+            console.error("âŒ MISSING NOTIFICATION DOM ELEMENTS - RETURNING");
             return;
         }
 
@@ -478,7 +478,7 @@ class App {
         if (effectiveCount > 0 && count > lastCount) {
             const diff = count - lastCount;
             // Only toast if meaningful increase
-            if (diff > 0) this.showToast(`¡${diff} Nuevo(s) Producto(s) Listo(s)!`, 'success');
+            if (diff > 0) this.showToast(`Â¡${diff} Nuevo(s) Producto(s) Listo(s)!`, 'success');
         }
 
         // Always update this for the "Next" delta check
@@ -501,7 +501,7 @@ class App {
             list.innerHTML = `
                 <div style="padding:8px; border-bottom:1px solid #eee; text-align:right;">
                     <button style="font-size:0.75rem; color:#3b82f6; background:none; border:none; cursor:pointer;" onclick="app.clearNotifications()">
-                        Marcar todo como leído
+                        Marcar todo como leÃ­do
                     </button>
                 </div>
                 ${prods.map(p => `
@@ -510,7 +510,7 @@ class App {
                      onmouseover="this.style.backgroundColor='#f8fafc'"
                      onmouseout="this.style.backgroundColor='white'">
                     <div style="font-size:0.85rem; font-weight:bold; color:#1e293b;">
-                        <i class="fa-solid fa-check-circle" style="color:#16a34a; margin-right:4px;"></i> ¡Producto Listo!
+                        <i class="fa-solid fa-check-circle" style="color:#16a34a; margin-right:4px;"></i> Â¡Producto Listo!
                     </div>
                     <div style="font-size:0.8rem; color:#475569; padding-left:1.2rem;">
                         <strong>${p.descripcion}</strong> (${p.cantidad} un.)<br>
@@ -566,7 +566,7 @@ class App {
 
         // Update list to show "Cleared" state immediately
         const list = document.getElementById('notification-list');
-        if (list) list.innerHTML = '<div style="padding:10px; color:#999; font-size:0.85rem; text-align:center;">Leído. Sin nuevas alertas.</div>';
+        if (list) list.innerHTML = '<div style="padding:10px; color:#999; font-size:0.85rem; text-align:center;">LeÃ­do. Sin nuevas alertas.</div>';
     }
 
 
@@ -627,7 +627,7 @@ class App {
             'movements': 'Movimientos',
             'dispatch': 'Despachos',
             'prepedidos': 'Prepedidos - Proveedores',
-            'users': 'Gestión de Usuarios'
+            'users': 'GestiÃ³n de Usuarios'
         };
         this.pageTitle.textContent = titles[viewName] || 'LEVO ERP';
 
@@ -712,7 +712,7 @@ class App {
                         <table style="width: 100%; text-align: left; border-collapse: collapse;">
                             <thead>
                                 <tr style="border-bottom: 2px solid #eee; color: #666;">
-                                    <th style="padding: 1rem;">CÓDIGO</th>
+                                    <th style="padding: 1rem;">CÃ“DIGO</th>
                                     <th style="padding: 1rem;">CANTIDAD</th>
                                     <th style="padding: 1rem;">FECHA</th>
                                     <th style="padding: 1rem;">USUARIO</th>
@@ -729,7 +729,7 @@ class App {
                 container.innerHTML = `<p style="color:red;"> Error al cargar: ${result.message}</p> `;
             }
         } catch (error) {
-            container.innerHTML = `<p style="color:red;"> Error de conexión: ${error.message}</p> `;
+            container.innerHTML = `<p style="color:red;"> Error de conexiÃ³n: ${error.message}</p> `;
         }
     }
 
@@ -737,7 +737,7 @@ class App {
      * DATA LOADING
      */
     async preloadAllData() {
-        console.log("🚀 Preloading Data for All Modules...");
+        console.log("ðŸš€ Preloading Data for All Modules...");
 
         // Parallel requests (Fire & Forget style where appropriate)
         const p1 = this.fetchProducts({ isBackground: true });
@@ -748,7 +748,7 @@ class App {
 
         // We do not await here to block UI, but we track them
         Promise.allSettled([p1, p2, p3, p4, p5]).then(() => {
-            console.log("✅ All Modules Preloaded & Cached");
+            console.log("âœ… All Modules Preloaded & Cached");
         });
     }
 
@@ -1029,7 +1029,7 @@ class App {
                     <!-- Widget 1: Random Audit -->
                     <div id="widget-audit" class="widget-card">
                         <div style="text-align:center; padding:2rem; color:#999;">
-                            <i class="fa-solid fa-spinner fa-spin"></i> Cargando Auditoría...
+                            <i class="fa-solid fa-spinner fa-spin"></i> Cargando AuditorÃ­a...
                         </div>
                     </div>
 
@@ -1086,8 +1086,8 @@ class App {
                                     <td style="padding:0.75rem; text-align:right;">${p.cantidad}</td>
                                     <td style="padding:0.75rem;">
                                         <button class="btn-sm" style="background:#3b82f6; color:white; border:none; padding:4px 8px; border-radius:4px;"
-                                            onclick="alert('Por favor, busca la Guía original para incluir este item o crea una nueva.')">
-                                            Ver Guía
+                                            onclick="alert('Por favor, busca la GuÃ­a original para incluir este item o crea una nueva.')">
+                                            Ver GuÃ­a
                                         </button>
                                     </td>
                                 </tr>
@@ -1109,7 +1109,7 @@ class App {
 
         container.innerHTML = `
             <div style="text-align:center; padding:2rem; color:#999;">
-                <i class="fa-solid fa-spinner fa-spin"></i> Cargando Auditoría...
+                <i class="fa-solid fa-spinner fa-spin"></i> Cargando AuditorÃ­a...
             </div>
         `;
 
@@ -1133,11 +1133,11 @@ class App {
             if (pendingCount === 0) {
                 container.innerHTML = `
                     <div class="widget-header">
-                        <div class="widget-title"><i class="fa-solid fa-clipboard-check"></i> Auditoría Diaria</div>
+                        <div class="widget-title"><i class="fa-solid fa-clipboard-check"></i> AuditorÃ­a Diaria</div>
                     </div>
                     <div style="padding:1.5rem; text-align:center; color:#22c55e;">
                          <i class="fa-solid fa-check-double" style="font-size:2rem; margin-bottom:0.5rem;"></i>
-                         <p>¡Todo al día!</p>
+                         <p>Â¡Todo al dÃ­a!</p>
                     </div>
                 `;
                 return;
@@ -1145,7 +1145,7 @@ class App {
 
             container.innerHTML = `
                 <div class="widget-header">
-                    <div class="widget-title"><i class="fa-solid fa-clipboard-check"></i> Auditoría Diaria</div>
+                    <div class="widget-title"><i class="fa-solid fa-clipboard-check"></i> AuditorÃ­a Diaria</div>
                     <div style="font-size:0.8rem; color:#888;">${new Date().toLocaleDateString()}</div>
                 </div>
                 <div style="padding:1rem; text-align:center;">
@@ -1161,7 +1161,7 @@ class App {
 
         } catch (e) {
             console.error(e);
-            container.innerHTML = '<div style="padding:1rem; color:red;">Error al cargar auditoría</div>';
+            container.innerHTML = '<div style="padding:1rem; color:red;">Error al cargar auditorÃ­a</div>';
         }
     }
 
@@ -1198,7 +1198,7 @@ class App {
         if (validItems.length === 0) {
             container.innerHTML = `
                 <div class="widget-header">
-                    <div class="widget-title"><i class="fa-solid fa-calendar-xmark"></i> Próximos Vencimientos</div>
+                    <div class="widget-title"><i class="fa-solid fa-calendar-xmark"></i> PrÃ³ximos Vencimientos</div>
                 </div>
                 <div style="padding:1rem; text-align:center; color:#22c55e;">
                     <i class="fa-solid fa-check-circle" style="font-size:2rem; margin-bottom:0.5rem; display:block;"></i>
@@ -1214,7 +1214,7 @@ class App {
 
             let alertClass = 'alert-info';
             let icon = 'fa-clock';
-            let label = `${days} días`;
+            let label = `${days} dÃ­as`;
 
             if (days < 0) {
                 alertClass = 'alert-critical';
@@ -1244,7 +1244,7 @@ class App {
 
         container.innerHTML = `
             <div class="widget-header">
-                <div class="widget-title"><i class="fa-solid fa-calendar-xmark"></i> Próximos Vencimientos</div>
+                <div class="widget-title"><i class="fa-solid fa-calendar-xmark"></i> PrÃ³ximos Vencimientos</div>
             </div>
             <div class="expiration-list">
                 ${listHtml}
@@ -1304,7 +1304,7 @@ class App {
                     <div class="search-bar-header">
                         <i class="fa-solid fa-magnifying-glass search-icon"></i>
                         <input type="text" id="dispatch-search-input" placeholder="Buscar producto..." onkeyup="window.app.filterDispatchView(this.value)" inputmode="search" enterkeyhint="search">
-                        <i class="fa-solid fa-barcode barcode-icon" title="Escanear con Cámara" onclick="window.app.triggerBarcodeScan()"></i>
+                        <i class="fa-solid fa-barcode barcode-icon" title="Escanear con CÃ¡mara" onclick="window.app.triggerBarcodeScan()"></i>
                     </div>
                     <div class="client-buttons-group">
                         ${buttonsHtml}
@@ -1466,7 +1466,7 @@ class App {
         // Let's keep it safe.
     }
 
-    /* --- QUICK DISPATCH (Despacho Rápido) --- */
+    /* --- QUICK DISPATCH (Despacho RÃ¡pido) --- */
     openQuickDispatchModal(code) {
         const product = this.data.products[code];
         if (!product) return;
@@ -1481,7 +1481,7 @@ class App {
                     <i class="fa-solid fa-bolt"></i>
                 </div>
                 
-                <h3 style="margin-top:1.5rem; color:#d97706;">Despacho Rápido</h3>
+                <h3 style="margin-top:1.5rem; color:#d97706;">Despacho RÃ¡pido</h3>
                 
                 <div style="margin:1rem 0; text-align:left; background:#fffbeb; padding:1rem; border-radius:8px; border:1px solid #fcd34d;">
                     <div style="font-weight:bold; color:#92400e; font-size:1.1rem;">${product.desc}</div>
@@ -1501,7 +1501,7 @@ class App {
                             <button onclick="app.setQuickClient('${c}')" class="btn-sm" style="border:1px solid #ddd; background:white; color:#555;">${c}</button>
                         `).join('')}
                     </div>
-                    <input type="text" id="qd-client" placeholder="O escribe aquí..." class="modern-input" style="margin-top:0.5rem;" list="list-clients-qd">
+                    <input type="text" id="qd-client" placeholder="O escribe aquÃ­..." class="modern-input" style="margin-top:0.5rem;" list="list-clients-qd">
                     <datalist id="list-clients-qd">
                         ${this.data.clients ? this.data.clients.map(c => `<option value="${c}">`).join('') : ''}
                     </datalist>
@@ -1531,13 +1531,13 @@ class App {
         const qty = parseInt(qtyInput.value);
         const client = clientInput.value.trim();
 
-        if (isNaN(qty) || qty <= 0) return alert('Cantidad inválida');
+        if (isNaN(qty) || qty <= 0) return alert('Cantidad invÃ¡lida');
         if (!client) return alert('Debes seleccionar o escribir un destino');
 
         // Check Stock
         const product = this.data.products[code];
         if (product.stock < qty) {
-            if (!confirm(`Stock insuficiente (${product.stock}). ¿Despachar igualmente?`)) return;
+            if (!confirm(`Stock insuficiente (${product.stock}). Â¿Despachar igualmente?`)) return;
         }
 
         // Show Loading
@@ -1569,7 +1569,7 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                this.showToast('¡Despacho Rápido Exitoso!', 'success');
+                this.showToast('Â¡Despacho RÃ¡pido Exitoso!', 'success');
                 this.closeModal();
                 // Optionally reload guides in background
                 this.loadMovimientosData(true);
@@ -1596,7 +1596,7 @@ class App {
                 <div style="text-align:center; padding:2rem; color:#666;">
                     <i class="fa-solid fa-spinner fa-spin"></i> Cargando inventario...
                     <div style="margin-top:1rem;">
-                        <small>¿Tarda demasiado?</small><br>
+                        <small>Â¿Tarda demasiado?</small><br>
                         <button class="btn-sm" style="margin-top:0.5rem;" onclick="app.fetchProducts()">
                             <i class="fa-solid fa-rotate"></i> Forzar Recarga
                         </button>
@@ -1701,7 +1701,7 @@ class App {
                                 style="position:absolute; top:10px; left:10px; background:#f59e0b; color:white; border:none; width:32px; height:32px; border-radius:50%; box-shadow:0 4px 6px -1px rgba(245, 158, 11, 0.4); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.2s;"
                                 onmouseover="this.style.transform='scale(1.1)'"
                                 onmouseout="this.style.transform='scale(1)'"
-                                title="Despacho Rápido">
+                                title="Despacho RÃ¡pido">
                             <i class="fa-solid fa-bolt"></i>
                         </button>
 
@@ -1757,10 +1757,10 @@ class App {
                             </button>
                         </div>
                         
-                        <div class="back-label">Descripción Completa</div>
+                        <div class="back-label">DescripciÃ³n Completa</div>
                         <div class="back-value">${product.desc}</div>
 
-                        <div class="back-label">Código de Sistema</div>
+                        <div class="back-label">CÃ³digo de Sistema</div>
                         <div class="back-value">${code}</div>
 
                         <div class="back-label">Factor Zona</div>
@@ -1857,7 +1857,7 @@ class App {
         if (newQtyStr === null) return; // Cancelled
 
         const newQty = parseFloat(newQtyStr);
-        if (isNaN(newQty)) return alert("Cantidad inválida");
+        if (isNaN(newQty)) return alert("Cantidad invÃ¡lida");
 
         if (btn) {
             // const originalHtml = btn.innerHTML; // Unused
@@ -1872,7 +1872,7 @@ class App {
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({
                     action: 'updateStockAdjustment',
-                    payload: { rowId, newQty, reason: 'Corrección manual' }
+                    payload: { rowId, newQty, reason: 'CorrecciÃ³n manual' }
                 })
             });
             const result = await response.json();
@@ -1889,7 +1889,7 @@ class App {
             }
         } catch (e) {
             console.error(e);
-            alert("Error de conexión");
+            alert("Error de conexiÃ³n");
             if (btn) btn.innerHTML = '<i class="fa-solid fa-pencil"></i>';
             if (btn) btn.disabled = false;
         }
@@ -2020,16 +2020,16 @@ class App {
         overlay.innerHTML = `
             <div style="background:white; padding:2rem; border-radius:12px; width:90%; max-width:400px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);">
                 <h3 style="margin-top:0; color:#333;">Nuevo Ajuste de Stock</h3>
-                <p style="color:#666; font-size:0.9rem;">El sistema calculará automáticamente la diferencia.</p>
+                <p style="color:#666; font-size:0.9rem;">El sistema calcularÃ¡ automÃ¡ticamente la diferencia.</p>
                 
                 <div style="margin-bottom:1rem;">
-                    <label style="display:block; font-weight:bold; margin-bottom:5px; color:#555;">Código</label>
+                    <label style="display:block; font-weight:bold; margin-bottom:5px; color:#555;">CÃ³digo</label>
                     <input type="text" value="${code}" disabled style="width:100%; padding:8px; background:#f3f4f6; border:1px solid #ddd; border-radius:6px;">
                 </div>
 
                 <div style="margin-bottom:1rem;">
-                    <label style="display:block; font-weight:bold; margin-bottom:5px; color:#555;">Stock Físico (Real)</label>
-                    <input type="number" id="adj-real-qty" placeholder="¿Cuánto hay en realidad?" 
+                    <label style="display:block; font-weight:bold; margin-bottom:5px; color:#555;">Stock FÃ­sico (Real)</label>
+                    <input type="number" id="adj-real-qty" placeholder="Â¿CuÃ¡nto hay en realidad?" 
                            style="width:100%; padding:10px; border:2px solid #0284c7; border-radius:6px; font-size:1.1rem; font-weight:bold; color:#333;" autofocus>
                 </div>
 
@@ -2037,10 +2037,10 @@ class App {
                     <label style="display:block; font-weight:bold; margin-bottom:5px; color:#555;">Motivo</label>
                     <select id="adj-reason" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px;">
                         <option value="Ajuste de Inventario">Ajuste de Inventario</option>
-                        <option value="Merma / Daño">Merma / Daño</option>
-                        <option value="Corrección de Ingreso">Corrección de Ingreso</option>
-                        <option value="Corrección de Salida">Corrección de Salida</option>
-                        <option value="Auditoria">Auditoría</option>
+                        <option value="Merma / DaÃ±o">Merma / DaÃ±o</option>
+                        <option value="CorrecciÃ³n de Ingreso">CorrecciÃ³n de Ingreso</option>
+                        <option value="CorrecciÃ³n de Salida">CorrecciÃ³n de Salida</option>
+                        <option value="Auditoria">AuditorÃ­a</option>
                         <option value="Otro">Otro</option>
                     </select>
                 </div>
@@ -2064,7 +2064,7 @@ class App {
             if (realQtyVal === '') return alert('Ingresa la cantidad real');
 
             const realQty = parseFloat(realQtyVal);
-            if (isNaN(realQty)) return alert('Cantidad inválida');
+            if (isNaN(realQty)) return alert('Cantidad invÃ¡lida');
 
             this.confirmSmartAdjustment(code, realQty, currentSystemStock, reason);
         };
@@ -2078,10 +2078,10 @@ class App {
         if (Math.abs(delta) < 0.0001) return alert('El stock real es igual al del sistema. No se necesita ajuste.');
 
         const msg = delta > 0
-            ? `Se sumarán +${delta.toFixed(2)} unidades.`
-            : `Se restarán ${delta.toFixed(2)} unidades.`;
+            ? `Se sumarÃ¡n +${delta.toFixed(2)} unidades.`
+            : `Se restarÃ¡n ${delta.toFixed(2)} unidades.`;
 
-        if (!confirm(`Confirmar Ajuste:\n\nSistema: ${systemQty}\nReal: ${realQty}\n\nDiferencia: ${msg}\n\n¿Proceder?`)) return;
+        if (!confirm(`Confirmar Ajuste:\n\nSistema: ${systemQty}\nReal: ${realQty}\n\nDiferencia: ${msg}\n\nÂ¿Proceder?`)) return;
 
         // UI Loading
         const btn = document.getElementById('btn-save-adj');
@@ -2185,14 +2185,14 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                this.showToast('Sincronización completada', 'success');
+                this.showToast('SincronizaciÃ³n completada', 'success');
             } else {
                 alert('Error al guardar en servidor: ' + result.message);
             }
 
         } catch (e) {
             console.error(e);
-            alert('Error de conexión. El ajuste se guardó localmente pero falló en nube.');
+            alert('Error de conexiÃ³n. El ajuste se guardÃ³ localmente pero fallÃ³ en nube.');
         }
     }
 
@@ -2206,7 +2206,7 @@ class App {
 
         const numFactor = parseFloat(factor);
         if (isNaN(numFactor) || numFactor < 0) {
-            alert("Por favor ingrese un número válido mayor o igual a 0.");
+            alert("Por favor ingrese un nÃºmero vÃ¡lido mayor o igual a 0.");
             return;
         }
 
@@ -2287,7 +2287,7 @@ class App {
                     <div class="header">
                         <h1>Historial de Producto</h1>
                         <div style="font-size:1.2rem; font-weight:bold; margin: 5px 0;">${name}</div>
-                        <div style="color:#666;">CÓDIGO: ${code}</div>
+                        <div style="color:#666;">CÃ“DIGO: ${code}</div>
                         <div style="color:#888; font-size:12px; margin-top:5px;">Impreso: ${now}</div>
                     </div>
                     
@@ -2339,7 +2339,7 @@ class App {
 
         headerActions.innerHTML = `
                 <div class="header-tab-group">
-                <button id="btn-mov-guias" class="btn-header-tab active" onclick="app.switchMovTab('guias')">Guías</button>
+                <button id="btn-mov-guias" class="btn-header-tab active" onclick="app.switchMovTab('guias')">GuÃ­as</button>
                 <button id="btn-mov-preingresos" class="btn-header-tab" onclick="app.switchMovTab('preingresos')">Preingresos</button>
             </div>
                 `;
@@ -2379,7 +2379,7 @@ class App {
         const container = document.getElementById('guias-list-scroll');
         const CACHE_KEY = 'warehouse_movimientos_data';
 
-        console.log(`🔄 LOAD DATASOURCE START(Background = ${isBackground})`);
+        console.log(`ðŸ”„ LOAD DATASOURCE START(Background = ${isBackground})`);
 
         // 1. Try Cache First (Fast Load)
         if (!isBackground) {
@@ -2432,7 +2432,7 @@ class App {
                     }
 
                     // Update Notifications (CRITICAL for User Alert)
-                    console.log("🌍 FETCH SUCCESS - CALLING UPDATE NOTIFICATIONS");
+                    console.log("ðŸŒ FETCH SUCCESS - CALLING UPDATE NOTIFICATIONS");
                     this.updateNotifications();
 
                     // DASHBOARD SYNC FIX: If on dashboard, force re-render to show new data immediately
@@ -2465,7 +2465,7 @@ class App {
                     console.error('All fetch attempts failed', e);
                     if (!isBackground && container && (!this.data.movimientos || !this.data.movimientos.guias)) {
                         container.innerHTML = `<div style="text-align:center; padding:1rem; color:red;">
-                <i class="fa-solid fa-triangle-exclamation"></i> Error de conexión.Reintentando... (${e.message})
+                <i class="fa-solid fa-triangle-exclamation"></i> Error de conexiÃ³n.Reintentando... (${e.message})
                        </div>`;
                     }
                 } else {
@@ -2523,7 +2523,7 @@ class App {
     renderGuiasGrouped(list) {
         const container = document.getElementById('guias-list-scroll');
         if (list.length === 0) {
-            container.innerHTML = '<div style="text-align:center; color:#999; padding:2rem;">No se encontraron guías</div>';
+            container.innerHTML = '<div style="text-align:center; color:#999; padding:2rem;">No se encontraron guÃ­as</div>';
             return;
         }
 
@@ -2741,7 +2741,7 @@ class App {
                 <div style="padding:1.5rem; background:#f9fafb; min-height:100%; display:flex; flex-direction:column;">
                     <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:1rem;">
                     <div>
-                        <h3 style="color:var(--primary-color); margin:0;">Detalle de Guía</h3>
+                        <h3 style="color:var(--primary-color); margin:0;">Detalle de GuÃ­a</h3>
                         <div style="font-size:0.9rem; color:#666;">
                             <span style="font-weight:bold; color:#333;">${info.tipo}</span> | ${info.fecha}
                         </div>
@@ -2774,7 +2774,7 @@ class App {
                          style="max-height:180px; width:100%; object-fit:cover; display:block; cursor:zoom-in; transition:transform 0.2s;" 
                          onmouseover="this.style.opacity='0.9'"
                          onmouseout="this.style.opacity='1'"
-                         alt="Evidencia Guía"
+                         alt="Evidencia GuÃ­a"
                          title="Click para ampliar">
                 </div>
                 ` : ''
@@ -2807,7 +2807,7 @@ class App {
 
     shareGuiaWhatsapp(id) {
         const guiaInfo = this.data.movimientos.guias.find(g => g.id === id);
-        if (!guiaInfo) return alert('Guía no encontrada');
+        if (!guiaInfo) return alert('GuÃ­a no encontrada');
 
         // Normal Details
         const details = this.data.movimientos.detalles
@@ -2826,12 +2826,12 @@ class App {
             : [];
 
         // Build Message
-        let text = `📦 *REPORTE DE GUÍA (LEVO ERP)*\n`;
+        let text = `ðŸ“¦ *REPORTE DE GUÃA (LEVO ERP)*\n`;
         text += `----------------------------\n`;
-        text += `📅 *Fecha:* ${guiaInfo.fecha}\n`;
-        text += `🏢 *Proveedor/Destino:* ${guiaInfo.proveedor || guiaInfo.destino || 'S/D'}\n`;
-        text += `👤 *Usuario:* ${guiaInfo.usuario}\n`;
-        text += `📝 *Tipo:* ${guiaInfo.tipo}\n`;
+        text += `ðŸ“… *Fecha:* ${guiaInfo.fecha}\n`;
+        text += `ðŸ¢ *Proveedor/Destino:* ${guiaInfo.proveedor || guiaInfo.destino || 'S/D'}\n`;
+        text += `ðŸ‘¤ *Usuario:* ${guiaInfo.usuario}\n`;
+        text += `ðŸ“ *Tipo:* ${guiaInfo.tipo}\n`;
         text += `----------------------------\n\n`;
 
         text += `*PRODUCTOS:*\n`;
@@ -2841,24 +2841,24 @@ class App {
         }
 
         enriched.forEach(p => {
-            text += `• ${p.cantidad} x ${p.descripcion}\n`;
+            text += `â€¢ ${p.cantidad} x ${p.descripcion}\n`;
         });
 
         if (newProds.length > 0) {
             text += `\n*NUEVOS (PENDIENTES):*\n`;
             newProds.forEach(p => {
-                text += `• ${p.cantidad} x ${p.descripcion} (NUEVO)\n`;
+                text += `â€¢ ${p.cantidad} x ${p.descripcion} (NUEVO)\n`;
             });
         }
 
         text += `\n----------------------------\n`;
         if (guiaInfo.comentario) {
-            text += `💬 *Nota:* ${guiaInfo.comentario}\n`;
+            text += `ðŸ’¬ *Nota:* ${guiaInfo.comentario}\n`;
         }
 
         if (guiaInfo.foto) {
             const imageUrl = this.getOptimizedImageUrl(guiaInfo.foto);
-            text += `📷 *Foto:* ${imageUrl}\n`;
+            text += `ðŸ“· *Foto:* ${imageUrl}\n`;
         }
 
         const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
@@ -2867,7 +2867,7 @@ class App {
 
     printGuiaTicket(id) {
         const guiaInfo = this.data.movimientos.guias.find(g => g.id === id);
-        if (!guiaInfo) return alert('Guía no encontrada');
+        if (!guiaInfo) return alert('GuÃ­a no encontrada');
 
         // Normal Details
         const details = this.data.movimientos.detalles
@@ -2891,8 +2891,8 @@ class App {
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${id}`;
 
         // Title Logic
-        const tipoTitulo = guiaInfo.tipo === 'INGRESO' ? 'GUÍA DE INGRESO' :
-            guiaInfo.tipo === 'SALIDA' ? 'GUÍA DE SALIDA' : guiaInfo.tipo;
+        const tipoTitulo = guiaInfo.tipo === 'INGRESO' ? 'GUÃA DE INGRESO' :
+            guiaInfo.tipo === 'SALIDA' ? 'GUÃA DE SALIDA' : guiaInfo.tipo;
 
         let rowsHtml = '';
 
@@ -2994,7 +2994,7 @@ class App {
                     <table>
                         <thead>
                             <tr>
-                                <th style="text-align:left;">DESCRIPCIÓN</th>
+                                <th style="text-align:left;">DESCRIPCIÃ“N</th>
                                 <th style="text-align:right;">CANT.</th>
                             </tr>
                         </thead>
@@ -3029,13 +3029,13 @@ class App {
                 <div style="background:white; padding:1.5rem; border-radius:8px; width:90%; max-width:400px; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
                     <h3 style="margin-top:0; color:var(--primary-color);">Registrar Nuevo Producto</h3>
                     <div style="font-size:0.85rem; color:#666; margin-bottom:1rem;">
-                        Este producto se guardará como <strong>PENDIENTE</strong> hasta que sea validado por administración.
+                        Este producto se guardarÃ¡ como <strong>PENDIENTE</strong> hasta que sea validado por administraciÃ³n.
                     </div>
                     
                     <div style="display:flex; flex-direction:column; gap:0.75rem;">
                         <input type="text" id="np-marca" placeholder="Marca" style="padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
-                        <input type="text" id="np-desc" placeholder="Descripción del Producto *" style="padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
-                        <input type="text" id="np-code" placeholder="Código de Barra (Opcional)" style="padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
+                        <input type="text" id="np-desc" placeholder="DescripciÃ³n del Producto *" style="padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
+                        <input type="text" id="np-code" placeholder="CÃ³digo de Barra (Opcional)" style="padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
                         <div style="display:flex; gap:0.5rem;">
                              <input type="number" id="np-qty" placeholder="Cant. *" style="flex:1; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
                              <input type="date" id="np-date" style="flex:1; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
@@ -3059,7 +3059,7 @@ class App {
         const qty = document.getElementById('np-qty').value;
         const date = document.getElementById('np-date').value;
 
-        if (!desc || !qty) return alert('Descripción y Cantidad son obligatorios');
+        if (!desc || !qty) return alert('DescripciÃ³n y Cantidad son obligatorios');
 
         const payload = {
             idGuia: idGuia,
@@ -3284,7 +3284,7 @@ class App {
             pendingHtml = `
                 <div style="margin-top:1.5rem; border:1px dashed #f59e0b; background:#fffbeb; padding:1rem; border-radius:8px;">
                     <h5 style="margin:0 0 0.5rem 0; color:#b45309;"><i class="fa-solid fa-triangle-exclamation"></i> Productos Nuevos (Pendientes)</h5>
-                    <div style="font-size:0.8rem; color:#92400e; margin-bottom:0.5rem;">Estos productos están esperando validación administrativa.</div>
+                    <div style="font-size:0.8rem; color:#92400e; margin-bottom:0.5rem;">Estos productos estÃ¡n esperando validaciÃ³n administrativa.</div>
                     ${pendingProducts.map(p => `
                         <div style="display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0; border-bottom:1px solid #fcd34d;">
                             <div>
@@ -3300,7 +3300,7 @@ class App {
 
         panel.innerHTML = `
             <div style="padding:1.5rem; border-bottom:1px solid #eee; background:#f9fafb; display:flex; flex-direction:column; height:100%;">
-                <h3 style="color:var(--primary-color); margin-bottom:1rem;">Editar Guía</h3>
+                <h3 style="color:var(--primary-color); margin-bottom:1rem;">Editar GuÃ­a</h3>
                 
                 <div style="margin-bottom:0.5rem;">
                     <label style="font-size:0.8rem; font-weight:bold;">Proveedor / Destino</label>
@@ -3315,7 +3315,7 @@ class App {
                  <div style="margin-bottom:1rem; display:flex; justify-content:flex-end;">
                      <button onclick="app.showNewProductModal('${id}')" 
                              style="background:#f59e0b; color:white; border:none; padding:0.5rem 1rem; border-radius:4px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; gap:0.5rem;">
-                         <i class="fa-solid fa-plus-circle"></i> Nuevo Producto (No en Catálogo)
+                         <i class="fa-solid fa-plus-circle"></i> Nuevo Producto (No en CatÃ¡logo)
                      </button>
                 </div>
 
@@ -3344,7 +3344,7 @@ class App {
                         <i class="fa-solid fa-plus-circle" style="font-size:1.2rem; color:var(--primary-color);"></i>
                         <span>Agregar Producto</span>
                     </button>
-                    <div style="text-align:center; font-size:0.8rem; color:#888;">Presiona para buscar productos del catálogo...</div>
+                    <div style="text-align:center; font-size:0.8rem; color:#888;">Presiona para buscar productos del catÃ¡logo...</div>
                 </div>
 
                 <!-- SPOTLIGHT MODAL (Hidden by default) -->
@@ -3531,7 +3531,7 @@ class App {
         // Check if already exists
         const exists = this.editingDetails.find(d => String(d.codigo) === String(code));
         if (exists) {
-            alert('El producto ya está en la lista.');
+            alert('El producto ya estÃ¡ en la lista.');
             return;
         }
 
@@ -3611,7 +3611,7 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                alert('Guía actualizada correctamente');
+                alert('GuÃ­a actualizada correctamente');
                 // Reload Data (Will overwrite optimistic stock with server truth, preventing drift)
                 await this.loadMovimientosData();
                 // Return to view mode (Refresh detail panel with new data)
@@ -3740,7 +3740,7 @@ class App {
                             <button onclick="event.stopPropagation(); app.generateGuiaFromPreingreso('${p.id}')" 
                                     class="btn-sm" 
                                     style="margin-top:0.75rem; width:100%; background:var(--primary-color); color:white; border:none; border-radius:15px; padding:4px 0; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.4rem; font-size:0.75rem; font-weight:500; height: 28px;">
-                                <i class="fa-solid fa-file-import" style="font-size:0.7rem;"></i> Generar Guía
+                                <i class="fa-solid fa-file-import" style="font-size:0.7rem;"></i> Generar GuÃ­a
                             </button>
                          ` : ''}
                     </div>
@@ -3879,25 +3879,25 @@ class App {
         const info = this.data.movimientos.preingresos.find(p => p.id === id);
         if (!info) return alert('No encontrado');
 
-        let text = `📋 *REPORTE PRE-INGRESO (LEVO ERP)*\n`;
+        let text = `ðŸ“‹ *REPORTE PRE-INGRESO (LEVO ERP)*\n`;
         text += `----------------------------\n`;
-        text += `📅 *Fecha:* ${info.fecha}\n`;
-        text += `🏢 *Proveedor:* ${info.proveedor}\n`;
-        text += `💰 *Monto:* ${info.monto ? 'S/ ' + info.monto : '-'}\n`;
-        text += `🏷️ *Etiqueta:* ${info.etiqueta || 'N/A'}\n`;
-        text += `📄 *Comprobante:* ${info.comprobante || 'N/A'}\n`;
-        text += `🚦 *Estado:* ${info.estado}\n`;
+        text += `ðŸ“… *Fecha:* ${info.fecha}\n`;
+        text += `ðŸ¢ *Proveedor:* ${info.proveedor}\n`;
+        text += `ðŸ’° *Monto:* ${info.monto ? 'S/ ' + info.monto : '-'}\n`;
+        text += `ðŸ·ï¸ *Etiqueta:* ${info.etiqueta || 'N/A'}\n`;
+        text += `ðŸ“„ *Comprobante:* ${info.comprobante || 'N/A'}\n`;
+        text += `ðŸš¦ *Estado:* ${info.estado}\n`;
         text += `----------------------------\n\n`;
 
         if (info.comentario) {
-            text += `💬 *Observaciones:*\n"${info.comentario}"\n\n`;
+            text += `ðŸ’¬ *Observaciones:*\n"${info.comentario}"\n\n`;
         }
 
         if (info.fotos && info.fotos.length > 0) {
-            text += `📸 *Evidencias Adjuntas (${info.fotos.length}):*\n`;
+            text += `ðŸ“¸ *Evidencias Adjuntas (${info.fotos.length}):*\n`;
             info.fotos.forEach((url, index) => {
                 const optUrl = this.getOptimizedImageUrl(url);
-                text += `• Foto ${index + 1}: ${optUrl}\n`;
+                text += `â€¢ Foto ${index + 1}: ${optUrl}\n`;
             });
         } else {
             text += `_(Sin fotos adjuntas)_\n`;
@@ -3911,7 +3911,7 @@ class App {
         const pre = this.data.movimientos.preingresos.find(p => p.id === id);
         if (!pre) return;
 
-        if (!confirm(`¿Generar Guía de Ingreso para ${pre.proveedor}?`)) return;
+        if (!confirm(`Â¿Generar GuÃ­a de Ingreso para ${pre.proveedor}?`)) return;
 
         // Optimistic UI could go here, but let's wait for server
         const payload = {
@@ -3926,7 +3926,7 @@ class App {
         };
 
         try {
-            this.showToast('Generando guía...', 'info');
+            this.showToast('Generando guÃ­a...', 'info');
             const response = await fetch(API_URL, {
                 method: 'POST',
                 redirect: 'follow',
@@ -3939,24 +3939,24 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                this.showToast('Guía generada exitosamente', 'success');
+                this.showToast('GuÃ­a generada exitosamente', 'success');
                 // Reload to update lists (hide button in preingreso, show in guias)
                 await this.loadMovimientosData(false);
                 // Switch key tabs
                 this.switchMovTab('guias');
             } else {
-                alert('Error al generar guía: ' + result.message);
+                alert('Error al generar guÃ­a: ' + result.message);
             }
         } catch (e) {
             console.error(e);
-            alert('Error de conexión al generar guía');
+            alert('Error de conexiÃ³n al generar guÃ­a');
         }
     }
 
     // MODALS & FORMS
     // MODALS & FORMS
     openNewGuiaModal(type) {
-        const title = type === 'INGRESO' ? 'Nueva Guía de Ingreso' : 'Nueva Guía de Salida';
+        const title = type === 'INGRESO' ? 'Nueva GuÃ­a de Ingreso' : 'Nueva GuÃ­a de Salida';
         // Fix Provider Source: Use mov data or fallback
         let providers = this.data.providers || [];
         if (providers.length === 0 && this.data.movimientos && this.data.movimientos.proveedores) {
@@ -3981,7 +3981,7 @@ class App {
                         <!-- Section 1: Information -->
                         <div class="form-section">
                             <div class="section-header">
-                                <h4>Información General</h4>
+                                <h4>InformaciÃ³n General</h4>
                             </div>
                             
                             <div class="input-group floating">
@@ -4003,7 +4003,7 @@ class App {
                             <div class="section-header" style="flex-direction:column; align-items:start; gap:0.5rem;">
                                 <h4>Productos</h4>
                                 <div style="position:relative; width:100%;">
-                                    <input type="text" id="guia-inline-search" class="neon-input" placeholder="Escanear código o buscar..." 
+                                    <input type="text" id="guia-inline-search" class="neon-input" placeholder="Escanear cÃ³digo o buscar..." 
                                            style="width:100%; padding:0.8rem 2.5rem 0.8rem 1rem; border-radius:8px;"
                                            onkeyup="app.handleInlineProdSearch(this, event)" autocomplete="off">
                                     <i class="fa-solid fa-barcode" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:#aaa;"></i>
@@ -4039,7 +4039,7 @@ class App {
                     <div class="modern-footer">
                         <button class="btn-secondary" onclick="app.closeModal()">Cancelar</button>
                         <button class="btn-primary" onclick="app.saveGuia('${type}')">
-                            Guardar Guía <i class="fa-solid fa-save"></i>
+                            Guardar GuÃ­a <i class="fa-solid fa-save"></i>
                         </button>
                     </div>
                 </div>
@@ -4097,7 +4097,7 @@ class App {
             <div class="modal-card" style="width:95%; max-width:1200px; height:90vh; display:flex; flex-direction:column; overflow:hidden;">
                 <div class="modern-header">
                     <button class="close-btn" onclick="app.closeModal()"><i class="fa-solid fa-xmark"></i></button>
-                    <h3><i class="fa-solid fa-clipboard-check"></i> Auditoría Diaria</h3>
+                    <h3><i class="fa-solid fa-clipboard-check"></i> AuditorÃ­a Diaria</h3>
                     <span style="background:var(--primary-light); color:var(--primary-color); padding:0.2rem 0.6rem; border-radius:12px; font-size:0.8rem; font-weight:bold;">${this.auditList.length} Pendientes</span>
                 </div>
                 <div class="modern-body" style="background:#f3f4f6; padding:1.5rem;">
@@ -4155,7 +4155,7 @@ class App {
         if (!input || input.value === '') return alert('Ingrese la cantidad real');
 
         const realQty = parseFloat(input.value);
-        if (isNaN(realQty)) return alert('Cantidad inválida');
+        if (isNaN(realQty)) return alert('Cantidad invÃ¡lida');
 
         // UPDATE LOCAL STATE
         const itemIndex = this.auditList.findIndex(i => i.id == idAudit);
@@ -4214,7 +4214,7 @@ class App {
             // For now, let it be.
         } catch (e) {
             console.error('Audit Error', e);
-            alert('Error al guardar auditoría');
+            alert('Error al guardar auditorÃ­a');
         }
     }
 
@@ -4486,7 +4486,7 @@ class App {
                         <!-- Section 1: General -->
                         <div class="form-section">
                             <div class="section-header">
-                                <h4>Información General</h4>
+                                <h4>InformaciÃ³n General</h4>
                             </div>
                             
                             <div class="input-group floating">
@@ -4534,7 +4534,7 @@ class App {
                         <!-- Section 3: Attachments -->
                         <div class="form-section">
                             <div class="section-header">
-                                <h4>Adjuntos (Máx 4)</h4>
+                                <h4>Adjuntos (MÃ¡x 4)</h4>
                             </div>
                             
                             <div class="photo-widget">
@@ -4576,7 +4576,7 @@ class App {
         const currentImgs = document.querySelectorAll('#pre-preview img');
 
         if (files.length + currentImgs.length > 4) {
-            alert("Máximo 4 fotos permitidas.");
+            alert("MÃ¡ximo 4 fotos permitidas.");
             input.value = ''; // Reset
             return;
         }
@@ -4721,7 +4721,7 @@ class App {
         if (!finalCode) return alert('Seleccione un producto');
         // Validate existence?
         if (!this.data.products[finalCode]) {
-            if (!confirm('El código no parece existir en la lista cargada. ¿Agregar igual?')) return;
+            if (!confirm('El cÃ³digo no parece existir en la lista cargada. Â¿Agregar igual?')) return;
         }
 
         const desc = this.data.products[finalCode] ? this.data.products[finalCode].desc : 'Producto Manual';
@@ -4745,7 +4745,7 @@ class App {
     renderTempProducts() {
         const container = document.getElementById('temp-prods-list');
         if (this.tempGuiaProducts.length === 0) {
-            container.innerHTML = '<div style="text-align:center; padding:1.5rem; color:#999; font-size:0.9rem;">Ningún producto agregado</div>';
+            container.innerHTML = '<div style="text-align:center; padding:1.5rem; color:#999; font-size:0.9rem;">NingÃºn producto agregado</div>';
             return;
         }
 
@@ -4791,7 +4791,7 @@ class App {
         const newQty = item.cantidad + change;
 
         if (newQty < 1) {
-            if (confirm('¿Desea eliminar este producto?')) {
+            if (confirm('Â¿Desea eliminar este producto?')) {
                 this.removeTempProduct(index);
             }
         } else {
@@ -4945,7 +4945,7 @@ class App {
         this.data.movimientos.guias.unshift(tempGuia);
         this.filterGuiasList(); // Update UI immediately
         this.closeModal();
-        this.showToast("Guardando guía en segundo plano...", "info");
+        this.showToast("Guardando guÃ­a en segundo plano...", "info");
 
         // 2. SEND DATA ONLY (Fast)
         const payload = {
@@ -4985,7 +4985,7 @@ class App {
                 // Re-render to show real ID/Status
                 this.filterGuiasList();
 
-                this.showToast("Guía guardada exitosamente.", "success");
+                this.showToast("GuÃ­a guardada exitosamente.", "success");
                 // Background refresh to be safe (syncs details etc)
                 this.loadMovimientosData(true);
 
@@ -5066,7 +5066,7 @@ class App {
             // Save
             const newVal = parseFloat(input.value);
             if (isNaN(newVal) || newVal < 0) {
-                alert('Cantidad inválida');
+                alert('Cantidad invÃ¡lida');
                 return;
             }
             this.saveSeparatedEdit(id, newVal, btn, input);
@@ -5077,7 +5077,7 @@ class App {
 
     async saveSeparatedEdit(id, newVal, btn, input) {
         if (newVal < 0.1) {
-            alert('La cantidad mínima es 0.1');
+            alert('La cantidad mÃ­nima es 0.1');
             // Find original value to reset input
             const originalReq = this.data.requests.find(r => r.idSolicitud === id);
             if (originalReq) {
@@ -5128,7 +5128,7 @@ class App {
 
         } catch (e) {
             console.error(e);
-            alert('Error de conexión');
+            alert('Error de conexiÃ³n');
             // Revert UI on network error
             input.disabled = false;
             btn.innerHTML = '<i class="fa-solid fa-check"></i>';
@@ -5158,11 +5158,11 @@ class App {
         });
 
         if (itemsToDispatch.length === 0) {
-            alert('No hay ítems separados para despachar.');
+            alert('No hay Ã­tems separados para despachar.');
             return;
         }
 
-        if (!confirm(`¿Confirmar despacho de ${itemsToDispatch.length} ítems para ${zone.toUpperCase()}?`)) return;
+        if (!confirm(`Â¿Confirmar despacho de ${itemsToDispatch.length} Ã­tems para ${zone.toUpperCase()}?`)) return;
 
         const btn = document.querySelector('.fab-dispatch');
         if (btn) {
@@ -5245,7 +5245,7 @@ class App {
         } catch (e) {
             console.error(e);
             if (printWindow) printWindow.close(); // Close empty window on error
-            alert('Error de conexión: ' + e.message);
+            alert('Error de conexiÃ³n: ' + e.message);
             if (btn) {
                 btn.innerHTML = '<i class="fa-solid fa-truck-fast fab-icon"></i>';
                 btn.disabled = false;
@@ -5364,7 +5364,7 @@ class App {
             <body>
                 <div class="header">
                     <h2 style="margin:5px 0;">LEVO ERP</h2>
-                    <div style="font-weight:bold;">GUÍA DE SALIDA</div>
+                    <div style="font-weight:bold;">GUÃA DE SALIDA</div>
                     <!-- QR Code uses simple API -->
                     <img class="qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${guiaId}" alt="QR ID">
                 </div>
@@ -5543,7 +5543,7 @@ class App {
                     
                     .row { display: flex; justify-content: space-between; align-items: baseline; }
                     
-                    /* Code & Factor: "tamaño y grosor que el del nombre" (Standard Bold 13px) */
+                    /* Code & Factor: "tamaÃ±o y grosor que el del nombre" (Standard Bold 13px) */
                     .code { font-size: 13px; font-weight: bold; color: #000; }
                     .factor { font-size: 13px; font-weight: bold; margin-left:4px; }
                     
@@ -5588,7 +5588,7 @@ class App {
                 </div>
 
                  ${outOfStock.length > 0 ? `
-                    <div class="section-title">⚠️ SIN STOCK</div>
+                    <div class="section-title">âš ï¸ SIN STOCK</div>
                     <div id="oos-list">
                          ${outOfStock.map(i => `
                             <div class="item oos">
@@ -5628,7 +5628,7 @@ class App {
 
         if (newVal === null) return; // Cancel
         const numVal = parseFloat(newVal);
-        if (isNaN(numVal) || numVal <= 0) return alert('Ingrese un número válido mayor a 0');
+        if (isNaN(numVal) || numVal <= 0) return alert('Ingrese un nÃºmero vÃ¡lido mayor a 0');
 
         // Optimistic Update
         this.data.products[code].factor = numVal;
@@ -5839,7 +5839,7 @@ class App {
                                             <div class="card-desc" style="${titleStyle}">${item.desc}</div>
                                             <div class="card-code" style="color:#666; font-size:0.85rem;">
                                                 ${item.code}
-                                                ${item.factor > 0 ? `<span style="background:#fffbeb; color:#d97706; border:1px solid #fcd34d; padding:0 4px; border-radius:4px; margin-left:5px; font-weight:bold; font-size:0.75rem;">📦 x${item.factor}</span>` : `<i class="fa-solid fa-triangle-exclamation" style="color:#ef4444; margin-left:5px;" title="Factor no configurado"></i>`}
+                                                ${item.factor > 0 ? `<span style="background:#fffbeb; color:#d97706; border:1px solid #fcd34d; padding:0 4px; border-radius:4px; margin-left:5px; font-weight:bold; font-size:0.75rem;">ðŸ“¦ x${item.factor}</span>` : `<i class="fa-solid fa-triangle-exclamation" style="color:#ef4444; margin-left:5px;" title="Factor no configurado"></i>`}
                                                 ${isOutOfStock ? `<span style="color:#ef4444; font-weight:bold; font-size:0.75rem; margin-left:5px;">(SIN STOCK: ${item.stock})</span>` : ''}
                                             </div>
                                         </div>
@@ -5866,7 +5866,7 @@ class App {
                             <!-- BACK -->
                             <div class="card-back">
                                 <h5 style="margin-bottom:0.5rem; border-bottom:1px solid #eee; padding-bottom:0.5rem;">
-                                    ${isPending ? 'Historial Solicitudes' : 'Ítem Separado'}
+                                    ${isPending ? 'Historial Solicitudes' : 'Ãtem Separado'}
                                 </h5>
                                 
                                 ${isPending ? `
@@ -5874,12 +5874,12 @@ class App {
                                         ${requestListHtml}
                                     </div>
                                 ` : `
-                                    <div class="back-label">Descripción</div>
+                                    <div class="back-label">DescripciÃ³n</div>
                                     <div class="back-value">${item.desc}</div>
                                      
                                     <!-- Delete Button (Top Right) -->
                                     <button class="btn-delete-separated" onclick="app.deleteSeparatedRequest('${item.useId}')" 
-                                            title="Eliminar Separación (Regresar a Pendientes)">
+                                            title="Eliminar SeparaciÃ³n (Regresar a Pendientes)">
                                         <i class="fa-solid fa-rectangle-xmark"></i>
                                     </button>
                                     
@@ -5941,7 +5941,7 @@ class App {
                                 <div class="scroll-container" style="flex: 1; overflow-y: auto; padding-right: 5px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); grid-auto-rows: max-content; gap: 1rem; align-content: start;">
                                     ${pendingList.length > 0
                 ? pendingList.map(i => renderCard(i, true)).join('')
-                : '<div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:#999;">Todo al día 🎉</div>'}
+                : '<div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:#999;">Todo al dÃ­a ðŸŽ‰</div>'}
                                 </div>
                             </div>
 
@@ -5959,13 +5959,13 @@ class App {
                                 <div class="scroll-container" style="flex: 1; overflow-y: auto; padding-right: 5px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); grid-auto-rows: max-content; gap: 1rem; align-content: start;">
                                     ${separatedList.length > 0
                 ? separatedList.map(i => renderCard(i, false)).join('')
-                : '<div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:#81c784; font-style:italic;">Nada separado aún</div>'}
+                : '<div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:#81c784; font-style:italic;">Nada separado aÃºn</div>'}
                                 </div>
                             </div>
                         </div>
                         
                         ${separatedList.length > 0 ? `
-                        <button class="fab-dispatch" onclick="app.handleDispatchZone('${zone}')" title="Despachar ${separatedList.length} ítems">
+                        <button class="fab-dispatch" onclick="app.handleDispatchZone('${zone}')" title="Despachar ${separatedList.length} Ã­tems">
                             <i class="fa-solid fa-truck-fast fab-icon"></i>
                         </button>` : ''}
                 `;
@@ -6179,7 +6179,7 @@ class App {
         }
 
         let newQty = parseFloat(qtyInput.value);
-        if (isNaN(newQty) || newQty <= 0) { alert('Cantidad inválida'); return; }
+        if (isNaN(newQty) || newQty <= 0) { alert('Cantidad invÃ¡lida'); return; }
 
         // Find Aggregated Item by iterating requests again? 
         // Better: We stored it in 'renderZonePickup'. But 'this.data' is raw requests.
@@ -6278,7 +6278,7 @@ class App {
 
         // ALLOW OVER-ALLOCATION WITH CONFIRMATION
         if (newQty > totalAvailable + 0.001) {
-            if (!confirm(`La cantidad (${newQty}) excede lo pendiente (${totalAvailable.toFixed(3)}). ¿Desea separar el exceso de todas formas?`)) {
+            if (!confirm(`La cantidad (${newQty}) excede lo pendiente (${totalAvailable.toFixed(3)}). Â¿Desea separar el exceso de todas formas?`)) {
                 return;
             }
         }
@@ -6291,7 +6291,7 @@ class App {
                 const fallback = solicitedItems[solicitedItems.length - 1]; // Use last
                 validQueue.push({ ...fallback, available: 0 }); // Add with 0 available, loop will force-fill
             } else {
-                alert("No existe ninguna solicitud base para asociar esta separación.");
+                alert("No existe ninguna solicitud base para asociar esta separaciÃ³n.");
                 return;
             }
         }
@@ -6445,7 +6445,7 @@ class App {
             })
             .catch(err => {
                 console.error("Batch Sep Failed", err);
-                alert("Error guardando separación: " + err.message);
+                alert("Error guardando separaciÃ³n: " + err.message);
                 // Rollback
                 const index = this.data.requests.findIndex(r => r.idSolicitud === tempId);
                 if (index > -1) this.data.requests.splice(index, 1);
@@ -6463,7 +6463,7 @@ class App {
 
 
     async dispatchAll(zone) {
-        if (!confirm('¿Despachar todos los ítems separados?')) return;
+        if (!confirm('Â¿Despachar todos los Ã­tems separados?')) return;
 
         if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
@@ -6472,7 +6472,7 @@ class App {
             .map(r => ({ idSolicitud: r.idSolicitud, categoria: 'despachado' }));
 
         if (toDispatch.length === 0) {
-            alert('No hay ítems para despachar');
+            alert('No hay Ã­tems para despachar');
             if (btn) btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Despachar Todo';
             return;
         }
@@ -6491,7 +6491,7 @@ class App {
             const zoneContainer = document.getElementById('zone-content');
             if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
 
-            alert('Despacho realizado con éxito');
+            alert('Despacho realizado con Ã©xito');
 
         } catch (e) {
             console.error(e);
@@ -6513,8 +6513,8 @@ class App {
                 <form id="new-request-form">
                     <div class="modal-body">
                         <div class="input-group">
-                            <p style="margin-bottom:0.5rem; font-size:0.9rem; color:#666;">Producto (Escanee o Escriba Código)</p>
-                            <input type="text" id="req-code" placeholder="Escanee aquí..." required autocomplete="off">
+                            <p style="margin-bottom:0.5rem; font-size:0.9rem; color:#666;">Producto (Escanee o Escriba CÃ³digo)</p>
+                            <input type="text" id="req-code" placeholder="Escanee aquÃ­..." required autocomplete="off">
                             <div id="product-preview" style="margin-top:0.5rem; font-size:0.9rem; color:var(--primary-color); font-weight:600; min-height:1.2em;"></div>
                         </div>
                         <div class="input-group">
@@ -6552,11 +6552,11 @@ class App {
                 const desc = this.getProductDescription(code);
 
                 if (desc !== 'Producto Desconocido') {
-                    preview.textContent = `✅ ${desc} `;
+                    preview.textContent = `âœ… ${desc} `;
                     preview.style.color = 'var(--primary-color)';
                     qtyInput.focus();
                 } else {
-                    preview.textContent = '❌ Producto no encontrado';
+                    preview.textContent = 'âŒ Producto no encontrado';
                     preview.style.color = 'red';
                 }
             }
@@ -6568,7 +6568,7 @@ class App {
             if (code) {
                 const desc = this.getProductDescription(code);
                 if (desc !== 'Producto Desconocido') {
-                    preview.textContent = `✅ ${desc} `;
+                    preview.textContent = `âœ… ${desc} `;
                     preview.style.color = 'var(--primary-color)';
                 }
             }
@@ -6602,7 +6602,7 @@ class App {
 
             if (result.status === 'success') {
                 this.closeModal();
-                alert('Solicitud guardada con éxito');
+                alert('Solicitud guardada con Ã©xito');
                 this.renderDispatchRequests(document.getElementById('dispatch-content')); // Refresh
             } else {
                 alert('Error: ' + result.message);
@@ -6611,7 +6611,7 @@ class App {
             }
         } catch (e) {
             console.error(e);
-            alert('Error de conexión');
+            alert('Error de conexiÃ³n');
             btn.disabled = false;
             btn.innerHTML = 'Guardar Solicitud';
         }
@@ -6635,7 +6635,7 @@ class App {
 
         const container = document.getElementById('prepedidos-container');
 
-        // 1. Mostrar caché si existe (Instantáneo)
+        // 1. Mostrar cachÃ© si existe (InstantÃ¡neo)
         if (this.providersData) {
             this.renderProviders(this.providersData);
         } else {
@@ -6646,21 +6646,21 @@ class App {
         // 2. Fetch actualizado siempre (Background refresh)
         await this.fetchProvidersBackground();
 
-        // 3. Iniciar Auto-Refresh si no está activo
+        // 3. Iniciar Auto-Refresh si no estÃ¡ activo
         if (!this.providerRefreshInterval) {
             this.startProviderAutoRefresh();
         }
     }
 
     startProviderAutoRefresh() {
-        // Evitar múltiples intervalos
+        // Evitar mÃºltiples intervalos
         if (this.providerRefreshInterval) clearInterval(this.providerRefreshInterval);
 
         console.log("Iniciando auto-refresh de proveedores (60s)...");
         this.providerRefreshInterval = setInterval(() => {
-            // Solo refrescar si la pestaña está activa (opcional, pero buena práctica)
+            // Solo refrescar si la pestaÃ±a estÃ¡ activa (opcional, pero buena prÃ¡ctica)
             // O simplemente verificar si estamos en la vista de prepedidos (si tu app es SPA real)
-            // Aquí asumimos siempre refrescar.
+            // AquÃ­ asumimos siempre refrescar.
             this.fetchProvidersBackground();
         }, 60000); // 60 segundos
     }
@@ -6676,7 +6676,7 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                this.providersData = result.data; // Guardar en caché
+                this.providersData = result.data; // Guardar en cachÃ©
 
                 // Si estamos viendo la pantalla de prepedidos, actualizar UI silenciosamente
                 // (Verificamos si existe el contenedor en el DOM)
@@ -6772,11 +6772,11 @@ class App {
                 </div>
 
                 <div class="provider-info-row">
-                    <span class="provider-label"><i class="fa-regular fa-calendar-check" style="margin-right:5px;"></i> Día Pedido:</span>
+                    <span class="provider-label"><i class="fa-regular fa-calendar-check" style="margin-right:5px;"></i> DÃ­a Pedido:</span>
                     <span class="provider-pill ${orderClass}">${diaPedido}</span>
                 </div>
                 <div class="provider-info-row">
-                    <span class="provider-label"><i class="fa-solid fa-truck-ramp-box" style="margin-right:5px;"></i> Día Entrega:</span>
+                    <span class="provider-label"><i class="fa-solid fa-truck-ramp-box" style="margin-right:5px;"></i> DÃ­a Entrega:</span>
                     <span class="provider-pill ${deliveryClass}">${diaEntrega}</span>
                 </div>
             </div>
@@ -6790,7 +6790,7 @@ class App {
     }
 
     async deleteSeparatedRequest(id) {
-        if (!confirm('¿Devolver este ítem a pendiente?')) return;
+        if (!confirm('Â¿Devolver este Ã­tem a pendiente?')) return;
 
         // Visual Feedback
         const card = document.querySelector(`.request-card .btn-delete-separated[onclick*="${id}"]`).closest('.request-card');
@@ -6808,7 +6808,7 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                this.showToast('Ítem devuelto a pendientes', 'success');
+                this.showToast('Ãtem devuelto a pendientes', 'success');
                 // Remove card visually immediately
                 if (card) {
                     card.style.transform = 'scale(0)';
@@ -6833,7 +6833,7 @@ class App {
             }
         } catch (e) {
             console.error(e);
-            alert('Error de conexión');
+            alert('Error de conexiÃ³n');
             if (card) card.style.opacity = '1';
         }
     }
@@ -6892,7 +6892,7 @@ class App {
             }
         } catch (e) {
             console.error(e);
-            alert('Error de conexión al obtener historial.');
+            alert('Error de conexiÃ³n al obtener historial.');
             this.closeModal();
         }
     }
@@ -7109,7 +7109,7 @@ class App {
             </div>
             <div class="modal-body" style="padding: 1rem;">
                 <div class="alert-info" style="font-size:0.9rem; color:#666; margin-bottom:1rem;">
-                    <i class="fa-solid fa-info-circle"></i> Productos con pedido sugerido están resaltados.
+                    <i class="fa-solid fa-info-circle"></i> Productos con pedido sugerido estÃ¡n resaltados.
                      <span style="color:#007bff; font-weight:bold; margin-left:10px;">Pedido = Calculado (Origen + Hijos)</span>.
                      <br><i class="fa-solid fa-layer-group" style="margin-right:5px;"></i> Los productos repetidos suman su stock total.
                 </div>
@@ -7119,13 +7119,13 @@ class App {
                         <thead>
                             <tr>
                                 <th style="width:30px;"><i class="fa-solid fa-check-double"></i></th>
-                                <th>Código</th>
+                                <th>CÃ³digo</th>
                                 <th style="width:50px;">Pedido</th> <!-- Reduced width -->
                                 <th>Producto</th>
                                 <th style="width:80px;">Min - Stock</th>
                                 <!-- 'A Comprar' Hidden -->
                                 <th>Costo Ref.</th>
-                                <th>Últ. Compra</th>
+                                <th>Ãšlt. Compra</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -7182,7 +7182,7 @@ class App {
             }
         });
 
-        if (selected.length === 0) return alert('Seleccione al menos un producto con cantidad válida.');
+        if (selected.length === 0) return alert('Seleccione al menos un producto con cantidad vÃ¡lida.');
 
         // Close History Modal
         this.closeModal();
@@ -7193,7 +7193,7 @@ class App {
 
     sendPrepedidoWhatsApp(phone) {
         if (!phone) {
-            return alert('Este proveedor no tiene registrado un número de teléfono para WhatsApp.');
+            return alert('Este proveedor no tiene registrado un nÃºmero de telÃ©fono para WhatsApp.');
         }
 
         const selected = [];
@@ -7207,16 +7207,16 @@ class App {
             }
         });
 
-        if (selected.length === 0) return alert('Seleccione al menos un producto con cantidad válida para enviar.');
+        if (selected.length === 0) return alert('Seleccione al menos un producto con cantidad vÃ¡lida para enviar.');
 
         // Time-based Greeting
         const hour = new Date().getHours();
-        let greeting = 'Buenos días';
+        let greeting = 'Buenos dÃ­as';
         if (hour >= 12 && hour < 19) greeting = 'Buenas tardes';
         else if (hour >= 19) greeting = 'Buenas noches';
 
         // Format Message
-        let msg = `${greeting}, le envío esta lista para que me despache:\n\n`;
+        let msg = `${greeting}, le envÃ­o esta lista para que me despache:\n\n`;
         selected.forEach(item => {
             msg += `${item.cantidad} - ${item.desc}\n`;
         });
@@ -7343,7 +7343,7 @@ class App {
                  <div class="search-neon-wrapper" style="position: relative; width: 300px;">
                     <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#999;"></i>
                     <input type="text" id="packing-search" 
-                        placeholder="Buscar por Código o Nombre..." 
+                        placeholder="Buscar por CÃ³digo o Nombre..." 
                         style="width:100%; padding-left:35px; height:40px; border-radius: 20px; border: 1px solid #ddd;"
                         onkeyup="app.filterPackingList(this.value)">
                 </div>
@@ -7415,7 +7415,7 @@ class App {
 
         } catch (e) {
             console.error(e);
-            if (container && !isBackground) container.innerHTML = `<div class="error-msg">Error de conexión</div>`;
+            if (container && !isBackground) container.innerHTML = `<div class="error-msg">Error de conexiÃ³n</div>`;
         }
     }
 
@@ -7578,7 +7578,7 @@ class App {
             const isCritical = item.batteryClass === 'critical';
             // If missing Min, show Alert Icon overlay
             const alertOverlay = item.missingMin ?
-                `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#ef4444; font-size:1.5rem; text-shadow:0 1px 3px rgba(255,255,255,0.8); z-index:2;" title="Stock Mínimo no definido">
+                `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#ef4444; font-size:1.5rem; text-shadow:0 1px 3px rgba(255,255,255,0.8); z-index:2;" title="Stock MÃ­nimo no definido">
                     <i class="fa-solid fa-triangle-exclamation fa-beat-fade"></i>
                  </div>` : '';
 
@@ -7697,7 +7697,7 @@ class App {
             }
 
                 <div class="drawer-section">
-                    <label>Código</label>
+                    <label>CÃ³digo</label>
                     <div class="drawer-value main">${item.codigo}</div>
                 </div>
 
@@ -7719,7 +7719,7 @@ class App {
                         <div class="drawer-value" style="color:${stockReal < stockMin ? '#ef4444' : '#22c55e'}">${stockReal}</div>
                     </div>
                     <div class="drawer-section">
-                        <label>Stock Mínimo</label>
+                        <label>Stock MÃ­nimo</label>
                         <div class="drawer-value" style="color:#aaa;">${stockMin}</div>
                     </div>
                 </div>
@@ -7762,7 +7762,7 @@ class App {
     }
 
     async registerEnvasado(productCode, quantity) {
-        if (!confirm(`¿Confirmar envasado de ${quantity} unidades para ${productCode}?`)) return;
+        if (!confirm(`Â¿Confirmar envasado de ${quantity} unidades para ${productCode}?`)) return;
 
         // Find Item metadata (Origin, Factor)
         const item = this.packingList.find(p => p.codigo === productCode);
@@ -7789,7 +7789,7 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                this.showToast('Envasado registrado con éxito', 'success');
+                this.showToast('Envasado registrado con Ã©xito', 'success');
                 this.closePackingDrawer();
 
                 // Refresh Totals & UI immediately
@@ -7802,7 +7802,7 @@ class App {
             }
         } catch (e) {
             console.error(e);
-            alert('Error de conexión al guardar.');
+            alert('Error de conexiÃ³n al guardar.');
         }
     }
     /* STOCK HISTORY MODAL */
@@ -7829,7 +7829,7 @@ class App {
                 this.openModal(`<div class="error-msg">Error: ${result.message}</div>`);
             }
         } catch (e) {
-            this.openModal(`<div class="error-msg">Error de conexión: ${e.message}</div>`);
+            this.openModal(`<div class="error-msg">Error de conexiÃ³n: ${e.message}</div>`);
         }
     }
 
@@ -7962,7 +7962,7 @@ class App {
         const qtyToSave = parseFloat(document.getElementById('adj-qty').value);
         const reason = document.getElementById('adj-reason').value;
 
-        if (isNaN(qtyToSave) || qtyToSave === 0) return alert('Ingrese una cantidad válida (positiva o negativa).');
+        if (isNaN(qtyToSave) || qtyToSave === 0) return alert('Ingrese una cantidad vÃ¡lida (positiva o negativa).');
         if (!reason) return alert('Ingrese un motivo.');
 
         const btn = document.querySelector('#adjust-form button');
@@ -7992,7 +7992,7 @@ class App {
             }
         } catch (e) {
             console.error(e);
-            alert('Error de conexión');
+            alert('Error de conexiÃ³n');
             btn.disabled = false;
             btn.innerHTML = 'Guardar Ajuste';
         }
@@ -8002,7 +8002,7 @@ class App {
         const modalHtml = `
             <div class="modal-card">
                 <div class="modal-header">
-                    <h3>Despacho Rápido: ${desc}</h3>
+                    <h3>Despacho RÃ¡pido: ${desc}</h3>
                     <button class="modal-close" onclick="app.closeModal()">&times;</button>
                 </div>
                 <div class="modal-body" style="padding: 1.5rem;">
@@ -8045,7 +8045,7 @@ class App {
         const client = clientBtn ? clientBtn.innerText : 'ZONA1';
         const qty = parseFloat(document.getElementById('qd-qty').value);
 
-        if (!qty || qty <= 0) return alert('Cantidad inválida');
+        if (!qty || qty <= 0) return alert('Cantidad invÃ¡lida');
 
         const btn = document.querySelector('.modal-body .btn-primary');
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
@@ -8088,7 +8088,7 @@ class App {
             }
         } catch (e) {
             console.error(e);
-            alert('Error de conexión');
+            alert('Error de conexiÃ³n');
             btn.disabled = false;
             btn.innerHTML = 'Confirmar y Despachar';
         }
@@ -8105,7 +8105,7 @@ class App {
 
         this.writeReceiptHtml(win, {
             title: 'LEVO ERP',
-            subtitle: 'GUÍA DE SALIDA',
+            subtitle: 'GUÃA DE SALIDA',
             meta: {
                 'ID': data.idGuia.substring(0, 13) + '...',
                 'Fecha': data.fecha,
@@ -8216,7 +8216,7 @@ class App {
                 <!-- Header -->
                 <div style="flex:0 0 auto; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:1rem;">
                     <div>
-                        <h2 style="margin:0; color:var(--primary-color);"><i class="fa-solid fa-wand-magic-sparkles"></i> Escáner de Tickets (OCR)</h2>
+                        <h2 style="margin:0; color:var(--primary-color);"><i class="fa-solid fa-wand-magic-sparkles"></i> EscÃ¡ner de Tickets (OCR)</h2>
                         <p style="margin:0.25rem 0 0; color:#666; font-size:0.9rem;">Convierte fotos de WhatsApp o Excel en tickets imprimibles.</p>
                     </div>
                      <div style="display:flex; gap:0.5rem;">
@@ -8242,21 +8242,21 @@ class App {
                              onclick="document.getElementById('ocr-file-input').click()">
                             
                             <i class="fa-solid fa-cloud-arrow-up" style="font-size:2rem; color:#aaa; margin-bottom:0.5rem;"></i>
-                            <div style="font-weight:600; color:#555;">Subir Imágenes</div>
+                            <div style="font-weight:600; color:#555;">Subir ImÃ¡genes</div>
                             <div style="font-size:0.8rem; color:#888;">WhatsApp, Excel, Fotos</div>
                             <input type="file" id="ocr-file-input" multiple accept="image/*" style="display:none;" onchange="app.handleOCRUpload(this)">
                         </div>
 
                         <!-- Scan Status -->
                         <div id="ocr-status" style="display:none; padding:1rem; background:#fff3cd; color:#856404; border-radius:8px; font-size:0.9rem;">
-                            <i class="fa-solid fa-circle-notch fa-spin"></i> Procesando imágenes...
+                            <i class="fa-solid fa-circle-notch fa-spin"></i> Procesando imÃ¡genes...
                         </div>
 
                         <!-- Carousel -->
-                        <h4 style="margin:0.5rem 0 0; color:#444;">Imágenes Cargadas (<span id="ocr-img-count">0</span>)</h4>
+                        <h4 style="margin:0.5rem 0 0; color:#444;">ImÃ¡genes Cargadas (<span id="ocr-img-count">0</span>)</h4>
                         <div id="ocr-carousel" style="display:flex; flex-direction:column; gap:0.5rem;">
                             <!-- Thumbs injected here -->
-                            <div style="text-align:center; color:#ccc; padding:2rem; font-style:italic;">No hay imágenes</div>
+                            <div style="text-align:center; color:#ccc; padding:2rem; font-style:italic;">No hay imÃ¡genes</div>
                         </div>
                     </div>
 
@@ -8272,14 +8272,14 @@ class App {
                     <!-- RIGHT: Editor -->
                     <div style="flex:0 0 400px; display:flex; flex-direction:column; background:white; border-radius:12px; border:1px solid #eee; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
                         <div style="padding:1rem; border-bottom:1px solid #eee; bg:#f8f9fa;">
-                            <h4 style="margin:0;">Datos Extraídos</h4>
+                            <h4 style="margin:0;">Datos ExtraÃ­dos</h4>
                         </div>
                         
                         <div class="custom-scrollbar" style="flex:1; overflow-y:auto; padding:0;">
                             <table class="data-table" style="width:100%; border-collapse:collapse;">
                                 <thead style="background:#f8f9fa; position:sticky; top:0;">
                                     <tr>
-                                        <th style="padding:8px; text-align:left; font-size:0.85rem; color:#666;">Descripción</th>
+                                        <th style="padding:8px; text-align:left; font-size:0.85rem; color:#666;">DescripciÃ³n</th>
                                         <th style="padding:8px; width:80px; text-align:right; font-size:0.85rem; color:#666;">Cant.</th>
                                         <th style="width:40px;"></th>
                                     </tr>
@@ -8318,10 +8318,10 @@ class App {
         const countEl = document.getElementById('ocr-img-count');
 
         statusEl.style.display = 'block';
-        statusEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Procesando ${input.files.length} imágenes...`;
+        statusEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Procesando ${input.files.length} imÃ¡genes...`;
 
         // Clear placeholder if first upload
-        if (carouselEl.innerHTML.includes('No hay imágenes')) {
+        if (carouselEl.innerHTML.includes('No hay imÃ¡genes')) {
             carouselEl.innerHTML = '';
         }
 
@@ -8387,47 +8387,57 @@ class App {
     }
 
     parseAndAppendOCRText(text) {
-        // Simple Regex Heuristics for "List Style"
-        // Patterns:
-        // "4 und de Coca Cola" -> 4, Coca Cola
-        // "Coca Cola x 4" -> 4, Coca Cola
-        // "10 cajas Leche" -> 10, Leche
-
-        const lines = text.split('\n');
-        const tbody = document.getElementById('ocr-result-body');
-
+        // Advanced Parsing Logic (v2) - Prioritizes Table Structure
+        const lines = text.split("\n");
+        
         lines.forEach(line => {
             line = line.trim();
             if (!line) return;
+            // Skip typical headers
+            if (line.match(/^(código|nombre|almacen|descripci|cantidad|item)/i)) return; 
 
-            let qty = 1;
+            let qty = "";
             let desc = line;
             let match = false;
 
-            // Pattern 1: Start with Number (e.g., "10 x Producto" or "10 Producto")
-            // Regex: ^(\d+[\.,]?\d*)\s*(?:x|und|caja|bolsa|kg|g|mg)?\s+(.*)
-            const startNumRegex = /^(\d+[\.,]?\d*)\s*(?:x|und|unid|cajas?|bolsas?|kgs?|gs?)\.?\s+(.*)/i;
-            const simpleStartNum = /^(\d+)\s+(.*)/;
+            // Pattern 1: Table Row -> CODE + DESC + QTY (The Users specific case)
+            // Example: "7752230119696 UNIVERSAL COLAPIZ 20 GR... 02 cajas"
+            const tableRowRegex = /^(\d{8,})\s+(.+?)\s+(\d+[\.,]?\d*.*)$/i;
+            
+            // Pattern 2: End with Quantity (e.g. "PRODUCTO 12")
+            const endKvRegex = /^(.*?)\s+([0-9]+[\.,]?[0-9]*\s*(?:cajas|paquetes|unid|und|botellas|pack|kg|gr)?)$/i;
 
-            // Pattern 2: End with Number (e.g., "Producto x 10" or "Producto 10")
-            const endNumRegex = /(.*)\s+(?:x|cant|cnt)?[\s:]*(\d+[\.,]?\d*)$/i;
+            // Pattern 3: Start with Quantity (e.g. "12 PRODUCTO")
+            const startKvRegex = /^(\d+[\.,]?\d*)\s*(?:x|und|unid|cajas?|bolsas?|kgs?|gs?)\.?\s+(.*)/i;
 
-            if (match = line.match(startNumRegex)) {
+            if (match = line.match(tableRowRegex)) {
+                // Found Table Row: Code | Desc | Qty
+                desc = match[2].trim(); 
+                let qtyStr = match[3].trim();
+                let qMatch = qtyStr.match(/(\d+[\.,]?\d*)/);
+                qty = qMatch ? qMatch[1] : "1";
+                
+            } else if (match = line.match(endKvRegex)) {
+                 desc = match[1].trim();
+                 let qtyStr = match[2].trim();
+                 let qMatch = qtyStr.match(/(\d+[\.,]?\d*)/);
+                 qty = qMatch ? qMatch[1] : qtyStr;
+
+            } else if (match = line.match(startKvRegex)) {
                 qty = match[1];
                 desc = match[2];
-            } else if (match = line.match(endNumRegex)) {
-                desc = match[1];
-                qty = match[2];
-            } else if (match = line.match(simpleStartNum)) {
-                // Fallback: "10 Arroz"
-                qty = match[1];
-                desc = match[2];
+            } else {
+                 // Ignore lines that are JUST a barcode to avoid noise
+                 if(line.match(/^\d{8,}$/)) return;
             }
 
-            // Cleanup Description
-            desc = desc.replace(/^[-*•]\s*/, '').trim(); // Remove bullets
+            // Cleanup
+            desc = desc.replace(/^[-*•]\s*/, "").trim(); 
+            if (parseInt(qty) > 100000) qty = "1"; // Safety check
 
-            this.addOCRRow(desc, qty);
+            if (desc.length > 2) {
+                this.addOCRRow(desc, qty || "1");
+            }
         });
     }
 
@@ -8437,7 +8447,7 @@ class App {
         row.style.borderBottom = '1px solid #f0f0f0';
         row.innerHTML = `
             <td style="padding:4px;">
-                <input type="text" value="${desc}" placeholder="Descripción" 
+                <input type="text" value="${desc}" placeholder="DescripciÃ³n" 
                        style="width:100%; border:none; padding:4px; font-size:0.9rem;">
             </td>
             <td style="padding:4px;">
@@ -8454,8 +8464,8 @@ class App {
     }
 
     clearOCRWorkspace() {
-        if (!confirm('¿Borrar todo?')) return;
-        document.getElementById('ocr-carousel').innerHTML = '<div style="text-align:center; color:#ccc; padding:2rem; font-style:italic;">No hay imágenes</div>';
+        if (!confirm('Â¿Borrar todo?')) return;
+        document.getElementById('ocr-carousel').innerHTML = '<div style="text-align:center; color:#ccc; padding:2rem; font-style:italic;">No hay imÃ¡genes</div>';
         document.getElementById('ocr-result-body').innerHTML = '';
         document.getElementById('ocr-preview-img').style.display = 'none';
         document.getElementById('ocr-preview-placeholder').style.display = 'block';
@@ -8476,7 +8486,7 @@ class App {
             }
         });
 
-        if (items.length === 0) return alert('Lista vacía');
+        if (items.length === 0) return alert('Lista vacÃ­a');
 
         const printWindow = window.open('', '_blank', 'width=450,height=600');
 
@@ -8500,7 +8510,7 @@ class App {
                 <div class="header">
                     <div class="title">LISTA DE PEDIDO</div>
                     <div class="info">FECHA: ${new Date().toLocaleString()}</div>
-                    <div class="info">ORIGEN: ESCÁNER FOTO</div>
+                    <div class="info">ORIGEN: ESCÃNER FOTO</div>
                 </div>
                 <table>
         `;
@@ -8518,7 +8528,7 @@ class App {
                 </table>
                 <div class="footer">
                     Generado por LEVO ERP<br>
-                    (Módulo OCR)
+                    (MÃ³dulo OCR)
                 </div>
                 <script>
                     window.onload = function() { window.print(); }
@@ -8537,6 +8547,7 @@ try {
     window.app = new App();
 } catch (err) {
     console.error('Critical Init Error:', err);
-    alert('Error crítico al iniciar la aplicación: ' + err.message);
+    alert('Error crÃ­tico al iniciar la aplicaciÃ³n: ' + err.message);
 }
+
 
