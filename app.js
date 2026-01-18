@@ -2193,6 +2193,52 @@ class App {
         }
     }
 
+    /**
+     * FACTOR ZONA EDITING
+     */
+    async editFactorZona(code, currentFactor) {
+        const factor = prompt(`Editar Factor Zona para ${code}:\n(Ingrese 0 para dejar sin factor)`, currentFactor || 0);
+
+        if (factor === null) return; // Cancelled
+
+        const numFactor = parseFloat(factor);
+        if (isNaN(numFactor) || numFactor < 0) {
+            alert("Por favor ingrese un número válido mayor o igual a 0.");
+            return;
+        }
+
+        this.showToast("Actualizando Factor...", "info");
+
+        // Optimistic Update
+        if (this.data.products[code]) {
+            this.data.products[code].factor = numFactor;
+            this.filterProducts(); // Re-render cards to show new badge
+        }
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: 'saveProductFactor',
+                    payload: { code: code, factor: numFactor }
+                })
+            });
+
+            const result = await response.json();
+            if (result.status === 'success') {
+                this.showToast("Factor actualizado correctamente", "success");
+            } else {
+                throw new Error(result.message);
+            }
+
+        } catch (e) {
+            console.error(e);
+            alert("Error al guardar factor: " + e.message);
+        }
+    }
+
     printProductHistory(code, name) {
         if (!this._tempHistoryData) return;
 
