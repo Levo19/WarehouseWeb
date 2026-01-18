@@ -2789,14 +2789,77 @@ class App {
                     </div>
                 </div>
 
-                <div style="display:flex; justify-content:space-between; margin-top:auto; flex-shrink:0;">
-                    <button onclick="app.printGuiaTicket('${info.id}')" class="btn-secondary" style="background:#333; color:white;">
+                <div style="display:flex; justify-content:space-between; margin-top:auto; flex-shrink:0; gap: 0.5rem;">
+                    <button onclick="app.shareGuiaWhatsapp('${info.id}')" class="btn-secondary" style="background:#25D366; color:white; border:none; flex:1;">
+                        <i class="fa-brands fa-whatsapp"></i> WhatsApp
+                    </button>
+                    <button onclick="app.printGuiaTicket('${info.id}')" class="btn-secondary" style="background:#333; color:white; border:none; flex:1;">
                         <i class="fa-solid fa-print"></i> Imprimir
                     </button>
-                    <button onclick="app.closeGuiaDetails()" class="btn-secondary">Cerrar Panel</button>
+                    <button onclick="app.closeGuiaDetails()" class="btn-secondary" style="flex:0.5;">Cerrar</button>
                 </div>
             </div >
                 `;
+    }
+
+    shareGuiaWhatsapp(id) {
+        const guiaInfo = this.data.movimientos.guias.find(g => g.id === id);
+        if (!guiaInfo) return alert('Guía no encontrada');
+
+        // Normal Details
+        const details = this.data.movimientos.detalles
+            ? this.data.movimientos.detalles.filter(d => d.idGuia === id)
+            : [];
+
+        const enriched = details.map(d => {
+            const pCode = String(d.codigo).trim();
+            const product = this.data.products[pCode] || Object.values(this.data.products).find(p => String(p.codigo).trim() === pCode);
+            return { ...d, descripcion: product ? product.desc : 'Desconocido' };
+        });
+
+        // New Products
+        const newProds = this.data.nuevosProductos
+            ? this.data.nuevosProductos.filter(np => np.idGuia === id && np.estado !== 'PROCESADO')
+            : [];
+
+        // Build Message
+        let text = `📦 *REPORTE DE GUÍA (LEVO ERP)*\n`;
+        text += `----------------------------\n`;
+        text += `📅 *Fecha:* ${guiaInfo.fecha}\n`;
+        text += `🏢 *Proveedor/Destino:* ${guiaInfo.proveedor || guiaInfo.destino || 'S/D'}\n`;
+        text += `👤 *Usuario:* ${guiaInfo.usuario}\n`;
+        text += `📝 *Tipo:* ${guiaInfo.tipo}\n`;
+        text += `----------------------------\n\n`;
+
+        text += `*PRODUCTOS:*\n`;
+
+        if (enriched.length === 0 && newProds.length === 0) {
+            text += `_(Sin productos registrados)_\n`;
+        }
+
+        enriched.forEach(p => {
+            text += `• ${p.cantidad} x ${p.descripcion}\n`;
+        });
+
+        if (newProds.length > 0) {
+            text += `\n*NUEVOS (PENDIENTES):*\n`;
+            newProds.forEach(p => {
+                text += `• ${p.cantidad} x ${p.descripcion} (NUEVO)\n`;
+            });
+        }
+
+        text += `\n----------------------------\n`;
+        if (guiaInfo.comentario) {
+            text += `💬 *Nota:* ${guiaInfo.comentario}\n`;
+        }
+
+        if (guiaInfo.foto) {
+            const imageUrl = this.getOptimizedImageUrl(guiaInfo.foto);
+            text += `📷 *Foto:* ${imageUrl}\n`;
+        }
+
+        const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+        window.open(url, '_blank');
     }
 
     printGuiaTicket(id) {
