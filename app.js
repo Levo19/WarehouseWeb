@@ -8740,7 +8740,6 @@ class App {
         const items = [];
         rows.forEach(r => {
             const inputs = r.querySelectorAll('input');
-            // Logic: 4 Inputs -> Code, Desc, Qty, U.M.
             if (inputs.length >= 3) {
                 const code = inputs[0].value.trim();
                 const desc = inputs[1].value.trim();
@@ -8753,54 +8752,112 @@ class App {
 
         if (items.length === 0) return alert('Lista vacía');
 
-        const printWindow = window.open('', '_blank', 'width=450,height=600');
+        const printWindow = window.open('', '_blank', 'width=400,height=600');
 
         let html = `
             <html>
             <head>
                 <title>Ticket OCR</title>
                 <style>
-                    body { font-family: 'Courier New', monospace; width: 80mm; margin: 0; padding: 10px; font-size: 12px; }
-                    .header { text-align: center; margin-bottom: 10px; border-bottom: 2px solid black; padding-bottom: 10px; }
-                    .title { font-size: 16px; font-weight: bold; }
-                    .info { font-size: 12px; margin: 2px 0; }
-                    table { width: 100%; border-collapse: collapse; }
-                    td { padding: 4px 0; vertical-align: top; }
-                    .qty { text-align: right; font-weight: bold; font-size: 14px; width: 40px; }
-                    .desc { padding-right: 5px; font-weight: 600; text-transform: uppercase; }
-                    .code { display:block; font-size:10px; font-weight:normal; color:#555; }
-                    .footer { margin-top: 15px; border-top: 1px dashed black; padding-top: 10px; text-align: center; font-size: 10px; }
+                    @page { margin: 0; size: 80mm auto; }
+                    body { 
+                        font-family: 'Arial', sans-serif; 
+                        width: 100%; 
+                        margin: 0; 
+                        padding: 5px; 
+                        box-sizing: border-box;
+                    }
+                    .header { margin-bottom: 5px; border-bottom: 3px solid black; padding-bottom: 5px; }
+                    .title { font-size: 18px; font-weight: 900; text-transform: uppercase; text-align: center;}
+                    .meta { font-size: 12px; text-align: center; margin-top:2px; font-weight: bold;}
+                    
+                    .item-row {
+                        display: flex;
+                        align-items: flex-start;
+                        border-bottom: 2px dashed black;
+                        padding: 6px 0;
+                    }
+                    
+                    .col-prod {
+                        flex: 1;
+                        padding-right: 5px;
+                    }
+                    
+                    .prod-name {
+                        font-size: 16px;
+                        font-weight: 800; /* Extra Bold */
+                        line-height: 1.1;
+                        text-transform: uppercase;
+                        display: block;
+                    }
+                    
+                    .prod-code {
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #000;
+                        display: block;
+                        margin-top: 2px;
+                    }
+                    
+                    .col-qty {
+                        width: 60px; /* Fixed width for alignment */
+                        text-align: right;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: flex-end;
+                    }
+                    
+                    .qty-val {
+                        font-size: 20px;
+                        font-weight: 900;
+                        line-height: 1;
+                    }
+                    
+                    .qty-uom {
+                        font-size: 12px;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        margin-top: 2px;
+                    }
+
+                    .footer { 
+                        margin-top: 10px; 
+                        border-top: 2px solid black; 
+                        padding-top: 5px; 
+                        text-align: center; 
+                        font-size: 10px; 
+                        font-weight: bold; 
+                    }
                 </style>
             </head>
             <body>
                 <div class="header">
-                    <div class="title">LISTA DE PEDIDO</div>
-                    <div class="info">FECHA: ${new Date().toLocaleString()}</div>
-                    <div class="info">ORIGEN: ESCÁNER / FOTO</div>
+                    <div class="title">ORDEN DE PEDIDO</div>
+                    <div class="meta">${new Date().toLocaleString()}</div>
                 </div>
-                <table>
+                <div class="items-container">
         `;
 
         items.forEach(item => {
             html += `
-                <tr style="border-bottom: 1px dashed #ccc;">
-                    <td class="desc">
-                        ${item.code ? `<span class="code">[${item.code}]</span>` : ''}
-                        ${item.desc}
-                    </td>
-                    <td class="qty">
-                        ${item.qty}
-                        ${item.uom ? `<span style="font-size:11px; font-weight:normal;">${item.uom}</span>` : ''}
-                    </td>
-                </tr>
+                <div class="item-row">
+                    <div class="col-prod">
+                        <span class="prod-name">${item.desc}</span>
+                        ${item.code ? `<span class="prod-code">${item.code}</span>` : ''}
+                    </div>
+                    <div class="col-qty">
+                        <span class="qty-val">${item.qty}</span>
+                        ${item.uom ? `<span class="qty-uom">${item.uom}</span>` : ''}
+                    </div>
+                </div>
             `;
         });
 
         html += `
-                </table>
+                </div>
                 <div class="footer">
-                    Generado por LEVO ERP<br>
-                    (MÃ³dulo OCR)
+                    LEVO ERP - Módulo OCR
                 </div>
                 <script>
                     window.onload = function() { window.print(); }
