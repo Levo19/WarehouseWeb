@@ -8476,26 +8476,39 @@ class App {
     }
 
     parseAndAppendOCRText(text) {
-        // V12 ADAPTIVE PARSER (AI-Like)
-        // Auto-detects layout: Columnar (Blocks) vs Row-Interleaved
+        // V13.1 ADAPTIVE PARSER (Robust Columnar Logic)
+        // Fixes: "Code" appearing in "Description" bucket due to strict regex failure.
 
-        const lines = text.split("\n").map(l => l.trim()).filter(l => l);
+        // 1. PRE-CLEANING: Remove leading bullets, dashes, or noise
+        const lines = text.split("\n")
+            .map(l => l.trim().replace(/^[-*•]\s*/, "")) // Remove bullets
+            .filter(l => l);
+
         if (lines.length === 0) return;
 
         // --- SHARED HELPERS ---
-        const getCodeInfo = (str) => {
+        const strictQtyRegex = /^(\d+[\.,]?\d*)\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]{1,5})?$/i;
+
+        // V13 Helper: "Is this line definitely a Code?"
+        const isDefinitelyCode = (str) => {
+            // A. Standard Regex (3+ chars, alphanumeric, starts with code)
             const match = str.match(/^([A-Z0-9\-\.]{3,})(\s.*)?$/);
             if (match) {
-                const possibleCode = match[1];
-                const rest = match[2] ? match[2].trim() : "";
-                if (/\d/.test(possibleCode) && possibleCode.length > 3) {
-                    return { isCode: true, code: possibleCode, remainder: rest };
-                }
+                const code = match[1];
+                if (/\d/.test(code) && code.length > 3) return { isCode: true, code: code, remainder: match[2] ? match[2].trim() : "" };
             }
+
+            // B. Aggressive Digit Check (Fallback for Columnar Mode context)
+            // If line has >5 digits, it is almost certainly a code (or phone number, but context implies code)
+            const digitCount = (str.match(/\d/g) || []).length;
+            if (digitCount >= 5) {
+                // Assume entire first word is code
+                const parts = str.split(/\s+/);
+                return { isCode: true, code: parts[0], remainder: parts.slice(1).join(" ") };
+            }
+
             return { isCode: false, code: "", remainder: str };
         };
-
-        const strictQtyRegex = /^(\d+[\.,]?\d*)\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]{1,5})?$/i;
 
         const extractTail = (line) => {
             const tailRegex = /^(.*)\s+([0-9\.,]+\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]+)?)$/i;
@@ -8512,60 +8525,62 @@ class App {
         };
 
         // --- PHASE 1: CLASSIFICATION & DETECTION ---
-        // Classify each line: C=Code, Q=Qty, T=Text, H=Header
         const headerRegex = /^(código|nombre|almacen|descripci|cantidad|item|lista de zona)/i;
 
         const map = lines.map(line => {
             if (line.match(headerRegex)) return 'H';
-            if (getCodeInfo(line).isCode) return 'C';
+            const info = isDefinitelyCode(line);
+            if (info.isCode) return 'C';
             if (line.match(strictQtyRegex)) return 'Q';
             return 'T';
         });
 
         const signature = map.join('');
-        console.log("OCR LAYOUT SIGNATURE:", signature); // e.g. "CCCTTQ"
+        console.log("OCR LAYOUT SIGNATURE (V13):", signature);
 
         // HEURISTIC: 
         // If we see "CCC" (3 codes in a row) -> Columnar Mode.
         // If we see "CCT" (Code, Code, Text) -> Columnar Mode.
-        // If we see many codes (more than 3) -> Columnar Mode.
-        // Otherwise, assume Row Mode.
+        // If we see more Codes than anything else (dense block) -> Columnar Mode.
 
-        if (signature.includes('CCC') || (signature.match(/C/g) || []).length > 3 && signature.indexOf('CCT') > -1) {
+        const codeCount = (signature.match(/C/g) || []).length;
+        const totalCount = signature.length;
+
+        if (signature.includes('CCC') || (codeCount > 3 && signature.indexOf('CCT') > -1) || codeCount > totalCount * 0.4) {
             console.log("MODE: COLUMNAR / BLOCKS DETECTED");
-            this.parseAsColumns(lines, getCodeInfo, extractTail, strictQtyRegex);
+            this.parseAsColumns(lines, isDefinitelyCode, extractTail, strictQtyRegex);
         } else {
             console.log("MODE: ROW INTERLEAVED DETECTED");
-            this.parseAsRows(lines, getCodeInfo, extractTail, strictQtyRegex);
+            this.parseAsRows(lines, isDefinitelyCode, extractTail, strictQtyRegex);
         }
     }
 
-    // STRATEGY A: COLUMNAR (BLOCKS)
-    parseAsColumns(lines, getCodeInfo, extractTail, strictQtyRegex) {
-        // 1. Bucketing
+    // STRATEGY A: COLUMNAR (BLOCKS) - V13 ROBUST
+    parseAsColumns(lines, isDefinitelyCode, extractTail, strictQtyRegex) {
         const codes = [];
         const descs = [];
         const qtys = [];
         const headerRegex = /^(código|nombre|almacen|descripci|cantidad|item|lista de zona)/i;
 
         lines.forEach(line => {
-            if (line.match(headerRegex)) return; // Skip headers
+            if (line.match(headerRegex)) return;
 
-            const info = getCodeInfo(line);
+            // V13: AGGRESSIVE CLASSIFICATION FOR BUCKETING
+            const info = isDefinitelyCode(line);
+
             if (info.isCode) {
-                // It's a code block
                 codes.push(info.code);
-                // If there's remainder, it might be part of desc? 
-                // In columnar mode, usually codes are pure.
-                if (info.remainder && info.remainder.length > 2) descs.push(info.remainder);
+                // Only push remainder if it looks like real text, not just noise
+                if (info.remainder && info.remainder.length > 2 && !info.remainder.match(/^\d+$/)) {
+                    descs.push(info.remainder);
+                }
             } else if (line.match(strictQtyRegex)) {
-                // It's a quantity
-                // Extract clean qty/uom
                 const t = extractTail("DUMMY " + line);
                 qtys.push({ q: t.qty, u: t.uom });
             } else {
-                // It's a description
-                // Check if it has embedded qty
+                // Description Bucket
+                // Check if it's actually a Quantity disguised (e.g. "03 paquetes")
+                // strictQtyRegex should catch most, but let's be safe.
                 const t = extractTail(line);
                 if (t.found && t.qty !== "1") {
                     descs.push(t.desc);
@@ -8576,10 +8591,9 @@ class App {
             }
         });
 
-        console.log("Buckets:", { codes, descs, qtys });
+        console.log("Buckets V13:", { codes, descs, qtys });
 
         // 2. Alignment / Zipping
-        // Use the longest array length
         const maxLen = Math.max(codes.length, descs.length);
 
         for (let i = 0; i < maxLen; i++) {
