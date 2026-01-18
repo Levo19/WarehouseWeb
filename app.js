@@ -612,6 +612,12 @@ class App {
 
     // New Entry point for navigation
     navigateTo(viewName) {
+        // Cleanup global listeners (e.g. Paste)
+        if (this.pasteHandler) {
+            document.removeEventListener('paste', this.pasteHandler);
+            this.pasteHandler = null;
+        }
+
         // Update Sidebar UI
         this.navLinks.forEach(link => {
             if (link.getAttribute('data-target') === viewName) {
@@ -657,6 +663,9 @@ class App {
         } else if (viewName === 'tools') {
             this.state.currentModule = 'tools';
             this.renderToolsModule();
+            // CLIPBOARD PASTE SUPPORT
+            this.pasteHandler = (e) => this.handleOCRPaste(e);
+            document.addEventListener('paste', this.pasteHandler);
         } else if (viewName === 'movements') {
             this.state.currentModule = 'movements';
             if (this.closeGuiaDetails) this.closeGuiaDetails(); // Reset Panel
@@ -8242,21 +8251,21 @@ class App {
                              onclick="document.getElementById('ocr-file-input').click()">
                             
                             <i class="fa-solid fa-cloud-arrow-up" style="font-size:2rem; color:#aaa; margin-bottom:0.5rem;"></i>
-                            <div style="font-weight:600; color:#555;">Subir ImÃ¡genes</div>
+                            <div style="font-weight:600; color:#555;">Subir o Pegar (Ctrl+V)</div>
                             <div style="font-size:0.8rem; color:#888;">WhatsApp, Excel, Fotos</div>
                             <input type="file" id="ocr-file-input" multiple accept="image/*" style="display:none;" onchange="app.handleOCRUpload(this)">
                         </div>
 
                         <!-- Scan Status -->
                         <div id="ocr-status" style="display:none; padding:1rem; background:#fff3cd; color:#856404; border-radius:8px; font-size:0.9rem;">
-                            <i class="fa-solid fa-circle-notch fa-spin"></i> Procesando imÃ¡genes...
+                            <i class="fa-solid fa-circle-notch fa-spin"></i> Procesando imágenes...
                         </div>
 
                         <!-- Carousel -->
-                        <h4 style="margin:0.5rem 0 0; color:#444;">ImÃ¡genes Cargadas (<span id="ocr-img-count">0</span>)</h4>
+                        <h4 style="margin:0.5rem 0 0; color:#444;">Imágenes Cargadas (<span id="ocr-img-count">0</span>)</h4>
                         <div id="ocr-carousel" style="display:flex; flex-direction:column; gap:0.5rem;">
                             <!-- Thumbs injected here -->
-                            <div style="text-align:center; color:#ccc; padding:2rem; font-style:italic;">No hay imÃ¡genes</div>
+                            <div style="text-align:center; color:#ccc; padding:2rem; font-style:italic;">No hay imágenes</div>
                         </div>
                     </div>
 
@@ -8272,14 +8281,14 @@ class App {
                     <!-- RIGHT: Editor -->
                     <div style="flex:0 0 400px; display:flex; flex-direction:column; background:white; border-radius:12px; border:1px solid #eee; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
                         <div style="padding:1rem; border-bottom:1px solid #eee; bg:#f8f9fa;">
-                            <h4 style="margin:0;">Datos ExtraÃ­dos</h4>
+                            <h4 style="margin:0;">Datos Extraídos</h4>
                         </div>
                         
                         <div class="custom-scrollbar" style="flex:1; overflow-y:auto; padding:0;">
                             <table class="data-table" style="width:100%; border-collapse:collapse;">
                                 <thead style="background:#f8f9fa; position:sticky; top:0;">
                                     <tr>
-                                        <th style="padding:8px; text-align:left; font-size:0.85rem; color:#666;">DescripciÃ³n</th>
+                                        <th style="padding:8px; text-align:left; font-size:0.85rem; color:#666;">Descripción</th>
                                         <th style="padding:8px; width:80px; text-align:right; font-size:0.85rem; color:#666;">Cant.</th>
                                         <th style="width:40px;"></th>
                                     </tr>
@@ -8304,6 +8313,36 @@ class App {
 
     async handleOCRUpload(input) {
         if (!input.files || input.files.length === 0) return;
+        await this.processOCRFiles(input.files);
+        input.value = ""; // Reset input
+    }
+
+    async handleOCRPaste(e) {
+        if (this.state.currentModule !== "tools") return;
+
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        const files = [];
+
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].kind === "file" && items[i].type.indexOf("image/") !== -1) {
+                const blob = items[i].getAsFile();
+                // Fake a name for pasted images
+                if (!blob.name || blob.name === "image.png") {
+                    blob.name = "Pasted_Image_" + Date.now() + ".png";
+                }
+                files.push(blob);
+            }
+        }
+
+        if (files.length > 0) {
+            e.preventDefault();
+            this.showToast("ðŸ“‹ Imagen pegada del portapapeles", "info");
+            await this.processOCRFiles(files);
+        }
+    }
+
+    async processOCRFiles(files) {
+        if (!files || files.length === 0) return;
 
         // HELPER: File to Base64
         const fileToBase64 = (file) => new Promise((resolve, reject) => {
@@ -8313,29 +8352,30 @@ class App {
             reader.onerror = error => reject(error);
         });
 
-        const statusEl = document.getElementById('ocr-status');
-        const carouselEl = document.getElementById('ocr-carousel');
-        const countEl = document.getElementById('ocr-img-count');
+        const statusEl = document.getElementById("ocr-status");
+        const carouselEl = document.getElementById("ocr-carousel");
+        const countEl = document.getElementById("ocr-img-count");
 
-        statusEl.style.display = 'block';
-        statusEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Procesando ${input.files.length} imÃ¡genes...`;
+        if (statusEl) {
+            statusEl.style.display = "block";
+            statusEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Procesando ${files.length} imÃ¡genes...`;
+        }
 
-        // Clear placeholder if first upload
-        if (carouselEl.innerHTML.includes('No hay imÃ¡genes')) {
-            carouselEl.innerHTML = '';
+        if (carouselEl && carouselEl.innerHTML.includes("No hay imÃ¡genes")) {
+            carouselEl.innerHTML = "";
         }
 
         let processedCount = 0;
 
-        for (const file of Array.from(input.files)) {
+        for (const file of Array.from(files)) {
             try {
                 // 1. Convert to Base64
                 const base64 = await fileToBase64(file);
 
                 // 2. Add to Carousel (Optimistic)
-                const imgId = 'ocr-img-' + Date.now() + Math.random().toString(36).substr(2, 5);
+                const imgId = "ocr-img-" + Date.now() + Math.random().toString(36).substr(2, 5);
                 const thumbHtml = `
-                    <div class="ocr-thumb" onclick="app.viewOCRImage('${imgId}', '${base64}')" 
+                    <div class="ocr-thumb" onclick="app.viewOCRImage('" + imgId + "', '" + base64 + "')" 
                          style="display:flex; gap:0.5rem; align-items:center; padding:0.5rem; background:white; border:1px solid #eee; border-radius:6px; cursor:pointer;"
                          onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='white'">
                         <img id="${imgId}" src="${base64}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;">
@@ -8345,37 +8385,38 @@ class App {
                         </div>
                     </div>
                 `;
-                carouselEl.insertAdjacentHTML('beforeend', thumbHtml);
-                countEl.innerText = parseInt(countEl.innerText) + 1;
+                if (carouselEl) carouselEl.insertAdjacentHTML("beforeend", thumbHtml);
+                if (countEl) countEl.innerText = parseInt(countEl.innerText || 0) + 1;
 
-                // 3. Send to Backend for OCR
-                statusEl.innerHTML = `<i class="fa-solid fa-eye"></i> Leyendo imagen ${processedCount + 1}/${input.files.length}...`;
+                // 3. Send to Backend
+                if (statusEl) statusEl.innerHTML = `<i class="fa-solid fa-eye"></i> Leyendo imagen ${processedCount + 1}/${files.length}...`;
 
                 const responseRaw = await fetch(API_URL, {
-                    method: 'POST',
-                    redirect: 'follow',
+                    method: "POST",
+                    redirect: "follow",
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
                     body: JSON.stringify({
-                        action: 'processImageOCR',
+                        action: "processImageOCR",
                         payload: { image: base64 }
                     })
                 });
                 const response = await responseRaw.json();
 
-                if (response.status === 'success' && response.text) {
+                if (response.status === "success" && response.text) {
                     this.parseAndAppendOCRText(response.text);
                 } else {
-                    console.warn('OCR Failure:', response.message);
+                    console.warn("OCR Failure:", response.message);
+                    this.showToast("Error OCR: " + response.message, "error");
                 }
 
             } catch (err) {
-                console.error('OCR Error:', err);
+                console.error("OCR Error:", err);
+                this.showToast("Error al procesar: " + err.message, "error");
             }
             processedCount++;
         }
 
-        statusEl.style.display = 'none';
-        input.value = ''; // Reset input
+        if (statusEl) statusEl.style.display = "none";
     }
 
     viewOCRImage(id, src) {
@@ -8455,8 +8496,32 @@ class App {
 
             // Cleanup description garbage
             desc = desc.replace(/^[-*•]\s*/, "").trim();
-            // Cleanup barcode lookalikes in quantity
-            if (parseInt(qty) > 100000) qty = "1";
+
+            // HEURISTIC: Weight vs Quantity Correction
+            // 1. If extracted Qty > 20 and looks like typical weight (250, 500, 1000), default to 1 because usually people don't buy 500 units of "Rice".
+            // 2. If 'desc' ended with specific units that match the Quantity, undo it.
+            if (parseInt(qty) > 20) {
+                // Check if the original line or desc ends with this number + weight unit
+                const weightCheck = new RegExp(qty + "\\s*(g|gr|gramos|kg|kgs|ml|cc|lb|oz)", "i");
+                if (line.match(weightCheck)) {
+                    qty = "1"; // It was a weight (e.g. 500 gr), not 500 units.
+                }
+            }
+
+            // Cleanup large barcode lookalikes
+            if (parseInt(qty) > 10000) qty = "1";
+
+            // Fix for standalone lines like "02 cajas" being treated as Description
+            // If the Description matches a pure Qty pattern, parse it correctly.
+            const standaloneQtyRegex = /^(\d+[\.,]?\d*)\s*(cajas?|paquetes?|und|unid|bolsas?|botellas?)$/i;
+            if (qty === "1" || qty === "") { // Only if we haven't found a strong qty yet
+                const sqMatch = desc.match(standaloneQtyRegex);
+                if (sqMatch) {
+                    qty = sqMatch[1];
+                    desc = desc.replace(standaloneQtyRegex, "").trim();
+                    if (!desc) desc = sqMatch[2]; // Use unit as desc if empty (e.g. "cajas")
+                }
+            }
 
             if (desc.length > 2) {
                 this.addOCRRow(desc, qty || "1");
@@ -8572,6 +8637,7 @@ try {
     console.error('Critical Init Error:', err);
     alert('Error crÃ­tico al iniciar la aplicaciÃ³n: ' + err.message);
 }
+
 
 
 
