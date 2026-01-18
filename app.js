@@ -8476,39 +8476,36 @@ class App {
     }
 
     parseAndAppendOCRText(text) {
-        // Advanced Parsing Logic (v3) - WhatsApp & Hybrid Tables
-        // Prioritizes: Hyphenated Lists -> Table Rows -> Flexible KV
+        // V11 PARSER: Strict Code & State Machine
+        // Handles: 
+        // 1. "Code -> Desc -> Qty" (3-line split)
+        // 2. "Desc -> Qty" (2-line split)
+        // 3. Strict Code validation (must have digits)
+
         const lines = text.split("\n");
 
-        // V7 PARSER: Iterative Lookahead & Merge
-        // Solves "Code on Line 1, Description on Line 1, Quantity on Line 2" fragmentation
-
-        // Helper to extract Code from start of line
-        const extractCode = (line) => {
-            // Priority: Alphanumeric Code at start (e.g. TONYVG003 or 77522...)
-            const codeRegex = /^([A-Z0-9]{4,})\s+(.*)$/;
-            const match = line.match(codeRegex);
+        // Helper to check for "Valid Code" (Must have digits, >3 chars, no spaces inside the code part)
+        const getCodeInfo = (str) => {
+            const match = str.match(/^([A-Z0-9\-\.]{3,})(\s.*)?$/); // Capture first word
             if (match) {
-                // Heuristic: If "Code" is actually a word like "LATA", ignore it.
-                // But simplified: assuming codes are >3 chars and start the line.
-                return { code: match[1], remainder: match[2] };
+                const possibleCode = match[1];
+                const rest = match[2] ? match[2].trim() : "";
+
+                // RULE: Code must have at least one digit OR be a very specific format.
+                if (/\d/.test(possibleCode)) {
+                    return { isCode: true, code: possibleCode, remainder: rest };
+                }
             }
-            return { code: "", remainder: line };
+            return { isCode: false, code: "", remainder: str };
         };
 
-        const knownUnitsRegex = /\b(und|unid|unidades|cajas?|paquetes?|packs?|bolsas?|sacos?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?)\b/i;
-
-        // Helper to extract Qty/Uom from end of line
+        // Helper to extract Qty form end of line
         const extractTail = (line) => {
-            // Greedy match for last number: "Desc... 20 cajas"
-            // Updated regex to handle "02 cajas" better and not eat too much description
             const tailRegex = /^(.*)\s+([0-9\.,]+\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]+)?)$/i;
             const m = line.match(tailRegex);
             if (m) {
                 const descPart = m[1];
-                const qtyPart = m[2]; // e.g. "02 cajas"
-
-                // Parse the qty part
+                const qtyPart = m[2];
                 const qm = qtyPart.match(/^(\d+[\.,]?\d*)\s*(.*)$/);
                 if (qm) {
                     return { desc: descPart, qty: qm[1], uom: qm[2].trim(), found: true };
@@ -8517,167 +8514,104 @@ class App {
             return { desc: line, qty: "1", uom: "", found: false };
         };
 
-        // const lines = text.split("\n"); // Already declared at top
-
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
             if (!line) continue;
-            console.log(`OCR LINE [${i}]:`, line); // DEBUG
+            console.log(`OCR LINE [${i}]:`, line);
 
-            // Skip headers (Enhanced)
+            // Skip headers
             if (line.match(/^(código|nombre|almacen|descripci|cantidad|item|lista de zona)/i)) continue;
 
-            // 1. EXTRACT CODE (STRICT CHECK)
-            // We need to decide if this line is a "Standalone Code" or a "Description"
-            const strictCodeRegex = /^[A-Z0-9]{8,}$|^[A-Z]+[0-9]+[A-Z0-9]*$/; // E.g. TONYVG003 or 77522...
-            let isStandaloneCode = false;
-            let pureCode = "";
+            const info = getCodeInfo(line);
 
-            if (line.match(strictCodeRegex) && !line.match(/\s/)) {
-                // It's a code on its own line (no spaces, e.g. "7752230119696")
-                isStandaloneCode = true;
-                pureCode = line;
-            }
-
-            // LOOP STATE MACHINE
             let code = "";
             let desc = "";
             let qty = "1";
             let uom = "";
 
-            if (isStandaloneCode) {
-                // CASE A: Line i is CODE.
-                // Lookahead:
-                // i+1 = Description?
-                // i+2 = Quantity?
-                code = pureCode;
+            if (info.isCode) {
+                // CASE A: Starts with CODE
+                code = info.code;
+                desc = info.remainder;
 
-                // Peek i+1 for Description
-                if (i + 1 < lines.length) {
-                    let line2 = lines[i + 1].trim();
-                    if (!line2.match(strictCodeRegex)) { // Make sure line 2 isn't another code
-                        desc = line2;
+                // Cleanup bad remainder (e.g. "Nombre")
+                if (desc.match(/^(nombre|descripci|cantidad|item)/i)) {
+                    desc = "";
+                }
 
-                        // Peek i+2 for Quantity
-                        if (i + 2 < lines.length) {
-                            let line3 = lines[i + 2].trim();
-                            const strictQtyRegex = /^(\d+[\.,]?\d*)\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]{1,5})?$/i;
-                            if (line3.match(strictQtyRegex)) {
-                                // BINGO! 3-Line Merge: Code -> Desc -> Qty
-                                console.log("3-LINE MERGE:", code, desc, line3);
-                                const qTail = extractTail("DUMMY " + line3);
-                                qty = qTail.qty;
-                                uom = qTail.uom;
-                                i += 2; // Skip next 2 lines
+                // If description is empty or very short, look at NEXT line for description
+                if (desc.length < 3) {
+                    if (i + 1 < lines.length) {
+                        const nextLine = lines[i + 1].trim();
+                        const nextInfo = getCodeInfo(nextLine);
+                        const strictQtyRegex = /^(\d+[\.,]?\d*)\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]{1,5})?$/i;
 
-                                // Early exit to add row
-                                this.addOCRRow(desc, qty, code, uom);
-                                continue;
-                            }
+                        if (!nextInfo.isCode && !nextLine.match(strictQtyRegex)) {
+                            // MERGE DESCRIPTION
+                            console.log("MERGING NEXT LINE (DESC):", nextLine);
+                            desc = nextLine;
+                            i++;
                         }
-
-                        // If we didn't match 3 lines, maybe it's just Code -> Desc (and Desc has qty inside?)
-                        // Merge 2 lines
-                        console.log("2-LINE MERGE (CODE->DESC):", code, desc);
-                        // Check if Desc has tail-qty
-                        let tail = extractTail(desc);
-                        if (tail.found) {
-                            desc = tail.desc;
-                            qty = tail.qty;
-                            uom = tail.uom;
-                        }
-                        i++; // Skip next line
-                        this.addOCRRow(desc, qty, code, uom);
-                        continue;
                     }
                 }
 
-                // If no Desc found, just add Code
-                this.addOCRRow("", "1", code, "");
-                continue;
-
-            } else {
-                // CASE B: Line i is DESCRIPTION (or Code+Description on one line).
-                let extraction = extractCode(line);
-                code = extraction.code;
-                desc = extraction.remainder;
-
-                // Extract inner Qty
-                let tail = extractTail(desc);
-                if (tail.found) {
-                    desc = tail.desc;
-                    qty = tail.qty;
-                    uom = tail.uom;
-                }
-
-                // AGGRESSIVE MERGE CHECK (2-Line: Desc -> Qty)
+                // NOW check for Quantity (Lookahead)
                 if (i + 1 < lines.length) {
-                    let nextLine = lines[i + 1].trim();
+                    const nextLine = lines[i + 1].trim();
                     const strictQtyRegex = /^(\d+[\.,]?\d*)\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]{1,5})?$/i;
 
                     if (nextLine.match(strictQtyRegex)) {
-                        // MERGE!
-                        console.log("2-LINE MERGE (DESC->QTY):", desc, nextLine);
-                        const nextTail = extractTail("DUMMY " + nextLine);
-                        if (nextTail.found) {
-                            qty = nextTail.qty;
-                            uom = nextTail.uom;
-                            // Restore previous "weak" qty to desc if needed
-                            if (tail.found) {
-                                desc = desc + " " + tail.qty + " " + tail.uom;
-                            }
-                            i++; // Skip next line
-                        }
+                        // MERGE QUANTITY
+                        console.log("MERGING NEXT LINE (QTY):", nextLine);
+                        const qTail = extractTail("DUMMY " + nextLine);
+                        qty = qTail.qty;
+                        uom = qTail.uom;
+                        i++;
                     }
                 }
-            }
 
-            // 3. CLEANUP UOM (Ambiguous "LT BOTELLA")
-            if (uom) {
-                const unitMatch = uom.match(knownUnitsRegex);
-                if (unitMatch) {
-                    const splitIndex = unitMatch.index + unitMatch[0].length;
-                    const cleanUom = unitMatch[0];
-                    const leftover = uom.substring(splitIndex).trim();
-                    if (leftover && (leftover.match(/\d/) || leftover.match(/^[-*•]/))) {
-                        // RECURSION TRIGGER: The "UOM" actually contained a second product!
-                        // e.g. "4 und te huyro"
-                        // We can't really recurse easily in a for-loop structure without a queue.
-                        // Simple fix: Insert a new line into `lines` array to handle it?
-                        // Or just add directly.
-                        console.log("SPLITTING MERGED LINE:", leftover);
-                        this.addOCRRow(leftover, "1", "", ""); // Add "te huyro" as basic row
-                    } else if (leftover) {
-                        uom = cleanUom + " " + leftover;
-                    } else {
-                        uom = cleanUom;
+                if (desc) {
+                    const tail = extractTail(desc);
+                    if (tail.found && qty === "1") {
+                        desc = tail.desc;
+                        qty = tail.qty;
+                        uom = tail.uom;
                     }
                 }
-            }
 
-            // 4. CLEANUP CODE (If it looks like a barcode on its own line, likely handled)
-            if (code && !desc && qty === "1") {
-                // Line was JUST a code? e.g. "775..."
-                // Check next line for Desc
+            } else {
+                // CASE B: Starts with DESCRIPTION (No Code found)
+                code = "";
+                desc = line;
+
+                // Check if next line is Quantity
                 if (i + 1 < lines.length) {
-                    let nextLine = lines[i + 1].trim();
-                    console.log("MERGING NEXT LINE (DESC):", nextLine);
-                    // Capture desc/qty from next line
-                    let nextHead = extractCode(nextLine); // Maybe next line brings its own code? Unlikely if merge.
-                    let nextTail = extractTail(nextLine);
+                    const nextLine = lines[i + 1].trim();
+                    const strictQtyRegex = /^(\d+[\.,]?\d*)\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]{1,5})?$/i;
 
-                    desc = nextTail.desc; // "VALLE VERDE..."
-                    if (nextTail.found) {
-                        qty = nextTail.qty;
-                        uom = nextTail.uom;
+                    if (nextLine.match(strictQtyRegex)) {
+                        console.log("MERGING NEXT LINE (QTY) [NO CODE]:", nextLine);
+                        const qTail = extractTail("DUMMY " + nextLine);
+                        qty = qTail.qty;
+                        uom = qTail.uom;
+                        i++;
                     }
-                    i++; // Skip next line
+                }
+
+                if (qty === "1") {
+                    const tail = extractTail(desc);
+                    if (tail.found) {
+                        desc = tail.desc;
+                        qty = tail.qty;
+                        uom = tail.uom;
+                    }
                 }
             }
 
-            desc = desc.replace(/^[-*•]\s*/, "").trim();
-            if (parseInt(qty) > 10000) qty = "1";
+            // CLEANUP
+            if (desc) desc = desc.replace(/^[-*•]\s*/, "").trim();
             if (uom) uom = uom.replace(/[^a-zA-Z0-9\.]/g, "");
+            if (qty && parseInt(qty) > 10000) qty = "1";
 
             if (desc || code) {
                 this.addOCRRow(desc, qty, code, uom);
