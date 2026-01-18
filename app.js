@@ -8319,8 +8319,23 @@ class App {
                     </div>
 
                 </div>
+
+                <!-- HISTORY SECTION -->
+                <div style="margin-top:2rem; background:white; border-radius:12px; border:1px solid #eee; padding:1rem; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.5rem; border-bottom:1px solid #eee;">
+                        <h4 style="margin:0; color:#444;"><i class="fa-solid fa-clock-rotate-left"></i> Historial de Tickets Impresos</h4>
+                        <button onclick="app.loadOCRHistory()" style="background:none; border:none; color:var(--primary-color); cursor:pointer; font-size:0.9rem;">
+                            <i class="fa-solid fa-sync"></i> Actualizar
+                        </button>
+                    </div>
+                    <div id="ocr-history-container" style="max-height:200px; overflow-y:auto;">
+                        <!-- Table Loaded via JS -->
+                    </div>
+                </div>
             </div>
         `;
+        // Auto Load
+        setTimeout(() => { if (this.state.currentModule === 'tools') this.loadOCRHistory(); }, 1000);
     }
 
     async handleOCRUpload(input) {
@@ -8733,7 +8748,7 @@ class App {
         document.getElementById('ocr-img-count').innerText = '0';
     }
 
-    printOCRTicket() {
+    async printOCRTicket() {
         const rows = document.querySelectorAll('#ocr-result-body tr');
         if (rows.length === 0) return alert('No hay datos para imprimir');
 
@@ -8752,9 +8767,10 @@ class App {
 
         if (items.length === 0) return alert('Lista vacía');
 
+        // 1. OPEN PRINT WINDOW IMMEDIATELY (UX)
         const printWindow = window.open('', '_blank', 'width=400,height=600');
 
-        let html = `
+        let htmlContent = `
             <html>
             <head>
                 <title>Ticket OCR</title>
@@ -8840,7 +8856,7 @@ class App {
         `;
 
         items.forEach(item => {
-            html += `
+            htmlContent += `
                 <div class="item-row">
                     <div class="col-prod">
                         <span class="prod-name">${item.desc}</span>
@@ -8854,7 +8870,7 @@ class App {
             `;
         });
 
-        html += `
+        htmlContent += `
                 </div>
                 <div class="footer">
                     LEVO ERP - Módulo OCR
@@ -8866,8 +8882,104 @@ class App {
             </html>
         `;
 
-        printWindow.document.write(html);
+        printWindow.document.write(htmlContent);
         printWindow.document.close();
+
+        // 2. SAVE TO CLOUD (Background)
+        this.saveTicketToCloud(htmlContent);
+    }
+
+    async saveTicketToCloud(html) {
+        // Change Button State
+        const btn = document.querySelector('button[onclick="app.printOCRTicket()"]'); // We need to update HTML ref
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-cloud-upload fa-spin"></i> Guardando...';
+
+        try {
+            const filename = "Ticket_" + new Date().toISOString().replace(/[:.]/g, "-");
+
+            const responseRaw = await fetch(LEVO_API_URL, {
+                method: "POST",
+                redirect: "follow",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: "saveOCRTicket",
+                    payload: { html: html, filename: filename }
+                })
+            });
+            const response = await responseRaw.json();
+
+            if (response.status === 'success') {
+                this.showToast("Ticket guardado en Drive", "success");
+                this.clearOCRWorkspace(true); // True = Silent/No Confirm
+                this.loadOCRHistory(); // Refresh table
+            } else {
+                this.showToast("Error guardando Ticket: " + response.message, "error");
+            }
+        } catch (e) {
+            console.error(e);
+            this.showToast("Error de red al guardar ticket", "error");
+        } finally {
+            if (btn) btn.innerHTML = '<i class="fa-solid fa-print"></i> Imprimir Ticket';
+        }
+    }
+
+    async loadOCRHistory() {
+        const container = document.getElementById('ocr-history-container');
+        if (!container) return;
+
+        container.innerHTML = '<div style="text-align:center; padding:1rem; color:#999;"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando historial...</div>';
+
+        try {
+            const responseRaw = await fetch(LEVO_API_URL, {
+                method: "POST",
+                redirect: "follow",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: "getOCRTicketHistory" })
+            });
+            const response = await responseRaw.json();
+
+            if (response.status === 'success') {
+                if (response.data.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; padding:1rem; color:#999;">No hay tickets guardados</div>';
+                    return;
+                }
+
+                let html = `
+                    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                        <thead style="background:#f8f9fa; color:#666;">
+                            <tr>
+                                <th style="padding:8px; text-align:left;">Fecha</th>
+                                <th style="padding:8px; text-align:left;">Archivo</th>
+                                <th style="padding:8px; text-align:right;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                response.data.forEach(file => {
+                    const dateKey = new Date(file.date).toLocaleString();
+                    html += `
+                        <tr style="border-bottom:1px solid #eee;">
+                            <td style="padding:8px;">${dateKey}</td>
+                            <td style="padding:8px;">${file.name}</td>
+                            <td style="padding:8px; text-align:right;">
+                                <a href="${file.url}" target="_blank" style="text-decoration:none; color:var(--primary-color); font-weight:bold;">
+                                    <i class="fa-solid fa-print"></i> Reimprimir
+                                </a>
+                            </td>
+                        </tr>
+                     `;
+                });
+
+                html += '</tbody></table>';
+                container.innerHTML = html;
+
+            } else {
+                container.innerHTML = '<div style="color:red; padding:1rem;">Error cargando historial</div>';
+            }
+        } catch (e) {
+            container.innerHTML = '<div style="color:red; padding:1rem;">Error de conexión</div>';
+        }
     }
 }
 // Initialize App
