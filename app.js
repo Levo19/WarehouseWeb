@@ -3,7 +3,7 @@
  * Handles Navigation, State, and API communication.
  */
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbzPXx_2UG_m1mDnR07Rk_0N_DXpVFYINApX209_YbmStmV79RCAz9bMxVrH68u3IR8K/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbw1xfIC2UdqicDXK_k-ZuwVea0kNC69MM5amEKAbQ-YjIbyva_w5YMRF0XpQRBwQDjr/exec';
 
 class App {
     constructor() {
