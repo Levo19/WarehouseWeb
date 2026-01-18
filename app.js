@@ -8506,33 +8506,41 @@ class App {
                     const unitMatch = rawUom.match(knownUnitsRegex);
                     if (unitMatch) {
                         // Found valid unit! split it.
-                        // "und te huyro" -> uom: "und", remainder: "te huyro"
                         const splitIndex = unitMatch.index + unitMatch[0].length;
                         const cleanUom = unitMatch[0];
                         const leftover = rawUom.substring(splitIndex).trim();
-                        // Ignore leftover if it's just special chars or very short
-                        // BUT if it looks like a new line (starts with hyphen, bullet, or alphanum), keep it.
-                        let validRemainder = "";
-                        if (leftover.length > 2) validRemainder = leftover;
 
-                        return { qty: m[1], uom: cleanUom, remainder: validRemainder };
+                        // RECURSION SAFETY: Only return "remainder" if it LOOKS like a new product (has digits or separator)
+                        // Otherwise, append it to the UOM (e.g. "LT BOTELLA")
+                        if (leftover && (leftover.match(/\d/) || leftover.match(/^[-*•]/))) {
+                            return { qty: m[1], uom: cleanUom, remainder: leftover };
+                        } else if (leftover) {
+                            // It's just text "BOTELLA" -> Merge into UOM
+                            return { qty: m[1], uom: cleanUom + " " + leftover, remainder: "" };
+                        }
+
+                        return { qty: m[1], uom: cleanUom, remainder: "" };
                     }
                     // 2. Fallback: Short alpha-word check
                     const firstWord = rawUom.split(' ')[0].replace(/[^a-zA-Z]/g, '');
                     if (firstWord.length > 0 && firstWord.length <= 5) {
                         const leftover = rawUom.substring(firstWord.length).trim();
-                        return { qty: m[1], uom: firstWord, remainder: leftover.length > 2 ? leftover : "" };
+                        // Same safety check
+                        if (leftover && (leftover.match(/\d/) || leftover.match(/^[-*•]/))) {
+                            return { qty: m[1], uom: firstWord, remainder: leftover };
+                        }
                     }
                     return { qty: m[1], uom: "", remainder: "" };
                 }
                 return { qty: str, uom: "", remainder: "" };
             };
 
-            // Pattern 1: WhatsApp/Hyphen Style (Supports -, –, —)
-            const hyphenRegex = /^(.+?)\s+[-–—]\s+(\d+[\.,]?\d*\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|grs?|gramos|lt|ml)?.*)$/i;
+            // Pattern 1: WhatsApp/Hyphen Style (Greedy capture to prefer last number)
+            const hyphenRegex = /^(.+)\s+[-–—]\s+(\d+[\.,]?\d*\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|grs?|gramos|lt|ml)?.*)$/i;
 
-            const tableRowRegex = /^([A-Z0-9]{4,})\s+(.+?)\s+(\d+[\.,]?\d*.*)$/i;
-            const endKvRegex = /^(.*?)\s+([0-9]+[\.,]?[0-9]*\s*(?:cajas|paquetes|unid|und|botellas|pack|kg|gr)?.*)$/i; // .* needed to capture UOM context
+            // Pattern 2: Table Row (Greedy capture to prefer last number)
+            const tableRowRegex = /^([A-Z0-9]{4,})\s+(.+)\s+(\d+[\.,]?\d*.*)$/i;
+            const endKvRegex = /^(.*)\s+([0-9]+[\.,]?[0-9]*\s*(?:cajas|paquetes|unid|und|botellas|pack|kg|gr)?.*)$/i;
             const startKvRegex = /^(\d+[\.,]?\d*)\s*(?:x|und|unid|cajas?|bolsas?|kgs?|gs?)\.?\s+(.*)/i;
 
             if (match = line.match(hyphenRegex)) {
