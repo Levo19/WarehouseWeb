@@ -8256,7 +8256,7 @@ class App {
                             <i class="fa-solid fa-cloud-arrow-up" style="font-size:2rem; color:#aaa; margin-bottom:0.5rem;"></i>
                             <div style="font-weight:600; color:#555;">Subir o Pegar (Ctrl+V)</div>
                             <div style="font-size:0.8rem; color:#888;">WhatsApp, Excel, Fotos</div>
-                            <input type="file" id="ocr-file-input" multiple accept="image/*" style="display:none;" onchange="app.handleOCRUpload(this)">
+                            <input type="file" id="ocr-file-input" multiple accept="image/*, .xlsx, .xls" style="display:none;" onchange="app.handleOCRUpload(this)">
                         </div>
                         
                         <!-- Manual Paste Button (Fallback) -->
