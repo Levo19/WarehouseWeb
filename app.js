@@ -8288,6 +8288,7 @@ class App {
                             <table class="data-table" style="width:100%; border-collapse:collapse;">
                                 <thead style="background:#f8f9fa; position:sticky; top:0;">
                                     <tr>
+                                        <th style="padding:8px; width:90px; text-align:left; font-size:0.85rem; color:#666;">Código</th>
                                         <th style="padding:8px; text-align:left; font-size:0.85rem; color:#666;">Descripción</th>
                                         <th style="padding:8px; width:80px; text-align:right; font-size:0.85rem; color:#666;">Cant.</th>
                                         <th style="width:40px;"></th>
@@ -8440,6 +8441,7 @@ class App {
 
             let qty = "";
             let desc = line;
+            let code = ""; // New: Code
             let match = false;
 
             // Pattern 1: WhatsApp Style (Hyphenated)
@@ -8466,6 +8468,9 @@ class App {
 
             } else if (match = line.match(tableRowRegex)) {
                 // Table Row: Code | Desc | Qty
+            } else if (match = line.match(tableRowRegex)) {
+                // Table Row: Code | Desc | Qty
+                code = match[1].trim(); // Capture Code
                 desc = match[2].trim();
                 let qtyStr = match[3].trim();
                 let qMatch = qtyStr.match(/(\d+[\.,]?\d*)/);
@@ -8524,18 +8529,22 @@ class App {
             }
 
             if (desc.length > 2) {
-                this.addOCRRow(desc, qty || "1");
+                this.addOCRRow(desc, qty || "1", code);
             }
         });
     }
 
-    addOCRRow(desc = '', qty = '') {
+    addOCRRow(desc = '', qty = '', code = '') {
         const tbody = document.getElementById('ocr-result-body');
         const row = document.createElement('tr');
         row.style.borderBottom = '1px solid #f0f0f0';
         row.innerHTML = `
             <td style="padding:4px;">
-                <input type="text" value="${desc}" placeholder="DescripciÃ³n" 
+                <input type="text" value="${code}" placeholder="Cod." 
+                       style="width:100%; border:none; padding:4px; font-size:0.85rem; color:#555; background:#f9fafb;">
+            </td>
+            <td style="padding:4px;">
+                <input type="text" value="${desc}" placeholder="Descripción" 
                        style="width:100%; border:none; padding:4px; font-size:0.9rem;">
             </td>
             <td style="padding:4px;">
@@ -8567,14 +8576,16 @@ class App {
         const items = [];
         rows.forEach(r => {
             const inputs = r.querySelectorAll('input');
-            const desc = inputs[0].value.trim();
-            const qty = inputs[1].value.trim();
-            if (desc && qty) {
-                items.push({ descripcion: desc, cantidad: qty });
-            }
+            // Logic: 3 Inputs -> [0]=Code, [1]=Desc, [2]=Qty
+            // Fallback: 2 Inputs -> [0]=Desc, [1]=Qty (Legacy safety)
+            const code = inputs.length === 3 ? inputs[0].value.trim() : '';
+            const desc = inputs[inputs.length === 3 ? 1 : 0].value.trim();
+            const qty = inputs[inputs.length === 3 ? 2 : 1].value.trim();
+
+            if (desc) items.push({ code, desc, qty: qty || '1' });
         });
 
-        if (items.length === 0) return alert('Lista vacÃ­a');
+        if (items.length === 0) return alert('Lista vacía');
 
         const printWindow = window.open('', '_blank', 'width=450,height=600');
 
@@ -8591,6 +8602,7 @@ class App {
                     td { padding: 4px 0; vertical-align: top; }
                     .qty { text-align: right; font-weight: bold; font-size: 14px; width: 40px; }
                     .desc { padding-right: 5px; font-weight: 600; text-transform: uppercase; }
+                    .code { display:block; font-size:10px; font-weight:normal; color:#555; }
                     .footer { margin-top: 15px; border-top: 1px dashed black; padding-top: 10px; text-align: center; font-size: 10px; }
                 </style>
             </head>
@@ -8598,7 +8610,7 @@ class App {
                 <div class="header">
                     <div class="title">LISTA DE PEDIDO</div>
                     <div class="info">FECHA: ${new Date().toLocaleString()}</div>
-                    <div class="info">ORIGEN: ESCÃNER FOTO</div>
+                    <div class="info">ORIGEN: ESCÁNER / FOTO</div>
                 </div>
                 <table>
         `;
@@ -8606,7 +8618,10 @@ class App {
         items.forEach(item => {
             html += `
                 <tr style="border-bottom: 1px dashed #ccc;">
-                    <td class="desc">${item.descripcion}</td>
+                    <td class="desc">
+                        ${item.code ? `<span class="code">[${item.code}]</span>` : ''}
+                        ${item.desc}
+                    </td>
                     <td class="qty">${item.cantidad}</td>
                 </tr>
             `;
