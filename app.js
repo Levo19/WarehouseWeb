@@ -8390,13 +8390,25 @@ class App {
             reader.onerror = error => reject(error);
         });
 
+        // HELPER: Read Excel File
+        const readExcelFile = (file) => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsArrayBuffer(file);
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                resolve(workbook);
+            };
+            reader.onerror = error => reject(error);
+        });
+
         const statusEl = document.getElementById("ocr-status");
         const carouselEl = document.getElementById("ocr-carousel");
         const countEl = document.getElementById("ocr-img-count");
 
         if (statusEl) {
             statusEl.style.display = "block";
-            statusEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Procesando ${files.length} imÃ¡genes...`;
+            statusEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Procesando ${files.length} archivo(s)...`;
         }
 
         if (carouselEl && carouselEl.innerHTML.includes("No hay imÃ¡genes")) {
@@ -8407,6 +8419,23 @@ class App {
 
         for (const file of Array.from(files)) {
             try {
+                // EXCEL HANDLING
+                if (file.name.match(/\.(xlsx|xls)$/i)) {
+                    console.log("Processing Excel:", file.name);
+                    const workbook = await readExcelFile(file);
+                    // Assume first sheet
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); // Array of Arrays
+
+                    this.parseAndAppendExcelData(jsonData);
+
+                    this.showToast("Excel procesado: " + file.name, "success");
+                    processedCount++;
+                    continue;
+                }
+
+                // IMAGE HANDLING (Existing Logic)
                 // 1. Convert to Base64
                 const base64 = await fileToBase64(file);
 
@@ -8420,7 +8449,7 @@ class App {
                         <img id="${imgId}" src="${base64}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;">
                         <div style="flex:1; overflow:hidden;">
                             <div style="font-size:0.8rem; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${file.name}</div>
-                            <div style="font-size:0.7rem; color:green;"><i class="fa-solid fa-check"></i> Cargado</div>
+                            <div style="font-size:0.7rem; color:green;"><i class="fa-solid fa-check"></i> Imagen</div>
                         </div>
                     </div>
                 `;
@@ -8449,13 +8478,87 @@ class App {
                 }
 
             } catch (err) {
-                console.error("OCR Error:", err);
+                console.error("Processing Error:", err);
                 this.showToast("Error al procesar: " + err.message, "error");
             }
             processedCount++;
         }
 
         if (statusEl) statusEl.style.display = "none";
+    }
+
+    // EXCEL PARSER
+    parseAndAppendExcelData(rows) {
+        if (!rows || rows.length < 2) return; // Skip if empty or header only
+
+        // Heuristic to find columns
+        // User says: Code, Name, Almacen (Qty+Uom)
+        // Usually Row 1 (Index 0) is Header. Let's look for "Código", "Nombre", "Almacen"
+
+        // Find header row (scan first 5 rows)
+        let headerRowIndex = -1;
+        let colMap = { code: -1, desc: -1, almacen: -1 };
+
+        for (let i = 0; i < Math.min(rows.length, 5); i++) {
+            const row = rows[i].map(c => String(c).toLowerCase());
+            if (row.some(c => c.includes("código") || c.includes("codigo"))) {
+                headerRowIndex = i;
+                row.forEach((cell, idx) => {
+                    if (cell.includes("código") || cell.includes("codigo")) colMap.code = idx;
+                    if (cell.includes("nombre") || cell.includes("descrip")) colMap.desc = idx;
+                    if (cell.includes("almacen") || cell.includes("cantidad")) colMap.almacen = idx;
+                });
+                break;
+            }
+        }
+
+        // If automatic detection fails, fallback to hardcoded user example A, B, C?
+        // User Image shows: Codigo Interno (Merged?) NO. 
+        // Let's assume standard layout if headers found. If not, maybe Columns 0, 1, 2?
+
+        if (headerRowIndex === -1) {
+            // Fallback: Assume Col 0=Code, Col 1=Desc, Col 2 or last = Qty
+            headerRowIndex = 0;
+            colMap = { code: 0, desc: 1, almacen: 2 };
+        }
+
+        for (let i = headerRowIndex + 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.length === 0) continue;
+
+            let code = (colMap.code > -1 && row[colMap.code]) ? String(row[colMap.code]).trim() : "";
+            let desc = (colMap.desc > -1 && row[colMap.desc]) ? String(row[colMap.desc]).trim() : "";
+            let rawQty = (colMap.almacen > -1 && row[colMap.almacen]) ? String(row[colMap.almacen]).trim() : "1";
+
+            // Allow column index shift if user uploaded weird file
+            // If Code is empty, maybe it's in Col A?
+            if (!code && row[0] && String(row[0]).length > 4) code = String(row[0]);
+            if (!desc && row[1]) desc = String(row[1]);
+
+            // Parse Qty "01 CAJA" -> 1, CAJA
+            // "5" -> 5, ""
+            // "15" -> 15, ""
+            // "03 tiras" -> 3, tiras
+
+            let qty = "1";
+            let uom = "";
+
+            if (rawQty) {
+                // Regex for "Number Unit"
+                const m = rawQty.match(/^(\d+[\.,]?\d*)\s*(.*)$/);
+                if (m) {
+                    qty = m[1];
+                    uom = m[2].trim();
+                } else {
+                    // Try just number
+                    if (/\d/.test(rawQty)) qty = rawQty.replace(/[^\d\.,]/g, "");
+                }
+            }
+
+            if (code || desc) {
+                this.addOCRRow(desc, qty, code, uom);
+            }
+        }
     }
 
     viewOCRImage(id, src) {
