@@ -8297,7 +8297,8 @@ class App {
                                     <tr>
                                         <th style="padding:8px; width:90px; text-align:left; font-size:0.85rem; color:#666;">Código</th>
                                         <th style="padding:8px; text-align:left; font-size:0.85rem; color:#666;">Descripción</th>
-                                        <th style="padding:8px; width:80px; text-align:right; font-size:0.85rem; color:#666;">Cant.</th>
+                                        <th style="padding:8px; width:60px; text-align:right; font-size:0.85rem; color:#666;">Cant.</th>
+                                        <th style="padding:8px; width:60px; text-align:left; font-size:0.85rem; color:#666;">U.M.</th>
                                         <th style="width:40px;"></th>
                                     </tr>
                                 </thead>
@@ -8482,10 +8483,18 @@ class App {
             // Skip typical headers
             if (line.match(/^(código|nombre|almacen|descripci|cantidad|item)/i)) return;
 
-            let qty = "";
+            let qty = "1";
+            let uom = "";
             let desc = line;
-            let code = ""; // New: Code
+            let code = "";
             let match = false;
+
+            // HELPER: Split "10 cajas" -> { qty: "10", uom: "cajas" }
+            const extractQtyUom = (str) => {
+                const m = str.match(/^(\d+[\.,]?\d*)\s*(.*)$/);
+                if (m) return { qty: m[1], uom: m[2].trim() };
+                return { qty: str, uom: "" };
+            };
 
             // Pattern 1: WhatsApp Style (Hyphenated)
             // Example: "coco rallado largo 500g - 4 und"
@@ -8503,16 +8512,29 @@ class App {
             const startKvRegex = /^(\d+[\.,]?\d*)\s*(?:x|und|unid|cajas?|bolsas?|kgs?|gs?)\.?\s+(.*)/i;
 
             if (match = line.match(hyphenRegex)) {
-                // WhatsApp Style
                 desc = match[1].trim();
-                let qtyStr = match[2].trim();
-                let qMatch = qtyStr.match(/(\d+[\.,]?\d*)/);
-                qty = qMatch ? qMatch[1] : qtyStr;
+                const processed = extractQtyUom(match[2].trim());
+                qty = processed.qty;
+                uom = processed.uom;
 
             } else if (match = line.match(tableRowRegex)) {
-                // Table Row: Code | Desc | Qty
-            } else if (match = line.match(tableRowRegex)) {
-                // Table Row: Code | Desc | Qty
+                code = match[1].trim();
+                desc = match[2].trim();
+                const processed = extractQtyUom(match[3].trim());
+                qty = processed.qty;
+                uom = processed.uom;
+
+            } else if (match = line.match(endKvRegex)) {
+                desc = match[1].trim();
+                const processed = extractQtyUom(match[2].trim());
+                qty = processed.qty;
+                uom = processed.uom;
+
+            } else if (match = line.match(startKvRegex)) {
+                qty = match[1];
+                desc = match[2];
+                uom = "";
+            /* REMOVED LEGACY
                 code = match[1].trim(); // Capture Code
                 desc = match[2].trim();
                 let qtyStr = match[3].trim();
@@ -8540,7 +8562,7 @@ class App {
             } else {
                 // Ignore lines that are JUST a barcode to avoid noise
                 if (line.match(/^\d{8,}$/)) return;
-            }
+            */ }
 
             // Cleanup description garbage
             desc = desc.replace(/^[-*•]\s*/, "").trim();
@@ -8559,25 +8581,27 @@ class App {
             // Cleanup large barcode lookalikes
             if (parseInt(qty) > 10000) qty = "1";
 
-            // Fix for standalone lines like "02 cajas" being treated as Description
-            // If the Description matches a pure Qty pattern, parse it correctly.
-            const standaloneQtyRegex = /^(\d+[\.,]?\d*)\s*(cajas?|paquetes?|und|unid|bolsas?|botellas?)$/i;
-            if (qty === "1" || qty === "") { // Only if we haven't found a strong qty yet
+            // Fix for standalone lines / Post-process Description for Units
+            if ((qty === "1" || qty === "") && !uom) {
+                const standaloneQtyRegex = /^(\d+[\.,]?\d*)\s*(cajas?|paquetes?|und|unid|bolsas?|botellas?)$/i;
                 const sqMatch = desc.match(standaloneQtyRegex);
                 if (sqMatch) {
                     qty = sqMatch[1];
-                    desc = desc.replace(standaloneQtyRegex, "").trim();
-                    if (!desc) desc = sqMatch[2]; // Use unit as desc if empty (e.g. "cajas")
+                    uom = sqMatch[2];
+                    desc = "";
                 }
             }
 
-            if (desc.length > 2) {
-                this.addOCRRow(desc, qty || "1", code);
+            // Clean UOM if it contains garbage
+            if (uom) uom = uom.replace(/[^a-zA-Z0-9\.]/g, "");
+
+            if (desc.length > 0 || code.length > 0) {
+                this.addOCRRow(desc, qty || "1", code, uom);
             }
         });
     }
 
-    addOCRRow(desc = '', qty = '', code = '') {
+    addOCRRow(desc = '', qty = '', code = '', uom = '') {
         const tbody = document.getElementById('ocr-result-body');
         const row = document.createElement('tr');
         row.style.borderBottom = '1px solid #f0f0f0';
@@ -8593,6 +8617,10 @@ class App {
             <td style="padding:4px;">
                 <input type="number" value="${qty}" placeholder="1" 
                        style="width:100%; border:none; padding:4px; font-size:1rem; font-weight:bold; text-align:right;">
+            </td>
+            <td style="padding:4px;">
+                <input type="text" value="${uom}" placeholder="U.M" 
+                       style="width:100%; border:none; padding:4px; font-size:0.85rem; color:#666; text-align:left;">
             </td>
             <td style="padding:4px; text-align:center;">
                 <button onclick="this.parentElement.parentElement.remove()" style="border:none; background:none; color:#f87171; cursor:pointer;">
@@ -8619,13 +8647,15 @@ class App {
         const items = [];
         rows.forEach(r => {
             const inputs = r.querySelectorAll('input');
-            // Logic: 3 Inputs -> [0]=Code, [1]=Desc, [2]=Qty
-            // Fallback: 2 Inputs -> [0]=Desc, [1]=Qty (Legacy safety)
-            const code = inputs.length === 3 ? inputs[0].value.trim() : '';
-            const desc = inputs[inputs.length === 3 ? 1 : 0].value.trim();
-            const qty = inputs[inputs.length === 3 ? 2 : 1].value.trim();
+            // Logic: 4 Inputs -> Code, Desc, Qty, U.M.
+            if (inputs.length >= 3) {
+                const code = inputs[0].value.trim();
+                const desc = inputs[1].value.trim();
+                const qty = inputs[2].value.trim();
+                const uom = inputs[3] ? inputs[3].value.trim() : '';
 
-            if (desc) items.push({ code, desc, qty: qty || '1' });
+                if (desc) items.push({ code, desc, qty: qty || '1', uom });
+            }
         });
 
         if (items.length === 0) return alert('Lista vacía');
@@ -8665,7 +8695,10 @@ class App {
                         ${item.code ? `<span class="code">[${item.code}]</span>` : ''}
                         ${item.desc}
                     </td>
-                    <td class="qty">${item.cantidad}</td>
+                    <td class="qty">
+                        ${item.qty}
+                        ${item.uom ? `<span style="font-size:11px; font-weight:normal;">${item.uom}</span>` : ''}
+                    </td>
                 </tr>
             `;
         });
