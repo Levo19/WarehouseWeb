@@ -8501,7 +8501,8 @@ class App {
         // Helper to extract Qty/Uom from end of line
         const extractTail = (line) => {
             // Greedy match for last number: "Desc... 20 cajas"
-            const tailRegex = /^(.*)\s+(\d+[\.,]?\d*\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]+)?)$/i;
+            // Updated regex to handle "02 cajas" better and not eat too much description
+            const tailRegex = /^(.*)\s+([0-9\.,]+\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]+)?)$/i;
             const m = line.match(tailRegex);
             if (m) {
                 const descPart = m[1];
@@ -8523,7 +8524,8 @@ class App {
             if (!line) continue;
             console.log(`OCR LINE [${i}]:`, line); // DEBUG
 
-            if (line.match(/^(código|nombre|almacen|descripci|cantidad|item)/i)) continue;
+            // Skip headers (Enhanced)
+            if (line.match(/^(código|nombre|almacen|descripci|cantidad|item|lista de zona)/i)) continue;
 
             // 1. EXTRACT CODE
             let { code, remainder } = extractCode(line);
