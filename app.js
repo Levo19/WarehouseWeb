@@ -8557,6 +8557,22 @@ class App {
                 qty = match[1];
                 desc = match[2];
                 uom = "";
+            } else {
+                // FALLBACK: If line has content but no regex matched, DON'T SKIP IT.
+                // Capture it as a product with qty 1 to prevent data loss.
+                desc = line;
+                qty = "1";
+                uom = "";
+                code = "";
+
+                // Experimental: Check if line starts with a number (e.g. "5 PRODUCTS")
+                // that mistakenly didn't match strict patterns
+                const looseQtyMatch = line.match(/^(\d+)\s+(.+)$/);
+                if (looseQtyMatch) {
+                    qty = looseQtyMatch[1];
+                    desc = looseQtyMatch[2];
+                }
+            }
             /* REMOVED LEGACY
                 code = match[1].trim(); // Capture Code
                 desc = match[2].trim();
@@ -8590,45 +8606,45 @@ class App {
             // Cleanup description garbage
             desc = desc.replace(/^[-*•]\s*/, "").trim();
 
-            // HEURISTIC: Weight vs Quantity Correction
-            // 1. If extracted Qty > 20 and looks like typical weight (250, 500, 1000), default to 1 because usually people don't buy 500 units of "Rice".
-            // 2. If 'desc' ended with specific units that match the Quantity, undo it.
-            if (parseInt(qty) > 20) {
-                // Check if the original line or desc ends with this number + weight unit
-                const weightCheck = new RegExp(qty + "\\s*(g|gr|gramos|kg|kgs|ml|cc|lb|oz)", "i");
-                if (line.match(weightCheck)) {
-                    qty = "1"; // It was a weight (e.g. 500 gr), not 500 units.
-                }
+        // HEURISTIC: Weight vs Quantity Correction
+        // 1. If extracted Qty > 20 and looks like typical weight (250, 500, 1000), default to 1 because usually people don't buy 500 units of "Rice".
+        // 2. If 'desc' ended with specific units that match the Quantity, undo it.
+        if (parseInt(qty) > 20) {
+            // Check if the original line or desc ends with this number + weight unit
+            const weightCheck = new RegExp(qty + "\\s*(g|gr|gramos|kg|kgs|ml|cc|lb|oz)", "i");
+            if (line.match(weightCheck)) {
+                qty = "1"; // It was a weight (e.g. 500 gr), not 500 units.
             }
+        }
 
-            // Cleanup large barcode lookalikes
-            if (parseInt(qty) > 10000) qty = "1";
+        // Cleanup large barcode lookalikes
+        if (parseInt(qty) > 10000) qty = "1";
 
-            // Fix for standalone lines / Post-process Description for Units
-            if ((qty === "1" || qty === "") && !uom) {
-                const standaloneQtyRegex = /^(\d+[\.,]?\d*)\s*(cajas?|paquetes?|und|unid|bolsas?|botellas?)$/i;
-                const sqMatch = desc.match(standaloneQtyRegex);
-                if (sqMatch) {
-                    qty = sqMatch[1];
-                    uom = sqMatch[2];
-                    desc = "";
-                }
+        // Fix for standalone lines / Post-process Description for Units
+        if ((qty === "1" || qty === "") && !uom) {
+            const standaloneQtyRegex = /^(\d+[\.,]?\d*)\s*(cajas?|paquetes?|und|unid|bolsas?|botellas?)$/i;
+            const sqMatch = desc.match(standaloneQtyRegex);
+            if (sqMatch) {
+                qty = sqMatch[1];
+                uom = sqMatch[2];
+                desc = "";
             }
+        }
 
-            // Clean UOM if it contains garbage
-            if (uom) uom = uom.replace(/[^a-zA-Z0-9\.]/g, "");
+        // Clean UOM if it contains garbage
+        if (uom) uom = uom.replace(/[^a-zA-Z0-9\.]/g, "");
 
-            if (desc.length > 0 || code.length > 0) {
-                this.addOCRRow(desc, qty || "1", code, uom);
-            }
-        });
-    }
+        if (desc.length > 0 || code.length > 0) {
+            this.addOCRRow(desc, qty || "1", code, uom);
+        }
+    });
+}
 
-    addOCRRow(desc = '', qty = '', code = '', uom = '') {
-        const tbody = document.getElementById('ocr-result-body');
-        const row = document.createElement('tr');
-        row.style.borderBottom = '1px solid #f0f0f0';
-        row.innerHTML = `
+addOCRRow(desc = '', qty = '', code = '', uom = '') {
+    const tbody = document.getElementById('ocr-result-body');
+    const row = document.createElement('tr');
+    row.style.borderBottom = '1px solid #f0f0f0';
+    row.innerHTML = `
             <td style="padding:4px;">
                 <input type="text" value="${code}" placeholder="Cod." 
                        style="width:100%; border:none; padding:4px; font-size:0.85rem; color:#555; background:#f9fafb;">
@@ -8651,41 +8667,41 @@ class App {
                 </button>
             </td>
         `;
-        tbody.appendChild(row);
-    }
+    tbody.appendChild(row);
+}
 
-    clearOCRWorkspace() {
-        if (!confirm('Â¿Borrar todo?')) return;
-        document.getElementById('ocr-carousel').innerHTML = '<div style="text-align:center; color:#ccc; padding:2rem; font-style:italic;">No hay imÃ¡genes</div>';
-        document.getElementById('ocr-result-body').innerHTML = '';
-        document.getElementById('ocr-preview-img').style.display = 'none';
-        document.getElementById('ocr-preview-placeholder').style.display = 'block';
-        document.getElementById('ocr-img-count').innerText = '0';
-    }
+clearOCRWorkspace() {
+    if (!confirm('Â¿Borrar todo?')) return;
+    document.getElementById('ocr-carousel').innerHTML = '<div style="text-align:center; color:#ccc; padding:2rem; font-style:italic;">No hay imÃ¡genes</div>';
+    document.getElementById('ocr-result-body').innerHTML = '';
+    document.getElementById('ocr-preview-img').style.display = 'none';
+    document.getElementById('ocr-preview-placeholder').style.display = 'block';
+    document.getElementById('ocr-img-count').innerText = '0';
+}
 
-    printOCRTicket() {
-        const rows = document.querySelectorAll('#ocr-result-body tr');
-        if (rows.length === 0) return alert('No hay datos para imprimir');
+printOCRTicket() {
+    const rows = document.querySelectorAll('#ocr-result-body tr');
+    if (rows.length === 0) return alert('No hay datos para imprimir');
 
-        const items = [];
-        rows.forEach(r => {
-            const inputs = r.querySelectorAll('input');
-            // Logic: 4 Inputs -> Code, Desc, Qty, U.M.
-            if (inputs.length >= 3) {
-                const code = inputs[0].value.trim();
-                const desc = inputs[1].value.trim();
-                const qty = inputs[2].value.trim();
-                const uom = inputs[3] ? inputs[3].value.trim() : '';
+    const items = [];
+    rows.forEach(r => {
+        const inputs = r.querySelectorAll('input');
+        // Logic: 4 Inputs -> Code, Desc, Qty, U.M.
+        if (inputs.length >= 3) {
+            const code = inputs[0].value.trim();
+            const desc = inputs[1].value.trim();
+            const qty = inputs[2].value.trim();
+            const uom = inputs[3] ? inputs[3].value.trim() : '';
 
-                if (desc) items.push({ code, desc, qty: qty || '1', uom });
-            }
-        });
+            if (desc) items.push({ code, desc, qty: qty || '1', uom });
+        }
+    });
 
-        if (items.length === 0) return alert('Lista vacía');
+    if (items.length === 0) return alert('Lista vacía');
 
-        const printWindow = window.open('', '_blank', 'width=450,height=600');
+    const printWindow = window.open('', '_blank', 'width=450,height=600');
 
-        let html = `
+    let html = `
             <html>
             <head>
                 <title>Ticket OCR</title>
@@ -8711,8 +8727,8 @@ class App {
                 <table>
         `;
 
-        items.forEach(item => {
-            html += `
+    items.forEach(item => {
+        html += `
                 <tr style="border-bottom: 1px dashed #ccc;">
                     <td class="desc">
                         ${item.code ? `<span class="code">[${item.code}]</span>` : ''}
@@ -8724,9 +8740,9 @@ class App {
                     </td>
                 </tr>
             `;
-        });
+    });
 
-        html += `
+    html += `
                 </table>
                 <div class="footer">
                     Generado por LEVO ERP<br>
@@ -8739,9 +8755,9 @@ class App {
             </html>
         `;
 
-        printWindow.document.write(html);
-        printWindow.document.close();
-    }
+    printWindow.document.write(html);
+    printWindow.document.close();
+}
 }
 // Initialize App
 
