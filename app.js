@@ -8480,11 +8480,11 @@ class App {
         // Prioritizes: Hyphenated Lists -> Table Rows -> Flexible KV
         const lines = text.split("\n");
 
-        lines.forEach(line => {
+        // Process lines RECURSIVELY to handle merged products (e.g. "Prod A - 4 und Prod B - 5 und")
+        const processLine = (line) => {
             console.log("OCR RAW LINE:", line); // DEBUG
             line = line.trim();
             if (!line) return;
-            // Skip typical headers
             if (line.match(/^(código|nombre|almacen|descripci|cantidad|item)/i)) return;
 
             let qty = "1";
@@ -8492,13 +8492,12 @@ class App {
             let desc = line;
             let code = "";
             let match = false;
+            let remainder = "";
 
             // STRICT U.M. WHITELIST (Prevent "und" merging with next line)
-            // Supported: und, unid, caja, paquete, bolsa, kg, gr, lt, ml, oz, lb, lata, botella, pza, saco, pack
             const knownUnitsRegex = /\b(und|unid|unidades|cajas?|paquetes?|packs?|bolsas?|sacos?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?)\b/i;
 
-            // HELPER: Split "10 cajas" -> { qty: "10", uom: "cajas" } 
-            // Handles "4 undtehuyro" -> qty:4, uom:und (discards tehuyro)
+            // HELPER: Extract Qty, UOM, and Remainder text
             const extractQtyUom = (str) => {
                 const m = str.match(/^(\d+[\.,]?\d*)\s*(.*)$/);
                 if (m) {
@@ -8506,33 +8505,34 @@ class App {
                     // 1. Check for specific known unit match
                     const unitMatch = rawUom.match(knownUnitsRegex);
                     if (unitMatch) {
-                        return { qty: m[1], uom: unitMatch[1] }; // Return ONLY the matched unit (e.g. "und")
+                        // Found valid unit! split it.
+                        // "und te huyro" -> uom: "und", remainder: "te huyro"
+                        const splitIndex = unitMatch.index + unitMatch[0].length;
+                        const cleanUom = unitMatch[0];
+                        const leftover = rawUom.substring(splitIndex).trim();
+                        // Ignore leftover if it's just special chars or very short
+                        // BUT if it looks like a new line (starts with hyphen, bullet, or alphanum), keep it.
+                        let validRemainder = "";
+                        if (leftover.length > 2) validRemainder = leftover;
+
+                        return { qty: m[1], uom: cleanUom, remainder: validRemainder };
                     }
-                    // 2. Fallback: If no known unit, take first alpha-word if short (< 6 chars)
-                    // This prevents capturing a full description from next line
+                    // 2. Fallback: Short alpha-word check
                     const firstWord = rawUom.split(' ')[0].replace(/[^a-zA-Z]/g, '');
                     if (firstWord.length > 0 && firstWord.length <= 5) {
-                        return { qty: m[1], uom: firstWord };
+                        const leftover = rawUom.substring(firstWord.length).trim();
+                        return { qty: m[1], uom: firstWord, remainder: leftover.length > 2 ? leftover : "" };
                     }
-
-                    return { qty: m[1], uom: "" }; // Discard long garbage
+                    return { qty: m[1], uom: "", remainder: "" };
                 }
-                return { qty: str, uom: "" };
+                return { qty: str, uom: "", remainder: "" };
             };
 
-            // Pattern 1: WhatsApp Style (Hyphenated)
-            // Example: "coco rallado largo 500g - 4 und"
-            const hyphenRegex = /^(.+?)\s+-\s+(\d+[\.,]?\d*\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|grs?|gramos|lt|ml)?.*)$/i;
+            // Pattern 1: WhatsApp/Hyphen Style (Supports -, –, —)
+            const hyphenRegex = /^(.+?)\s+[-–—]\s+(\d+[\.,]?\d*\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|grs?|gramos|lt|ml)?.*)$/i;
 
-            // Pattern 2: Table Row with Code (Alphanumeric support)
-            // Example: "TONYVG003 VINAGRE SUELTO... 6"
-            // Example: "775223... UNIVERSAL... 02 cajas"
             const tableRowRegex = /^([A-Z0-9]{4,})\s+(.+?)\s+(\d+[\.,]?\d*.*)$/i;
-
-            // Pattern 3: End with Quantity (e.g. "COCO RALLADO ... 6")
-            const endKvRegex = /^(.*?)\s+([0-9]+[\.,]?[0-9]*\s*(?:cajas|paquetes|unid|und|botellas|pack|kg|gr)?)$/i;
-
-            // Pattern 4: Start with Quantity (e.g. "12 PRODUCTO")
+            const endKvRegex = /^(.*?)\s+([0-9]+[\.,]?[0-9]*\s*(?:cajas|paquetes|unid|und|botellas|pack|kg|gr)?.*)$/i; // .* needed to capture UOM context
             const startKvRegex = /^(\d+[\.,]?\d*)\s*(?:x|und|unid|cajas?|bolsas?|kgs?|gs?)\.?\s+(.*)/i;
 
             if (match = line.match(hyphenRegex)) {
@@ -8540,6 +8540,7 @@ class App {
                 const processed = extractQtyUom(match[2].trim());
                 qty = processed.qty;
                 uom = processed.uom;
+                remainder = processed.remainder;
 
             } else if (match = line.match(tableRowRegex)) {
                 code = match[1].trim();
@@ -8547,98 +8548,52 @@ class App {
                 const processed = extractQtyUom(match[3].trim());
                 qty = processed.qty;
                 uom = processed.uom;
+                remainder = processed.remainder;
 
             } else if (match = line.match(endKvRegex)) {
+                // Careful: endKvRegex is greedy on description if we aren't careful.
                 desc = match[1].trim();
                 const processed = extractQtyUom(match[2].trim());
                 qty = processed.qty;
                 uom = processed.uom;
+                remainder = processed.remainder;
 
             } else if (match = line.match(startKvRegex)) {
                 qty = match[1];
                 desc = match[2];
                 uom = "";
             } else {
-                // FALLBACK: If line has content but no regex matched, DON'T SKIP IT.
-                // Capture it as a product with qty 1 to prevent data loss.
+                // FALLBACK: Capture everything
                 desc = line;
                 qty = "1";
                 uom = "";
-                code = "";
-
-                // Experimental: Check if line starts with a number (e.g. "5 PRODUCTS")
-                // that mistakenly didn't match strict patterns
                 const looseQtyMatch = line.match(/^(\d+)\s+(.+)$/);
                 if (looseQtyMatch) {
                     qty = looseQtyMatch[1];
                     desc = looseQtyMatch[2];
                 }
             }
-            /* REMOVED LEGACY
-                code = match[1].trim(); // Capture Code
-                desc = match[2].trim();
-                let qtyStr = match[3].trim();
-                let qMatch = qtyStr.match(/(\d+[\.,]?\d*)/);
 
-                // Safety: If "Code" looks like a common word (e.g. "LATA", "CAJA"), treat as description start
-                const potentialCode = match[1];
-                if (potentialCode.length < 8 && /^[A-Z]+$/.test(potentialCode)) {
-                    // Likely part of description, fall through to endKvRegex logic? 
-                    // No, "TONYVG003" is real. "LATA" is risky. 
-                    // Let is pass for now unless it is strictly dictionary words.
-                }
-
-                qty = qMatch ? qMatch[1] : "1";
-
-            } else if (match = line.match(endKvRegex)) {
-                desc = match[1].trim();
-                let qtyStr = match[2].trim();
-                let qMatch = qtyStr.match(/(\d+[\.,]?\d*)/);
-                qty = qMatch ? qMatch[1] : qtyStr;
-
-            } else if (match = line.match(startKvRegex)) {
-                qty = match[1];
-                desc = match[2];
-            } else {
-                // Ignore lines that are JUST a barcode to avoid noise
-                if (line.match(/^\d{8,}$/)) return;
-            */
-
-            // Cleanup description garbage
+            // Cleanup & Add
             desc = desc.replace(/^[-*•]\s*/, "").trim();
-
-            // HEURISTIC: Weight vs Quantity Correction
-            // 1. If extracted Qty > 20 and looks like typical weight (250, 500, 1000), default to 1 because usually people don't buy 500 units of "Rice".
-            // 2. If 'desc' ended with specific units that match the Quantity, undo it.
-            if (parseInt(qty) > 20) {
-                // Check if the original line or desc ends with this number + weight unit
-                const weightCheck = new RegExp(qty + "\\s*(g|gr|gramos|kg|kgs|ml|cc|lb|oz)", "i");
-                if (line.match(weightCheck)) {
-                    qty = "1"; // It was a weight (e.g. 500 gr), not 500 units.
-                }
-            }
-
-            // Cleanup large barcode lookalikes
-            if (parseInt(qty) > 10000) qty = "1";
-
-            // Fix for standalone lines / Post-process Description for Units
-            if ((qty === "1" || qty === "") && !uom) {
-                const standaloneQtyRegex = /^(\d+[\.,]?\d*)\s*(cajas?|paquetes?|und|unid|bolsas?|botellas?)$/i;
-                const sqMatch = desc.match(standaloneQtyRegex);
-                if (sqMatch) {
-                    qty = sqMatch[1];
-                    uom = sqMatch[2];
-                    desc = "";
-                }
-            }
-
-            // Clean UOM if it contains garbage
+            if (parseInt(qty) > 10000) qty = "1"; // Barcode protection
             if (uom) uom = uom.replace(/[^a-zA-Z0-9\.]/g, "");
 
             if (desc.length > 0 || code.length > 0) {
                 this.addOCRRow(desc, qty || "1", code, uom);
             }
-        });
+
+            // RECURSION: If there was leftover text that looked like a product, process it!
+            if (remainder) {
+                console.log("RECURSIVE PROCESSING:", remainder);
+                // Heuristic: If remainder starts with hyphen/bullet, it's definitely a new item. 
+                // If it's just text "te huyro", treat as new line.
+                processLine(remainder);
+            }
+        };
+
+        // const lines = text.split("\n"); // Already declared at top
+        lines.forEach(line => processLine(line));
     }
 
     addOCRRow(desc = '', qty = '', code = '', uom = '') {
