@@ -3863,10 +3863,45 @@ class App {
                 ${carouselHtml}
             </div>
             
-            <div style="padding:1rem; border-top:1px solid #eee; text-align:center;">
-                 <button class="btn-primary" style="width:100%; justify-content:center;" onclick="app.closePreingresoDetails()">Cerrar</button>
+            <div style="padding:1rem; border-top:1px solid #eee; display:flex; gap:0.5rem;">
+                 <button class="btn-primary" style="background:#25D366; border:none; flex:1; justify-content:center;" onclick="app.sharePreingresoWhatsapp('${info.id}')">
+                    <i class="fa-brands fa-whatsapp"></i> WhatsApp
+                 </button>
+                 <button class="btn-secondary" style="flex:0.5; justify-content:center;" onclick="app.closePreingresoDetails()">Cerrar</button>
             </div>
                 `;
+    }
+
+    sharePreingresoWhatsapp(id) {
+        const info = this.data.movimientos.preingresos.find(p => p.id === id);
+        if (!info) return alert('No encontrado');
+
+        let text = `📋 *REPORTE PRE-INGRESO (LEVO ERP)*\n`;
+        text += `----------------------------\n`;
+        text += `📅 *Fecha:* ${info.fecha}\n`;
+        text += `🏢 *Proveedor:* ${info.proveedor}\n`;
+        text += `💰 *Monto:* ${info.monto ? 'S/ ' + info.monto : '-'}\n`;
+        text += `🏷️ *Etiqueta:* ${info.etiqueta || 'N/A'}\n`;
+        text += `📄 *Comprobante:* ${info.comprobante || 'N/A'}\n`;
+        text += `🚦 *Estado:* ${info.estado}\n`;
+        text += `----------------------------\n\n`;
+
+        if (info.comentario) {
+            text += `💬 *Observaciones:*\n"${info.comentario}"\n\n`;
+        }
+
+        if (info.fotos && info.fotos.length > 0) {
+            text += `📸 *Evidencias Adjuntas (${info.fotos.length}):*\n`;
+            info.fotos.forEach((url, index) => {
+                const optUrl = this.getOptimizedImageUrl(url);
+                text += `• Foto ${index + 1}: ${optUrl}\n`;
+            });
+        } else {
+            text += `_(Sin fotos adjuntas)_\n`;
+        }
+
+        const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+        window.open(url, '_blank');
     }
 
     async generateGuiaFromPreingreso(id) {
