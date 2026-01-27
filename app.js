@@ -869,7 +869,7 @@ class App {
                 if (!options.isBackground) {
                     console.log('Products Loaded:', Object.keys(this.data.products).length);
                     if (Object.keys(this.data.products).length === 0) {
-                        alert('Alerta: Se descargaron 0 productos. Revise la hoja de Google.');
+                        this.showToast('Alerta: Se descargaron 0 productos. Revise la hoja de Google.', 'warning');
                     }
                 }
 
@@ -892,7 +892,7 @@ class App {
                 }
             } else {
                 console.error('API Error:', result);
-                if (!options.isBackground) alert('Error del servidor: ' + (result.message || 'Desconocido'));
+                if (!options.isBackground) this.showToast('Error del servidor: ' + (result.message || 'Desconocido'), 'error');
             }
         } catch (e) {
             console.error('Error fetching products', e);
@@ -1098,8 +1098,8 @@ class App {
                                     <td style="padding:0.75rem; text-align:right;">${p.cantidad}</td>
                                     <td style="padding:0.75rem;">
                                         <button class="btn-sm" style="background:#3b82f6; color:white; border:none; padding:4px 8px; border-radius:4px;"
-                                            onclick="alert('Por favor, busca la GuÃ­a original para incluir este item o crea una nueva.')">
-                                            Ver GuÃ­a
+                                            onclick="app.showToast('Por favor, busca la Guía original para incluir este item o crea una nueva.', 'info')">
+                                            Ver Guía
                                         </button>
                                     </td>
                                 </tr>
@@ -1121,7 +1121,7 @@ class App {
 
         container.innerHTML = `
             <div style="text-align:center; padding:2rem; color:#999;">
-                <i class="fa-solid fa-spinner fa-spin"></i> Cargando AuditorÃ­a...
+                <i class="fa-solid fa-spinner fa-spin"></i> Cargando Auditoría...
             </div>
         `;
 
@@ -1145,11 +1145,11 @@ class App {
             if (pendingCount === 0) {
                 container.innerHTML = `
                     <div class="widget-header">
-                        <div class="widget-title"><i class="fa-solid fa-clipboard-check"></i> AuditorÃ­a Diaria</div>
+                        <div class="widget-title"><i class="fa-solid fa-clipboard-check"></i> Auditoría Diaria</div>
                     </div>
                     <div style="padding:1.5rem; text-align:center; color:#22c55e;">
                          <i class="fa-solid fa-check-double" style="font-size:2rem; margin-bottom:0.5rem;"></i>
-                         <p>Â¡Todo al dÃ­a!</p>
+                         <p>¡Todo al día!</p>
                     </div>
                 `;
                 return;
@@ -1157,7 +1157,7 @@ class App {
 
             container.innerHTML = `
                 <div class="widget-header">
-                    <div class="widget-title"><i class="fa-solid fa-clipboard-check"></i> AuditorÃ­a Diaria</div>
+                    <div class="widget-title"><i class="fa-solid fa-clipboard-check"></i> Auditoría Diaria</div>
                     <div style="font-size:0.8rem; color:#888;">${new Date().toLocaleDateString()}</div>
                 </div>
                 <div style="padding:1rem; text-align:center;">
@@ -1173,7 +1173,7 @@ class App {
 
         } catch (e) {
             console.error(e);
-            container.innerHTML = '<div style="padding:1rem; color:red;">Error al cargar auditorÃ­a</div>';
+            container.innerHTML = `<div style="padding:1rem; color:red;">Error al cargar auditoría: ${e.message}</div>`;
         }
     }
 
