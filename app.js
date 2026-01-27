@@ -193,12 +193,12 @@ class App {
             if (result.status === 'success') {
                 this.setUser(result.user);
             } else {
-                alert(result.message || 'Error al iniciar sesiÃ³n');
+                this.showToast(result.message || 'Error al iniciar sesión', 'error');
             }
 
         } catch (error) {
             console.error(error);
-            alert('Error : ' + error.message);
+            this.showToast('Error: ' + error.message, 'error');
         } finally {
             submitBtn.innerHTML = originalBtnText;
             submitBtn.disabled = false;
