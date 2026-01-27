@@ -569,7 +569,7 @@ class App {
 
         // Update list to show "Cleared" state immediately
         const list = document.getElementById('notification-list');
-        if (list) list.innerHTML = '<div style="padding:10px; color:#999; font-size:0.85rem; text-align:center;">LeÃ­do. Sin nuevas alertas.</div>';
+        if (list) list.innerHTML = '<div style="padding:10px; color:#999; font-size:0.85rem; text-align:center;">Leído. Sin nuevas alertas.</div>';
     }
 
 
@@ -749,7 +749,7 @@ class App {
      * DATA LOADING
      */
     async preloadAllData() {
-        console.log("ðŸš€ Preloading Data for All Modules...");
+        console.log("🚀 Preloading Data for All Modules...");
 
         // Parallel requests (Fire & Forget style where appropriate)
         const p1 = this.fetchProducts({ isBackground: true });
@@ -760,7 +760,7 @@ class App {
 
         // We do not await here to block UI, but we track them
         Promise.allSettled([p1, p2, p3, p4, p5]).then(() => {
-            console.log("âœ… All Modules Preloaded & Cached");
+            console.log("✅ All Modules Preloaded & Cached");
         });
     }
 
@@ -1240,11 +1240,15 @@ class App {
                 icon = 'fa-circle-exclamation';
             }
 
+            // Clickable - Pass params safely
             return `
-                <div class="expiration-item ${alertClass}">
+                <div class="expiration-item ${alertClass}" style="cursor:pointer;" 
+                     onclick="app.openExpirationDetail('${item.codigo}', '${item.idGuia || ''}', '${item.fechaVencimiento}')"
+                     title="Ver análisis FIFO de vencimiento">
                     <div style="overflow:hidden;">
                         <div style="font-size:0.9rem; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${product.desc}</div>
                         <div style="font-size:0.8rem; opacity:0.8;">Code: ${item.codigo}</div>
+                        <div style="font-size:0.75rem; color:#444;">Guía: ${item.idGuia || 'N/A'}</div>
                     </div>
                     <div style="text-align:right; min-width:80px;">
                         <div style="font-size:0.85rem; font-weight:bold;"><i class="fa-solid ${icon}"></i> ${label}</div>
@@ -1257,6 +1261,9 @@ class App {
         container.innerHTML = `
             <div class="widget-header">
                 <div class="widget-title"><i class="fa-solid fa-calendar-xmark"></i> Próximos Vencimientos</div>
+                <div style="font-size:0.8rem; color:#666;">
+                    <i class="fa-solid fa-circle-info"></i> Click para auditar
+                </div>
             </div>
             <div class="expiration-list">
                 ${listHtml}
@@ -6784,11 +6791,11 @@ class App {
                 </div>
 
                 <div class="provider-info-row">
-                    <span class="provider-label"><i class="fa-regular fa-calendar-check" style="margin-right:5px;"></i> DÃ­a Pedido:</span>
+                    <span class="provider-label"><i class="fa-regular fa-calendar-check" style="margin-right:5px;"></i> Día Pedido:</span>
                     <span class="provider-pill ${orderClass}">${diaPedido}</span>
                 </div>
                 <div class="provider-info-row">
-                    <span class="provider-label"><i class="fa-solid fa-truck-ramp-box" style="margin-right:5px;"></i> DÃ­a Entrega:</span>
+                    <span class="provider-label"><i class="fa-solid fa-truck-ramp-box" style="margin-right:5px;"></i> Día Entrega:</span>
                     <span class="provider-pill ${deliveryClass}">${diaEntrega}</span>
                 </div>
             </div>
@@ -7709,7 +7716,7 @@ class App {
             }
 
                 <div class="drawer-section">
-                    <label>CÃ³digo</label>
+                    <label>Código</label>
                     <div class="drawer-value main">${item.codigo}</div>
                 </div>
 
@@ -7731,7 +7738,7 @@ class App {
                         <div class="drawer-value" style="color:${stockReal < stockMin ? '#ef4444' : '#22c55e'}">${stockReal}</div>
                     </div>
                     <div class="drawer-section">
-                        <label>Stock MÃ­nimo</label>
+                        <label>Stock Mínimo</label>
                         <div class="drawer-value" style="color:#aaa;">${stockMin}</div>
                     </div>
                 </div>
@@ -8228,7 +8235,7 @@ class App {
                 <!-- Header -->
                 <div style="flex:0 0 auto; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:1rem;">
                     <div>
-                        <h2 style="margin:0; color:var(--primary-color);"><i class="fa-solid fa-wand-magic-sparkles"></i> EscÃ¡ner de Tickets (OCR)</h2>
+                        <h2 style="margin:0; color:var(--primary-color);"><i class="fa-solid fa-wand-magic-sparkles"></i> Escáner de Tickets (OCR)</h2>
                         <p style="margin:0.25rem 0 0; color:#666; font-size:0.9rem;">Convierte fotos de WhatsApp o Excel en tickets imprimibles.</p>
                     </div>
                      <div style="display:flex; gap:0.5rem;">
@@ -8981,6 +8988,177 @@ class App {
             container.innerHTML = '<div style="color:red; padding:1rem;">Error de conexión</div>';
         }
     }
+
+    // --- FIFO ANALYSIS & EXPIRATION LOGIC ---
+
+    openExpirationDetail(code, guiaId, expDate) {
+        const product = this.data.products[code];
+        if (!product) return this.showToast('Producto no encontrado', 'error');
+
+        // 1. Calculate FIFO Status
+        const analysis = this.calculateStockFIFO(code);
+
+        // 2. Identify the specific batch user clicked
+        const clickedBatch = analysis.allBatches.find(b => b.idGuia === guiaId && b.fechaVencimiento === expDate);
+
+        let verdictHtml = '';
+
+        // If we can't find exact match, maybe dates differ slightly?
+        // Fallback: look for match by Guia ID
+        const targetBatch = clickedBatch || analysis.allBatches.find(b => b.idGuia === guiaId);
+
+        if (targetBatch) {
+            if (targetBatch.status === 'SOLD') {
+                verdictHtml = `
+                    <div style="background:#dcfce7; border:1px solid #22c55e; padding:1rem; border-radius:8px; margin-bottom:1rem;">
+                        <h4 style="margin:0; color:#15803d;"><i class="fa-solid fa-circle-check"></i> Este lote ya debió salir</h4>
+                        <p style="margin:0.5rem 0 0; color:#166534; font-size:0.9rem;">
+                            Según el análisis PEPS (FIFO), estas unidades fueron vendidas/despachadas hace tiempo. 
+                            Si aún están en físico, significa que salieron productos más nuevos antes que estos.
+                        </p>
+                    </div>
+                `;
+            } else if (targetBatch.status === 'ACTIVE') {
+                verdictHtml = `
+                    <div style="background:#fee2e2; border:1px solid #ef4444; padding:1rem; border-radius:8px; margin-bottom:1rem;">
+                        <h4 style="margin:0; color:#991b1b;"><i class="fa-solid fa-triangle-exclamation"></i> Este lote está en Stock (Vencido)</h4>
+                        <p style="margin:0.5rem 0 0; color:#7f1d1d; font-size:0.9rem;">
+                            El análisis indica que estas unidades siguen en inventario y han expirado.
+                            Recomendación: Mermar o retirar inmediatamente.
+                        </p>
+                    </div>
+                `;
+            } else {
+                verdictHtml = `
+                    <div style="background:#f3f4f6; border:1px solid #ccc; padding:1rem; border-radius:8px; margin-bottom:1rem;">
+                         <h4 style="margin:0; color:#444;"><i class="fa-solid fa-circle-info"></i> Lote Parcialmente Activo</h4>
+                         <p style="margin:0.5rem 0 0; font-size:0.9rem;">
+                            Parte de este lote ya salió, pero aún queda un remanente en stock.
+                        </p>
+                    </div>
+                `;
+            }
+        } else {
+            verdictHtml = `<div style="padding:1rem; color:#888;">No se encontró información detallada del lote en el historial.</div>`;
+        }
+
+
+        const html = `
+            <div style="padding:1rem;">
+                <h3 style="margin-top:0;"><i class="fa-solid fa-magnifying-glass-chart"></i> Auditoría PEPS (FIFO)</h3>
+                <div style="font-size:0.9rem; color:#666; margin-bottom:1.5rem;">
+                    Producto: <strong>${product.desc}</strong> <br>
+                    Stock Actual: <strong>${analysis.currentStock}</strong>
+                </div>
+
+                ${verdictHtml}
+
+                <h4 style="border-bottom:1px solid #eee; padding-bottom:0.5rem;">Historial de Ingresos (Lotes)</h4>
+                <div class="custom-scrollbar" style="max-height:300px; overflow-y:auto;">
+                    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                        <thead style="background:#f9fafb; position:sticky; top:0;">
+                            <tr>
+                                <th style="text-align:left; padding:0.5rem;">Fecha</th>
+                                <th style="text-align:left; padding:0.5rem;">Guía</th>
+                                <th style="text-align:right; padding:0.5rem;">Cant.</th>
+                                <th style="text-align:center; padding:0.5rem;">Estado Teórico</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${analysis.allBatches.map(b => {
+            let style = '';
+            let icon = '';
+
+            if (b.status === 'SOLD') {
+                style = 'color:#999; text-decoration:line-through;';
+                icon = '<span class="badge badge-gray" style="background:#f3f4f6; padding:2px 6px; border-radius:4px; font-size:0.7rem;">Vendido</span>';
+            } else if (b.status === 'ACTIVE') {
+                style = 'font-weight:bold; color:#000; background:#f0fdf4;';
+                icon = '<span class="badge badge-green" style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:0.7rem;">En Stock</span>';
+            } else {
+                style = 'font-weight:bold; color:#000; background:#fff7ed;';
+                icon = '<span class="badge badge-orange" style="background:#ffedd5; color:#9a3412; padding:2px 6px; border-radius:4px; font-size:0.7rem;">Parcial</span>';
+            }
+
+            // Highlight target
+            if (targetBatch && b.idGuia === targetBatch.idGuia) style += 'border: 2px solid var(--primary-color);';
+
+            return `
+                                    <tr style="border-bottom:1px solid #eee; ${style}">
+                                        <td style="padding:0.5rem;">${b.fecha}</td>
+                                        <td style="padding:0.5rem;">${b.idGuia} <br><div style="font-size:0.75rem; color:#666;">${b.proveedor || ''}</div></td>
+                                        <td style="text-align:right; padding:0.5rem;">${b.cantidad}</td>
+                                        <td style="text-align:center; padding:0.5rem;">${icon}</td>
+                                    </tr>
+                                `;
+        }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        this.openModal(html);
+    }
+
+    calculateStockFIFO(code) {
+        // 1. Get current Stock
+        let currentStock = 0;
+        const prod = this.data.products[code];
+        if (prod) currentStock = Number(prod.stock) || 0;
+
+        // 2. Get all INGRESOS (Source of Truth for Batches)
+        // We assume 'guias' contains headers and 'detalles' contains items.
+        // We need to JOIN them.
+
+        let batches = [];
+
+        if (this.data.movimientos && this.data.movimientos.detalles) {
+            batches = this.data.movimientos.detalles
+                .filter(d => String(d.codigo) === String(code)) // Filter by product
+                .map(d => {
+                    // Find Header for Date and Provider
+                    const header = this.data.movimientos.guias.find(g => g.id === d.idGuia);
+                    // If header not found (maybe Preingreso without Guia?), skip or fallback
+                    if (!header || header.tipo !== 'INGRESO') return null;
+
+                    return {
+                        idGuia: d.idGuia,
+                        fecha: header.fecha,
+                        proveedor: header.proveedor,
+                        cantidad: Number(d.cantidad),
+                        fechaVencimiento: d.fechaVencimiento,
+                        timestamp: new Date(header.fecha).getTime() // For sorting
+                    };
+                })
+                .filter(b => b !== null)
+                .sort((a, b) => b.timestamp - a.timestamp); // NEWEST FIRST to work backwards
+        }
+
+        // 3. Walk Backwards from Stock to determine ACTIVE batches
+        let remainingStockToCover = currentStock;
+
+        // Add Status to batches
+        batches.forEach(b => {
+            if (remainingStockToCover <= 0) {
+                b.status = 'SOLD'; // Already sold via FIFO (First In First OUT)
+            } else if (remainingStockToCover >= b.cantidad) {
+                b.status = 'ACTIVE'; // Fully in stock
+                remainingStockToCover -= b.cantidad;
+            } else {
+                b.status = 'PARTIAL'; // Split
+                b.remaining = remainingStockToCover;
+                remainingStockToCover = 0;
+            }
+        });
+
+        // 4. Return formatted data
+        // Sort Oldest -> Newest for display per user request logic (entry order)
+        return {
+            currentStock: currentStock,
+            allBatches: batches.sort((a, b) => a.timestamp - b.timestamp)
+        };
+    }
 }
 // Initialize App
 
@@ -8988,7 +9166,7 @@ try {
     window.app = new App();
 } catch (err) {
     console.error('Critical Init Error:', err);
-    alert('Error crÃ­tico al iniciar la aplicaciÃ³n: ' + err.message);
+    alert('Error crítico al iniciar la aplicación: ' + err.message);
 }
 
 
