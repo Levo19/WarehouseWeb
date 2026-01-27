@@ -119,7 +119,7 @@ class App {
         this.navLinks.forEach(link => {
             link.addEventListener('click', (e) => {
                 const targetId = link.dataset.target;
-                console.log(`ðŸ–±ï¸ CLICK DETECTED on Nav Link: ${targetId}`);
+                console.log(`ðŸ–± CLICK DETECTED on Nav Link: ${targetId}`);
                 e.preventDefault();
 
                 // Force Overlay Hide (Defensive)
@@ -392,7 +392,7 @@ class App {
 
         // ROBUST FINDER: If ID lookup failed, find by Icon Class
         if (!bell) {
-            console.warn("âš ï¸ Bell ID missing - searching by Icon...");
+            console.warn("âš ï¸ Bell ID missing - searching by Icon...");
             const bellIcon = document.querySelector('.fa-bell');
             if (bellIcon) {
                 bell = bellIcon.closest('button');
@@ -3896,7 +3896,7 @@ class App {
         text += `ðŸ“… *Fecha:* ${info.fecha}\n`;
         text += `ðŸ¢ *Proveedor:* ${info.proveedor}\n`;
         text += `ðŸ’° *Monto:* ${info.monto ? 'S/ ' + info.monto : '-'}\n`;
-        text += `ðŸ·ï¸ *Etiqueta:* ${info.etiqueta || 'N/A'}\n`;
+        text += `ðŸ· *Etiqueta:* ${info.etiqueta || 'N/A'}\n`;
         text += `ðŸ“„ *Comprobante:* ${info.comprobante || 'N/A'}\n`;
         text += `ðŸš¦ *Estado:* ${info.estado}\n`;
         text += `----------------------------\n\n`;
@@ -5600,7 +5600,7 @@ class App {
                 </div>
 
                  ${outOfStock.length > 0 ? `
-                    <div class="section-title">âš ï¸ SIN STOCK</div>
+                    <div class="section-title">âš ï¸ SIN STOCK</div>
                     <div id="oos-list">
                          ${outOfStock.map(i => `
                             <div class="item oos">
@@ -8990,6 +8990,7 @@ try {
     console.error('Critical Init Error:', err);
     alert('Error crÃ­tico al iniciar la aplicaciÃ³n: ' + err.message);
 }
+
 
 
 
