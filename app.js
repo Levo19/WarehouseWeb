@@ -636,7 +636,7 @@ class App {
             'movements': 'Movimientos',
             'dispatch': 'Despachos',
             'prepedidos': 'Prepedidos - Proveedores',
-            'users': 'GestiÃ³n de Usuarios'
+            'users': 'Gestión de Usuarios'
         };
         this.pageTitle.textContent = titles[viewName] || 'LEVO ERP';
 
@@ -741,7 +741,7 @@ class App {
                 container.innerHTML = `<p style="color:red;"> Error al cargar: ${result.message}</p> `;
             }
         } catch (error) {
-            container.innerHTML = `<p style="color:red;"> Error de conexiÃ³n: ${error.message}</p> `;
+            container.innerHTML = `<p style="color:red;"> Error de conexión: ${error.message}</p> `;
         }
     }
 
@@ -7427,7 +7427,7 @@ class App {
 
         } catch (e) {
             console.error(e);
-            if (container && !isBackground) container.innerHTML = `<div class="error-msg">Error de conexiÃ³n</div>`;
+            if (container && !isBackground) container.innerHTML = `<div class="error-msg">Error de conexión</div>`;
         }
     }
 
