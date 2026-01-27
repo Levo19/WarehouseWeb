@@ -392,12 +392,12 @@ class App {
 
         // ROBUST FINDER: If ID lookup failed, find by Icon Class
         if (!bell) {
-            console.warn("âš ï¸ Bell ID missing - searching by Icon...");
+            console.warn("⚠️ Bell ID missing - searching by Icon...");
             const bellIcon = document.querySelector('.fa-bell');
             if (bellIcon) {
                 bell = bellIcon.closest('button');
                 if (bell) {
-                    console.log("âœ… Found Bell Button via Icon! Assigning ID...");
+                    console.log("✅ Found Bell Button via Icon! Assigning ID...");
                     bell.id = 'header-notification-bell'; // Fix the DOM
                     bell.style.position = 'relative';
 
@@ -424,12 +424,12 @@ class App {
         if (!bell || !badge || !list) return;
 
         if (!bell) {
-            console.error("âŒ CRITICAL: BELL BUTTON NOT FOUND EVEN BY ICON");
+            console.error("❌ CRITICAL: BELL BUTTON NOT FOUND EVEN BY ICON");
             return;
         }
 
         if (!badge || !list) {
-            console.error("âŒ STILL MISSING ELEMENTS - ABORTING");
+            console.error("❌ STILL MISSING ELEMENTS - ABORTING");
             return;
         }
 
@@ -457,7 +457,7 @@ class App {
         }
 
         if (!badge || !list) {
-            console.error("âŒ MISSING NOTIFICATION DOM ELEMENTS - RETURNING");
+            console.error("❌ MISSING NOTIFICATION DOM ELEMENTS - RETURNING");
             return;
         }
 
@@ -481,7 +481,7 @@ class App {
         if (effectiveCount > 0 && count > lastCount) {
             const diff = count - lastCount;
             // Only toast if meaningful increase
-            if (diff > 0) this.showToast(`Â¡${diff} Nuevo(s) Producto(s) Listo(s)!`, 'success');
+            if (diff > 0) this.showToast(`¡${diff} Nuevo(s) Producto(s) Listo(s)!`, 'success');
         }
 
         // Always update this for the "Next" delta check
@@ -504,7 +504,7 @@ class App {
             list.innerHTML = `
                 <div style="padding:8px; border-bottom:1px solid #eee; text-align:right;">
                     <button style="font-size:0.75rem; color:#3b82f6; background:none; border:none; cursor:pointer;" onclick="app.clearNotifications()">
-                        Marcar todo como leÃ­do
+                        Marcar todo como leído
                     </button>
                 </div>
                 ${prods.map(p => `
@@ -513,7 +513,7 @@ class App {
                      onmouseover="this.style.backgroundColor='#f8fafc'"
                      onmouseout="this.style.backgroundColor='white'">
                     <div style="font-size:0.85rem; font-weight:bold; color:#1e293b;">
-                        <i class="fa-solid fa-check-circle" style="color:#16a34a; margin-right:4px;"></i> Â¡Producto Listo!
+                        <i class="fa-solid fa-check-circle" style="color:#16a34a; margin-right:4px;"></i> ¡Producto Listo!
                     </div>
                     <div style="font-size:0.8rem; color:#475569; padding-left:1.2rem;">
                         <strong>${p.descripcion}</strong> (${p.cantidad} un.)<br>
@@ -724,7 +724,7 @@ class App {
                         <table style="width: 100%; text-align: left; border-collapse: collapse;">
                             <thead>
                                 <tr style="border-bottom: 2px solid #eee; color: #666;">
-                                    <th style="padding: 1rem;">CÃ“DIGO</th>
+                                    <th style="padding: 1rem;">CÓDIGO</th>
                                     <th style="padding: 1rem;">CANTIDAD</th>
                                     <th style="padding: 1rem;">FECHA</th>
                                     <th style="padding: 1rem;">USUARIO</th>
@@ -1226,7 +1226,7 @@ class App {
 
             let alertClass = 'alert-info';
             let icon = 'fa-clock';
-            let label = `${days} dÃ­as`;
+            let label = `${days} días`;
 
             if (days < 0) {
                 alertClass = 'alert-critical';
@@ -1256,7 +1256,7 @@ class App {
 
         container.innerHTML = `
             <div class="widget-header">
-                <div class="widget-title"><i class="fa-solid fa-calendar-xmark"></i> PrÃ³ximos Vencimientos</div>
+                <div class="widget-title"><i class="fa-solid fa-calendar-xmark"></i> Próximos Vencimientos</div>
             </div>
             <div class="expiration-list">
                 ${listHtml}
@@ -1316,7 +1316,7 @@ class App {
                     <div class="search-bar-header">
                         <i class="fa-solid fa-magnifying-glass search-icon"></i>
                         <input type="text" id="dispatch-search-input" placeholder="Buscar producto..." onkeyup="window.app.filterDispatchView(this.value)" inputmode="search" enterkeyhint="search">
-                        <i class="fa-solid fa-barcode barcode-icon" title="Escanear con CÃ¡mara" onclick="window.app.triggerBarcodeScan()"></i>
+                        <i class="fa-solid fa-barcode barcode-icon" title="Escanear con Cámara" onclick="window.app.triggerBarcodeScan()"></i>
                     </div>
                     <div class="client-buttons-group">
                         ${buttonsHtml}
@@ -2351,7 +2351,7 @@ class App {
 
         headerActions.innerHTML = `
                 <div class="header-tab-group">
-                <button id="btn-mov-guias" class="btn-header-tab active" onclick="app.switchMovTab('guias')">GuÃ­as</button>
+                <button id="btn-mov-guias" class="btn-header-tab active" onclick="app.switchMovTab('guias')">Guías</button>
                 <button id="btn-mov-preingresos" class="btn-header-tab" onclick="app.switchMovTab('preingresos')">Preingresos</button>
             </div>
                 `;
@@ -2391,7 +2391,7 @@ class App {
         const container = document.getElementById('guias-list-scroll');
         const CACHE_KEY = 'warehouse_movimientos_data';
 
-        console.log(`ðŸ”„ LOAD DATASOURCE START(Background = ${isBackground})`);
+        console.log(`🔄 LOAD DATASOURCE START(Background = ${isBackground})`);
 
         // 1. Try Cache First (Fast Load)
         if (!isBackground) {
