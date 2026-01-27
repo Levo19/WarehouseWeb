@@ -615,6 +615,9 @@ class App {
 
     // New Entry point for navigation
     navigateTo(viewName) {
+        // Cleanup active modals
+        this.closeModal();
+
         // Cleanup global listeners (e.g. Paste)
         if (this.pasteHandler) {
             document.removeEventListener('paste', this.pasteHandler);
@@ -3569,6 +3572,24 @@ class App {
         const provider = document.getElementById('edit-guia-provider').value;
         const btn = document.getElementById('btn-save-guia');
 
+        // --- VALIDATION: Expiration Dates ---
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        for (const p of this.editingDetails) {
+            if (p.fechaVencimiento) {
+                // Parse date (YYYY-MM-DD)
+                const [y, m, d] = p.fechaVencimiento.split('-').map(Number);
+                const expDate = new Date(y, m - 1, d); // Month is 0-indexed
+
+                if (expDate < today) {
+                    alert(`Error: El producto ${p.codigo} tiene una fecha de vencimiento anterior a hoy (${p.fechaVencimiento}). No se puede ingresar producto vencido.`);
+                    return;
+                }
+            }
+        }
+        // ------------------------------------
+
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
 
@@ -3630,7 +3651,7 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                alert('GuÃ­a actualizada correctamente');
+                alert('Guía actualizada correctamente');
                 // Reload Data (Will overwrite optimistic stock with server truth, preventing drift)
                 await this.loadMovimientosData();
                 // Return to view mode (Refresh detail panel with new data)
@@ -4934,6 +4955,26 @@ class App {
 
         // Disable ALL save buttons to prevent double-click
         const buttons = document.querySelectorAll('.save-mobile-btn, .modal-footer .btn-primary');
+
+        // --- VALIDATION: Expiration Dates ---
+        if (type === 'INGRESO') {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            for (const p of this.tempGuiaProducts) {
+                if (p.fechaVencimiento) {
+                    const [y, m, d] = p.fechaVencimiento.split('-').map(Number);
+                    const expDate = new Date(y, m - 1, d);
+
+                    if (expDate < today) {
+                        alert(`Error: El producto ${p.codigo} tiene una fecha de vencimiento anterior a hoy (${p.fechaVencimiento}).`);
+                        return;
+                    }
+                }
+            }
+        }
+        // ------------------------------------
+
         buttons.forEach(b => {
             b.disabled = true;
             b.dataset.originalText = b.innerHTML;
@@ -9003,65 +9044,69 @@ class App {
 
         let verdictHtml = '';
 
-        // If we can't find exact match, maybe dates differ slightly?
-        // Fallback: look for match by Guia ID
+        // Match Target
         const targetBatch = clickedBatch || analysis.allBatches.find(b => b.idGuia === guiaId);
 
         if (targetBatch) {
             if (targetBatch.status === 'SOLD') {
                 verdictHtml = `
-                    <div style="background:#dcfce7; border:1px solid #22c55e; padding:1rem; border-radius:8px; margin-bottom:1rem;">
-                        <h4 style="margin:0; color:#15803d;"><i class="fa-solid fa-circle-check"></i> Este lote ya debió salir</h4>
-                        <p style="margin:0.5rem 0 0; color:#166534; font-size:0.9rem;">
-                            Según el análisis PEPS (FIFO), estas unidades fueron vendidas/despachadas hace tiempo. 
-                            Si aún están en físico, significa que salieron productos más nuevos antes que estos.
-                        </p>
+                    <div style="background:#f8f9fa; border:1px solid #ddd; padding:1.2rem; border-radius:8px; margin-bottom:1.5rem; text-align:center;">
+                        <h4 style="margin:0; color:#444; font-size:1.1rem;"><i class="fa-solid fa-check-circle" style="color:#22c55e;"></i> Stock Correcto (Teórico)</h4>
+                        <div style="margin-top:0.5rem; color:#666; font-size:0.9rem;">
+                            Según PEPS, este lote ya se vendió. Si físicamente no está, todo está en orden.
+                        </div>
                     </div>
                 `;
             } else if (targetBatch.status === 'ACTIVE') {
                 verdictHtml = `
-                    <div style="background:#fee2e2; border:1px solid #ef4444; padding:1rem; border-radius:8px; margin-bottom:1rem;">
-                        <h4 style="margin:0; color:#991b1b;"><i class="fa-solid fa-triangle-exclamation"></i> Este lote está en Stock (Vencido)</h4>
-                        <p style="margin:0.5rem 0 0; color:#7f1d1d; font-size:0.9rem;">
-                            El análisis indica que estas unidades siguen en inventario y han expirado.
-                            Recomendación: Mermar o retirar inmediatamente.
-                        </p>
+                    <div style="background:#fff1f2; border:1px solid #fda4af; padding:1.2rem; border-radius:8px; margin-bottom:1.5rem; text-align:center;">
+                        <h4 style="margin:0; color:#e11d48; font-size:1.1rem;"><i class="fa-solid fa-triangle-exclamation"></i> Alerta: Vencido en Stock</h4>
+                        <div style="margin-top:0.5rem; color:#9f1239; font-size:0.9rem;">
+                            Según análisis PEPS, este lote sigue en tu almacén y está vencido.
+                        </div>
+                        <div style="margin-top:0.5rem; font-weight:bold; color:#be123c;">
+                            Acción Recomendada: Retirar / Mermar
+                        </div>
                     </div>
                 `;
             } else {
                 verdictHtml = `
-                    <div style="background:#f3f4f6; border:1px solid #ccc; padding:1rem; border-radius:8px; margin-bottom:1rem;">
-                         <h4 style="margin:0; color:#444;"><i class="fa-solid fa-circle-info"></i> Lote Parcialmente Activo</h4>
-                         <p style="margin:0.5rem 0 0; font-size:0.9rem;">
-                            Parte de este lote ya salió, pero aún queda un remanente en stock.
-                        </p>
+                    <div style="background:#fff7ed; border:1px solid #fed7aa; padding:1.2rem; border-radius:8px; margin-bottom:1.5rem; text-align:center;">
+                         <h4 style="margin:0; color:#9a3412; font-size:1.1rem;"><i class="fa-solid fa-circle-exclamation"></i> Lote Parcial</h4>
+                         <div style="margin-top:0.5rem; color:#c2410c; font-size:0.9rem;">
+                            Quedan unidades de este lote por vender. Revisar prioridad.
+                        </div>
                     </div>
                 `;
             }
         } else {
-            verdictHtml = `<div style="padding:1rem; color:#888;">No se encontró información detallada del lote en el historial.</div>`;
+            verdictHtml = `<div style="padding:1rem; color:#888; text-align:center;">Información del lote no encontrada en historial.</div>`;
         }
 
 
         const html = `
-            <div style="padding:1rem;">
-                <h3 style="margin-top:0;"><i class="fa-solid fa-magnifying-glass-chart"></i> Auditoría PEPS (FIFO)</h3>
-                <div style="font-size:0.9rem; color:#666; margin-bottom:1.5rem;">
-                    Producto: <strong>${product.desc}</strong> <br>
-                    Stock Actual: <strong>${analysis.currentStock}</strong>
+            <div style="padding:0rem; position:relative;">
+                <button onclick="app.closeModal()" style="position:absolute; top:0; right:0; background:none; border:none; font-size:1.5rem; color:#666; cursor:pointer; padding:0.5rem 1rem;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+
+                <h3 style="margin-top:0; padding-right:2rem; font-size:1.3rem; margin-bottom:0.0rem;">Auditoría PEPS</h3>
+                <div style="font-size:0.95rem; color:#555; margin-bottom:1.5rem; border-bottom:1px solid #eee; padding-bottom:1rem;">
+                    <div>Producto: <strong style="color:#000;">${product.desc}</strong></div>
+                    <div>Stock Actual: <strong style="color:var(--primary-color); font-size:1.1rem;">${analysis.currentStock}</strong> un.</div>
                 </div>
 
                 ${verdictHtml}
 
-                <h4 style="border-bottom:1px solid #eee; padding-bottom:0.5rem;">Historial de Ingresos (Lotes)</h4>
-                <div class="custom-scrollbar" style="max-height:300px; overflow-y:auto;">
+                <h4 style="font-size:1rem; margin-bottom:0.8rem; color:#333;">Historial de Lotes (Ingresos)</h4>
+                <div class="custom-scrollbar" style="max-height:250px; overflow-y:auto; border:1px solid #eee; border-radius:6px;">
                     <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
-                        <thead style="background:#f9fafb; position:sticky; top:0;">
+                        <thead style="background:#f9fafb; position:sticky; top:0; z-index:1;">
                             <tr>
-                                <th style="text-align:left; padding:0.5rem;">Fecha</th>
-                                <th style="text-align:left; padding:0.5rem;">Guía</th>
-                                <th style="text-align:right; padding:0.5rem;">Cant.</th>
-                                <th style="text-align:center; padding:0.5rem;">Estado Teórico</th>
+                                <th style="text-align:left; padding:0.75rem; color:#666; font-weight:600;">Fecha Ingreso</th>
+                                <th style="text-align:left; padding:0.75rem; color:#666; font-weight:600;">Guía</th>
+                                <th style="text-align:right; padding:0.75rem; color:#666; font-weight:600;">Cant. Inicial</th>
+                                <th style="text-align:center; padding:0.75rem; color:#666; font-weight:600;">Estado</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -9070,25 +9115,32 @@ class App {
             let icon = '';
 
             if (b.status === 'SOLD') {
-                style = 'color:#999; text-decoration:line-through;';
-                icon = '<span class="badge badge-gray" style="background:#f3f4f6; padding:2px 6px; border-radius:4px; font-size:0.7rem;">Vendido</span>';
+                style = 'color:#aaa; background:#f9fafb;';
+                icon = '<span style="color:#888; font-size:0.75rem; border:1px solid #ddd; padding:2px 6px; border-radius:4px;">Agotado</span>';
             } else if (b.status === 'ACTIVE') {
-                style = 'font-weight:bold; color:#000; background:#f0fdf4;';
-                icon = '<span class="badge badge-green" style="background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:0.7rem;">En Stock</span>';
+                style = 'font-weight:bold; color:#be123c; background:#fff1f2;';
+                icon = '<span style="color:#e11d48; font-weight:bold; font-size:0.75rem; background:white; border:1px solid #fda4af; padding:2px 6px; border-radius:4px;">En Stock</span>';
             } else {
-                style = 'font-weight:bold; color:#000; background:#fff7ed;';
-                icon = '<span class="badge badge-orange" style="background:#ffedd5; color:#9a3412; padding:2px 6px; border-radius:4px; font-size:0.7rem;">Parcial</span>';
+                style = 'font-weight:bold; color:#c2410c; background:#fff7ed;';
+                icon = '<span style="color:#ea580c; font-weight:bold; font-size:0.75rem; background:white; border:1px solid #fed7aa; padding:2px 6px; border-radius:4px;">Parcial</span>';
             }
 
             // Highlight target
-            if (targetBatch && b.idGuia === targetBatch.idGuia) style += 'border: 2px solid var(--primary-color);';
+            if (targetBatch && b.idGuia === targetBatch.idGuia) {
+                style += 'border-left: 4px solid var(--primary-color);';
+            } else {
+                style += 'border-left: 4px solid transparent;';
+            }
 
             return `
                                     <tr style="border-bottom:1px solid #eee; ${style}">
-                                        <td style="padding:0.5rem;">${b.fecha}</td>
-                                        <td style="padding:0.5rem;">${b.idGuia} <br><div style="font-size:0.75rem; color:#666;">${b.proveedor || ''}</div></td>
-                                        <td style="text-align:right; padding:0.5rem;">${b.cantidad}</td>
-                                        <td style="text-align:center; padding:0.5rem;">${icon}</td>
+                                        <td style="padding:0.75rem;">${b.fecha ? b.fecha.split(' ')[0] : 'N/A'}</td>
+                                        <td style="padding:0.75rem;">
+                                            <div style="font-family:monospace; font-size:0.8rem;">${b.idGuia.substring(0, 8)}...</div>
+                                            <div style="font-size:0.7rem; color:#888;">${b.proveedor || ''}</div>
+                                        </td>
+                                        <td style="text-align:right; padding:0.75rem;">${isNaN(b.cantidad) ? 'N/A' : b.cantidad}</td>
+                                        <td style="text-align:center; padding:0.75rem;">${icon}</td>
                                     </tr>
                                 `;
         }).join('')}
