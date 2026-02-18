@@ -1184,52 +1184,104 @@ class App {
         const container = document.getElementById('widget-expiration');
         if (!container) return;
 
-        // Logic: Find closest expirations from MOVIMIENTOS DETALLES (Ingresos only)
-        // We need 'detalles' which contains { fechaVencimiento, codigo, idGuia ... }
-        // We assume loadMovimientosData populates this.data.movimientos.detalles
-
-        const detalles = this.data.movimientos?.detalles || [];
-
-        // Filter valid dates and sorted
-        const validItems = detalles
-            .filter(d => d.fechaVencimiento && d.fechaVencimiento.length > 5) // Simple check for "YYYY-MM-DD" or "DD/MM/YYYY" content
-            .map(d => {
-                // Parse Date. Formats could be "2025-12-31" or "31/12/2025" depending on input
-                // Input type="date" returns YYYY-MM-DD
-                let dateObj = new Date(d.fechaVencimiento);
-
-                // Fallback for different formats if needed?
-                // Assuming standard ISO from input type="date" or stored formatted string.
-
-                return {
-                    ...d,
-                    dateObj: dateObj,
-                    daysLeft: Math.ceil((dateObj - new Date()) / (1000 * 60 * 60 * 24))
-                };
-            })
-            .sort((a, b) => a.dateObj - b.dateObj)
-            .slice(0, 10); // Check top 10 closest
-
-        if (validItems.length === 0) {
+        // CHECK LOADING STATE
+        if (!this.data.movimientos || !this.data.movimientos.detalles) {
             container.innerHTML = `
-                <div class="widget-header">
-                    <div class="widget-title"><i class="fa-solid fa-calendar-xmark"></i> Próximos Vencimientos</div>
-                </div>
-                <div style="padding:1rem; text-align:center; color:#22c55e;">
-                    <i class="fa-solid fa-check-circle" style="font-size:2rem; margin-bottom:0.5rem; display:block;"></i>
-                    Todo en orden
-                </div>
-            `;
+            <div class="widget-header">
+                <div class="widget-title"><i class="fa-solid fa-calendar-xmark"></i> Próximos Vencimientos</div>
+            </div>
+            <div style="padding:2rem; text-align:center; color:#999;">
+                <i class="fa-solid fa-spinner fa-spin"></i> Cargando datos...
+            </div>
+        `;
             return;
         }
 
-        const listHtml = validItems.map(item => {
-            const product = this.data.products[item.codigo] || { desc: 'Desconocido' };
+        // NEW LOGIC: Group by Product & Filter by FIFO status
+        // 1. Get unique codes from details (history)
+        const allDetalles = this.data.movimientos.detalles || [];
+        const uniqueCodes = [...new Set(allDetalles.map(d => d.codigo))];
+
+        let validAlerts = [];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Start of today for clean diff
+
+        uniqueCodes.forEach(code => {
+            // A. Run FIFO Analysis for this product
+            const analysis = this.calculateStockFIFO(code);
+
+            // B. Filter only ACTIVE or PARTIAL batches (Meaning physically present)
+            const activeBatches = analysis.allBatches.filter(b => b.status === 'ACTIVE' || b.status === 'PARTIAL');
+
+            // If no active batches, it means stock is 0 (or all sold out). No alert needed.
+            if (activeBatches.length === 0) return;
+
+            // C. Check for Expiration among these ACTIVE batches
+            let worstBatch = null;
+            let worstDays = Infinity;
+            let activeExpiredCount = 0;
+
+            activeBatches.forEach(b => {
+                // Parse date
+                if (!b.fechaVencimiento || b.fechaVencimiento.length < 5) return;
+
+                // Handle potential different date formats if needed, but assuming standard for now
+                const expDate = new Date(b.fechaVencimiento);
+                if (isNaN(expDate)) return; // Skip invalid dates
+
+                // Calculate days left
+                const diffTime = expDate - today;
+                const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                // Threshold: Alert if <= 30 days
+                if (daysLeft <= 30) {
+                    activeExpiredCount++;
+                    // Keep the most urgent one (lowest days left)
+                    if (daysLeft < worstDays) {
+                        worstDays = daysLeft;
+                        worstBatch = { ...b, daysLeft: daysLeft };
+                    }
+                }
+            });
+
+            // D. Create Alert Object if we found at least one expiration in active stock
+            if (worstBatch) {
+                validAlerts.push({
+                    code: code,
+                    product: this.data.products[code]?.desc || 'Producto Desconocido',
+                    worstBatch: worstBatch,
+                    totalAlerts: activeExpiredCount
+                });
+            }
+        });
+
+        // 2. Sort alerts by urgency (lowest daysLeft first)
+        validAlerts.sort((a, b) => a.worstBatch.daysLeft - b.worstBatch.daysLeft);
+
+        // 3. Render Top 10
+        const topAlerts = validAlerts.slice(0, 10);
+
+        if (topAlerts.length === 0) {
+            container.innerHTML = `
+            <div class="widget-header">
+                <div class="widget-title"><i class="fa-solid fa-calendar-xmark"></i> Próximos Vencimientos</div>
+            </div>
+            <div style="padding:1rem; text-align:center; color:#22c55e;">
+                <i class="fa-solid fa-check-circle" style="font-size:2rem; margin-bottom:0.5rem; display:block;"></i>
+                Todo en orden
+            </div>
+        `;
+            return;
+        }
+
+        const listHtml = topAlerts.map(alert => {
+            const item = alert.worstBatch;
             const days = item.daysLeft;
 
             let alertClass = 'alert-info';
             let icon = 'fa-clock';
             let label = `${days} días`;
+            let countBadge = '';
 
             if (days < 0) {
                 alertClass = 'alert-critical';
@@ -1243,35 +1295,39 @@ class App {
                 icon = 'fa-circle-exclamation';
             }
 
-            // Clickable - Pass params safely
+            if (alert.totalAlerts > 1) {
+                countBadge = `<div style="font-size:0.75rem; background:#fff; color:#444; padding:2px 6px; border-radius:10px; display:inline-block; margin-top:4px; border:1px solid #ccc;">+${alert.totalAlerts - 1} lotes más</div>`;
+            }
+
             return `
-                <div class="expiration-item ${alertClass}" style="cursor:pointer;" 
-                     onclick="app.openExpirationDetail('${item.codigo}', '${item.idGuia || ''}', '${item.fechaVencimiento}')"
-                     title="Ver análisis FIFO de vencimiento">
-                    <div style="overflow:hidden;">
-                        <div style="font-size:0.9rem; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${product.desc}</div>
-                        <div style="font-size:0.8rem; opacity:0.8;">Code: ${item.codigo}</div>
-                        <div style="font-size:0.75rem; color:#444;">Guía: ${item.idGuia || 'N/A'}</div>
-                    </div>
-                    <div style="text-align:right; min-width:80px;">
-                        <div style="font-size:0.85rem; font-weight:bold;"><i class="fa-solid ${icon}"></i> ${label}</div>
-                        <div style="font-size:0.75rem;">${item.fechaVencimiento}</div>
-                    </div>
+            <div class="expiration-item ${alertClass}" style="cursor:pointer;" 
+                 onclick="app.openExpirationDetail('${alert.code}', '${item.idGuia || ''}', '${item.fechaVencimiento}')"
+                 title="Ver análisis FIFO de vencimiento">
+                <div style="overflow:hidden;">
+                    <div style="font-size:0.9rem; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${alert.product}</div>
+                    <div style="font-size:0.8rem; opacity:0.8;">Code: ${alert.code}</div>
+                    <div style="font-size:0.75rem; color:#444;">Guía: ${item.idGuia ? item.idGuia.substring(0, 8) + '...' : 'N/A'}</div>
+                    ${countBadge}
                 </div>
-            `;
+                <div style="text-align:right; min-width:80px;">
+                    <div style="font-size:0.85rem; font-weight:bold;"><i class="fa-solid ${icon}"></i> ${label}</div>
+                    <div style="font-size:0.75rem;">${item.fechaVencimiento}</div>
+                </div>
+            </div>
+        `;
         }).join('');
 
         container.innerHTML = `
-            <div class="widget-header">
-                <div class="widget-title"><i class="fa-solid fa-calendar-xmark"></i> Próximos Vencimientos</div>
-                <div style="font-size:0.8rem; color:#666;">
-                    <i class="fa-solid fa-circle-info"></i> Click para auditar
-                </div>
+        <div class="widget-header">
+            <div class="widget-title"><i class="fa-solid fa-calendar-xmark"></i> Próximos Vencimientos</div>
+            <div style="font-size:0.8rem; color:#666;">
+                <i class="fa-solid fa-circle-info"></i> Filtrado por stock
             </div>
-            <div class="expiration-list">
-                ${listHtml}
-            </div>
-        `;
+        </div>
+        <div class="expiration-list">
+            ${listHtml}
+        </div>
+    `;
     }
 
     /**
@@ -1284,7 +1340,7 @@ class App {
      */
     renderDispatchModule() {
         const container = document.getElementById('dispatch-content');
-        container.innerHTML = `<div id="zone-workspace" style="margin-top:1rem;"></div>`;
+        container.innerHTML = `< div id = "zone-workspace" style = "margin-top:1rem;" ></div > `;
 
         // 1. Calculate Unique Clients
         const clients = this.getUniqueClients();
@@ -1317,12 +1373,12 @@ class App {
         if (headerActions) {
             // Generate Buttons HTML
             const buttonsHtml = clients.map(client =>
-                `<button class="btn-zone" data-client="${client}" onclick="window.app.selectZone('${client}')">${client.toUpperCase()}</button>`
+                `< button class="btn-zone" data - client="${client}" onclick = "window.app.selectZone('${client}')" > ${client.toUpperCase()}</button > `
             ).join('');
 
             // Inject Search + Buttons + Bell (Remove Gear)
             headerActions.innerHTML = `
-                <div class="header-dispatch-toolbar">
+    < div class="header-dispatch-toolbar" >
                     <div class="search-bar-header">
                         <i class="fa-solid fa-magnifying-glass search-icon"></i>
                         <input type="text" id="dispatch-search-input" placeholder="Buscar producto..." onkeyup="window.app.filterDispatchView(this.value)" inputmode="search" enterkeyhint="search">
@@ -1331,10 +1387,10 @@ class App {
                     <div class="client-buttons-group">
                         ${buttonsHtml}
                     </div>
-                </div>
-                <!-- Bell Only, No Gear -->
-                <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
-            `;
+                </div >
+                < !--Bell Only, No Gear-- >
+    <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
+`;
 
             // Auto-Focus Search Bar
             setTimeout(() => {
@@ -1353,10 +1409,10 @@ class App {
         // Restore Default Actions
         if (headerActions) {
             headerActions.innerHTML = `
-                <div id="header-dynamic-actions"></div>
+    < div id = "header-dynamic-actions" ></div >
                 <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
                 <button class="icon-btn"><i class="fa-solid fa-gear"></i></button>
-            `;
+`;
 
             // RE-INITIALIZE NOTIFICATIONS
             // Because we just wiped the header, we must re-attach the bell logic.
@@ -1383,7 +1439,7 @@ class App {
                 // FILTER: Search in Data
                 const allEntries = Object.entries(this.data.products);
                 const filtered = allEntries.filter(([code, p]) => {
-                    const searchStr = `${p.desc} ${code} ${p.marca || ''}`.toLowerCase();
+                    const searchStr = `${p.desc} ${code} ${p.marca || ''} `.toLowerCase();
                     return searchStr.includes(term);
                 });
 
@@ -1400,7 +1456,7 @@ class App {
         // Find buttons using robust data attribute
         const buttons = document.querySelectorAll('.client-buttons-group .btn-zone');
         // Use attribute selector that works regardless of container
-        const clickedBtn = document.querySelector(`.client-buttons-group .btn-zone[data-client="${zone}"]`);
+        const clickedBtn = document.querySelector(`.client - buttons - group.btn - zone[data - client="${zone}"]`);
         const searchBar = document.querySelector('.search-bar-header');
 
         // Check if already active (DESELECT)
@@ -1433,7 +1489,7 @@ class App {
         // Visual Feedback on Button
         if (clickedBtn) {
             const originalText = clickedBtn.innerText;
-            clickedBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+            clickedBtn.innerHTML = `< i class="fa-solid fa-spinner fa-spin" ></i > `;
             clickedBtn.disabled = true;
 
             // Fetch Data
@@ -1473,11 +1529,11 @@ class App {
         // ... (existing code)
         // Directly Render Pickup/Pending View (No Tabs)
         container.innerHTML = `
-            <div class="slide-in-right" style="border-top:1px solid #eee; margin-top:1rem; padding-top:1rem;">
-                 <!-- Content Area -->
-                 <div id="zone-content"></div>
-            </div>
-        `;
+    < div class="slide-in-right" style = "border-top:1px solid #eee; margin-top:1rem; padding-top:1rem;" >
+                 < !--Content Area-- >
+    <div id="zone-content"></div>
+            </div >
+    `;
 
         this.renderZonePickup(zone, document.getElementById('zone-content'));
     }
@@ -1495,10 +1551,10 @@ class App {
 
         // Common Clients / Zones
         const quickClients = ['ZONA1', 'ZONA2', 'TIENDA', 'PERSONAL', 'OFICINA', 'MUESTRA'];
-        const clientOptions = quickClients.map(c => `<option value="${c}">${c}</option>`).join('');
+        const clientOptions = quickClients.map(c => `< option value = "${c}" > ${c}</option > `).join('');
 
         const modalHtml = `
-            <div class="modal-card" style="width:90%; max-width:400px; text-align:center; border-top: 5px solid #f59e0b;">
+    < div class="modal-card" style = "width:90%; max-width:400px; text-align:center; border-top: 5px solid #f59e0b;" >
                 <div style="position:absolute; top:-25px; left:50%; transform:translateX(-50%); background:#f59e0b; color:white; width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(245, 158, 11, 0.3); font-size:1.5rem;">
                     <i class="fa-solid fa-bolt"></i>
                 </div>
@@ -1535,8 +1591,8 @@ class App {
                         DESPACHAR <i class="fa-solid fa-paper-plane" style="margin-left:5px;"></i>
                     </button>
                 </div>
-            </div>
-        `;
+            </div >
+    `;
 
         this.openModal(modalHtml, 'qd-modal');
         setTimeout(() => document.getElementById('qd-qty').select(), 100);
@@ -1559,7 +1615,7 @@ class App {
         // Check Stock
         const product = this.data.products[code];
         if (product.stock < qty) {
-            if (!confirm(`Stock insuficiente (${product.stock}). ¿Despachar igualmente?`)) return;
+            if (!confirm(`Stock insuficiente(${product.stock}). ¿Despachar igualmente ? `)) return;
         }
 
         // Show Loading
@@ -1615,16 +1671,16 @@ class App {
     renderProductMasterList(filteredEntries = null) {
         if (!this.data.products || Object.keys(this.data.products).length === 0) {
             return `
-                <div style="text-align:center; padding:2rem; color:#666;">
-                    <i class="fa-solid fa-spinner fa-spin"></i> Cargando inventario...
-                    <div style="margin-top:1rem;">
-                        <small>¿Tarda demasiado?</small><br>
-                        <button class="btn-sm" style="margin-top:0.5rem;" onclick="app.fetchProducts()">
-                            <i class="fa-solid fa-rotate"></i> Forzar Recarga
-                        </button>
-                    </div>
-                </div>
-            `;
+    < div style = "text-align:center; padding:2rem; color:#666;" >
+        <i class="fa-solid fa-spinner fa-spin"></i> Cargando inventario...
+<div style="margin-top:1rem;">
+    <small>¿Tarda demasiado?</small><br>
+        <button class="btn-sm" style="margin-top:0.5rem;" onclick="app.fetchProducts()">
+            <i class="fa-solid fa-rotate"></i> Forzar Recarga
+        </button>
+</div>
+                </div >
+    `;
         }
 
         // 1. Prepare Entries
@@ -1641,19 +1697,19 @@ class App {
 
         // 3. Return Scaffold
         return `
-            <div style="margin-top:1rem; padding-bottom: 3rem;">
-                <div id="${gridId}" style="
+    < div style = "margin-top:1rem; padding-bottom: 3rem;" >
+        <div id="${gridId}" style="
                     display: grid;
                     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
                     gap: 1rem;
                 ">
-                     <div style="grid-column: 1 / -1; text-align:center; padding: 3rem; color:#999;">
-                        <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;"></i>
-                        <div style="margin-top:1rem;">Renderizando ${productEntries.length} productos...</div>
-                    </div>
-                </div>
+            <div style="grid-column: 1 / -1; text-align:center; padding: 3rem; color:#999;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;"></i>
+                <div style="margin-top:1rem;">Renderizando ${productEntries.length} productos...</div>
             </div>
-        `;
+        </div>
+            </div >
+    `;
     }
 
     /* --- ASYNC RENDERER --- */
