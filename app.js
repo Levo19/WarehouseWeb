@@ -9210,7 +9210,7 @@ class App {
                         idGuia: d.idGuia,
                         fecha: header.fecha,
                         proveedor: header.proveedor,
-                        cantidad: Number(d.cantidad),
+                        cantidad: typeof d.cantidad === 'string' ? parseFloat(d.cantidad.replace(',', '.')) : Number(d.cantidad),
                         fechaVencimiento: d.fechaVencimiento,
                         timestamp: new Date(header.fecha).getTime() // For sorting
                     };
