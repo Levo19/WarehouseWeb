@@ -1340,7 +1340,7 @@ class App {
      */
     renderDispatchModule() {
         const container = document.getElementById('dispatch-content');
-        container.innerHTML = `< div id = "zone-workspace" style = "margin-top:1rem;" ></div > `;
+        container.innerHTML = `<div id="zone-workspace" style="margin-top:1rem;"></div>`;
 
         // 1. Calculate Unique Clients
         const clients = this.getUniqueClients();
@@ -1373,12 +1373,12 @@ class App {
         if (headerActions) {
             // Generate Buttons HTML
             const buttonsHtml = clients.map(client =>
-                `< button class="btn-zone" data - client="${client}" onclick = "window.app.selectZone('${client}')" > ${client.toUpperCase()}</button > `
+                `<button class="btn-zone" data-client="${client}" onclick="window.app.selectZone('${client}')">${client.toUpperCase()}</button>`
             ).join('');
 
             // Inject Search + Buttons + Bell (Remove Gear)
             headerActions.innerHTML = `
-    < div class="header-dispatch-toolbar" >
+                <div class="header-dispatch-toolbar">
                     <div class="search-bar-header">
                         <i class="fa-solid fa-magnifying-glass search-icon"></i>
                         <input type="text" id="dispatch-search-input" placeholder="Buscar producto..." onkeyup="window.app.filterDispatchView(this.value)" inputmode="search" enterkeyhint="search">
@@ -1387,10 +1387,10 @@ class App {
                     <div class="client-buttons-group">
                         ${buttonsHtml}
                     </div>
-                </div >
-                < !--Bell Only, No Gear-- >
-    <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
-`;
+                </div>
+                <!-- Bell Only, No Gear -->
+                <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
+            `;
 
             // Auto-Focus Search Bar
             setTimeout(() => {
