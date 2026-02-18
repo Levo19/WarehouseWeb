@@ -299,7 +299,7 @@ class App {
                 </div>
                 <div style="padding:10px; text-align:center; border-top:1px solid #eee; background:#fff;">
                      <button style="font-size:0.85rem; color:#3b82f6; background:none; border:none; cursor:pointer; font-weight:600;" onclick="app.clearNotifications()">
-                        <i class="fa-solid fa-check-double"></i> Marcar todo como leÃ­do
+                        <i class="fa-solid fa-check-double"></i> Marcar todo como leído
                     </button>
                 </div>
                 <style>
@@ -1044,7 +1044,7 @@ class App {
                     <!-- Widget 1: Random Audit -->
                     <div id="widget-audit" class="widget-card">
                         <div style="text-align:center; padding:2rem; color:#999;">
-                            <i class="fa-solid fa-spinner fa-spin"></i> Cargando AuditorÃ­a...
+                            <i class="fa-solid fa-spinner fa-spin"></i> Cargando Auditoría...
                         </div>
                     </div>
 
@@ -1213,7 +1213,7 @@ class App {
         if (validItems.length === 0) {
             container.innerHTML = `
                 <div class="widget-header">
-                    <div class="widget-title"><i class="fa-solid fa-calendar-xmark"></i> PrÃ³ximos Vencimientos</div>
+                    <div class="widget-title"><i class="fa-solid fa-calendar-xmark"></i> Próximos Vencimientos</div>
                 </div>
                 <div style="padding:1rem; text-align:center; color:#22c55e;">
                     <i class="fa-solid fa-check-circle" style="font-size:2rem; margin-bottom:0.5rem; display:block;"></i>
@@ -1488,7 +1488,7 @@ class App {
         // Let's keep it safe.
     }
 
-    /* --- QUICK DISPATCH (Despacho RÃ¡pido) --- */
+    /* --- QUICK DISPATCH (Despacho Rápido) --- */
     openQuickDispatchModal(code) {
         const product = this.data.products[code];
         if (!product) return;
@@ -1503,7 +1503,7 @@ class App {
                     <i class="fa-solid fa-bolt"></i>
                 </div>
                 
-                <h3 style="margin-top:1.5rem; color:#d97706;">Despacho RÃ¡pido</h3>
+                <h3 style="margin-top:1.5rem; color:#d97706;">Despacho Rápido</h3>
                 
                 <div style="margin:1rem 0; text-align:left; background:#fffbeb; padding:1rem; border-radius:8px; border:1px solid #fcd34d;">
                     <div style="font-weight:bold; color:#92400e; font-size:1.1rem;">${product.desc}</div>
@@ -1523,7 +1523,7 @@ class App {
                             <button onclick="app.setQuickClient('${c}')" class="btn-sm" style="border:1px solid #ddd; background:white; color:#555;">${c}</button>
                         `).join('')}
                     </div>
-                    <input type="text" id="qd-client" placeholder="O escribe aquÃ­..." class="modern-input" style="margin-top:0.5rem;" list="list-clients-qd">
+                    <input type="text" id="qd-client" placeholder="O escribe aquí..." class="modern-input" style="margin-top:0.5rem;" list="list-clients-qd">
                     <datalist id="list-clients-qd">
                         ${this.data.clients ? this.data.clients.map(c => `<option value="${c}">`).join('') : ''}
                     </datalist>
@@ -1553,13 +1553,13 @@ class App {
         const qty = parseInt(qtyInput.value);
         const client = clientInput.value.trim();
 
-        if (isNaN(qty) || qty <= 0) return alert('Cantidad invÃ¡lida');
+        if (isNaN(qty) || qty <= 0) return alert('Cantidad inválida');
         if (!client) return alert('Debes seleccionar o escribir un destino');
 
         // Check Stock
         const product = this.data.products[code];
         if (product.stock < qty) {
-            if (!confirm(`Stock insuficiente (${product.stock}). Â¿Despachar igualmente?`)) return;
+            if (!confirm(`Stock insuficiente (${product.stock}). ¿Despachar igualmente?`)) return;
         }
 
         // Show Loading
@@ -1591,7 +1591,7 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                this.showToast('Â¡Despacho RÃ¡pido Exitoso!', 'success');
+                this.showToast('Â¡Despacho Rápido Exitoso!', 'success');
                 this.closeModal();
                 // Optionally reload guides in background
                 this.loadMovimientosData(true);
@@ -1618,7 +1618,7 @@ class App {
                 <div style="text-align:center; padding:2rem; color:#666;">
                     <i class="fa-solid fa-spinner fa-spin"></i> Cargando inventario...
                     <div style="margin-top:1rem;">
-                        <small>Â¿Tarda demasiado?</small><br>
+                        <small>¿Tarda demasiado?</small><br>
                         <button class="btn-sm" style="margin-top:0.5rem;" onclick="app.fetchProducts()">
                             <i class="fa-solid fa-rotate"></i> Forzar Recarga
                         </button>
@@ -1723,7 +1723,7 @@ class App {
                                 style="position:absolute; top:10px; left:10px; background:#f59e0b; color:white; border:none; width:32px; height:32px; border-radius:50%; box-shadow:0 4px 6px -1px rgba(245, 158, 11, 0.4); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.2s;"
                                 onmouseover="this.style.transform='scale(1.1)'"
                                 onmouseout="this.style.transform='scale(1)'"
-                                title="Despacho RÃ¡pido">
+                                title="Despacho Rápido">
                             <i class="fa-solid fa-bolt"></i>
                         </button>
 
@@ -1779,10 +1779,10 @@ class App {
                             </button>
                         </div>
                         
-                        <div class="back-label">DescripciÃ³n Completa</div>
+                        <div class="back-label">Descripción Completa</div>
                         <div class="back-value">${product.desc}</div>
 
-                        <div class="back-label">CÃ³digo de Sistema</div>
+                        <div class="back-label">Código de Sistema</div>
                         <div class="back-value">${code}</div>
 
                         <div class="back-label">Factor Zona</div>
@@ -1879,7 +1879,7 @@ class App {
         if (newQtyStr === null) return; // Cancelled
 
         const newQty = parseFloat(newQtyStr);
-        if (isNaN(newQty)) return alert("Cantidad invÃ¡lida");
+        if (isNaN(newQty)) return alert("Cantidad inválida");
 
         if (btn) {
             // const originalHtml = btn.innerHTML; // Unused
@@ -1894,7 +1894,7 @@ class App {
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({
                     action: 'updateStockAdjustment',
-                    payload: { rowId, newQty, reason: 'CorrecciÃ³n manual' }
+                    payload: { rowId, newQty, reason: 'Corrección manual' }
                 })
             });
             const result = await response.json();
@@ -1911,7 +1911,7 @@ class App {
             }
         } catch (e) {
             console.error(e);
-            alert("Error de conexiÃ³n");
+            alert("Error de conexión");
             if (btn) btn.innerHTML = '<i class="fa-solid fa-pencil"></i>';
             if (btn) btn.disabled = false;
         }
@@ -2042,16 +2042,16 @@ class App {
         overlay.innerHTML = `
             <div style="background:white; padding:2rem; border-radius:12px; width:90%; max-width:400px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);">
                 <h3 style="margin-top:0; color:#333;">Nuevo Ajuste de Stock</h3>
-                <p style="color:#666; font-size:0.9rem;">El sistema calcularÃ¡ automÃ¡ticamente la diferencia.</p>
+                <p style="color:#666; font-size:0.9rem;">El sistema calculará automáticamente la diferencia.</p>
                 
                 <div style="margin-bottom:1rem;">
-                    <label style="display:block; font-weight:bold; margin-bottom:5px; color:#555;">CÃ³digo</label>
+                    <label style="display:block; font-weight:bold; margin-bottom:5px; color:#555;">Código</label>
                     <input type="text" value="${code}" disabled style="width:100%; padding:8px; background:#f3f4f6; border:1px solid #ddd; border-radius:6px;">
                 </div>
 
                 <div style="margin-bottom:1rem;">
-                    <label style="display:block; font-weight:bold; margin-bottom:5px; color:#555;">Stock FÃ­sico (Real)</label>
-                    <input type="number" id="adj-real-qty" placeholder="Â¿CuÃ¡nto hay en realidad?" 
+                    <label style="display:block; font-weight:bold; margin-bottom:5px; color:#555;">Stock Físico (Real)</label>
+                    <input type="number" id="adj-real-qty" placeholder="¿Cuánto hay en realidad?" 
                            style="width:100%; padding:10px; border:2px solid #0284c7; border-radius:6px; font-size:1.1rem; font-weight:bold; color:#333;" autofocus>
                 </div>
 
@@ -2059,10 +2059,10 @@ class App {
                     <label style="display:block; font-weight:bold; margin-bottom:5px; color:#555;">Motivo</label>
                     <select id="adj-reason" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px;">
                         <option value="Ajuste de Inventario">Ajuste de Inventario</option>
-                        <option value="Merma / DaÃ±o">Merma / DaÃ±o</option>
-                        <option value="CorrecciÃ³n de Ingreso">CorrecciÃ³n de Ingreso</option>
-                        <option value="CorrecciÃ³n de Salida">CorrecciÃ³n de Salida</option>
-                        <option value="Auditoria">AuditorÃ­a</option>
+                        <option value="Merma / Daño">Merma / Daño</option>
+                        <option value="Corrección de Ingreso">Corrección de Ingreso</option>
+                        <option value="Corrección de Salida">Corrección de Salida</option>
+                        <option value="Auditoria">Auditoría</option>
                         <option value="Otro">Otro</option>
                     </select>
                 </div>
@@ -2086,7 +2086,7 @@ class App {
             if (realQtyVal === '') return alert('Ingresa la cantidad real');
 
             const realQty = parseFloat(realQtyVal);
-            if (isNaN(realQty)) return alert('Cantidad invÃ¡lida');
+            if (isNaN(realQty)) return alert('Cantidad inválida');
 
             this.confirmSmartAdjustment(code, realQty, currentSystemStock, reason);
         };
@@ -2100,10 +2100,10 @@ class App {
         if (Math.abs(delta) < 0.0001) return alert('El stock real es igual al del sistema. No se necesita ajuste.');
 
         const msg = delta > 0
-            ? `Se sumarÃ¡n +${delta.toFixed(2)} unidades.`
-            : `Se restarÃ¡n ${delta.toFixed(2)} unidades.`;
+            ? `Se sumarán +${delta.toFixed(2)} unidades.`
+            : `Se restarán ${delta.toFixed(2)} unidades.`;
 
-        if (!confirm(`Confirmar Ajuste:\n\nSistema: ${systemQty}\nReal: ${realQty}\n\nDiferencia: ${msg}\n\nÂ¿Proceder?`)) return;
+        if (!confirm(`Confirmar Ajuste:\n\nSistema: ${systemQty}\nReal: ${realQty}\n\nDiferencia: ${msg}\n\n¿Proceder?`)) return;
 
         // UI Loading
         const btn = document.getElementById('btn-save-adj');
@@ -2207,14 +2207,14 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                this.showToast('SincronizaciÃ³n completada', 'success');
+                this.showToast('Sincronización completada', 'success');
             } else {
                 alert('Error al guardar en servidor: ' + result.message);
             }
 
         } catch (e) {
             console.error(e);
-            alert('Error de conexiÃ³n. El ajuste se guardÃ³ localmente pero fallÃ³ en nube.');
+            alert('Error de conexión. El ajuste se guardó localmente pero falló en nube.');
         }
     }
 
@@ -2228,7 +2228,7 @@ class App {
 
         const numFactor = parseFloat(factor);
         if (isNaN(numFactor) || numFactor < 0) {
-            alert("Por favor ingrese un nÃºmero vÃ¡lido mayor o igual a 0.");
+            alert("Por favor ingrese un número válido mayor o igual a 0.");
             return;
         }
 
@@ -2487,7 +2487,7 @@ class App {
                     console.error('All fetch attempts failed', e);
                     if (!isBackground && container && (!this.data.movimientos || !this.data.movimientos.guias)) {
                         container.innerHTML = `<div style="text-align:center; padding:1rem; color:red;">
-                <i class="fa-solid fa-triangle-exclamation"></i> Error de conexiÃ³n.Reintentando... (${e.message})
+                <i class="fa-solid fa-triangle-exclamation"></i> Error de conexión.Reintentando... (${e.message})
                        </div>`;
                     }
                 } else {
@@ -2545,7 +2545,7 @@ class App {
     renderGuiasGrouped(list) {
         const container = document.getElementById('guias-list-scroll');
         if (list.length === 0) {
-            container.innerHTML = '<div style="text-align:center; color:#999; padding:2rem;">No se encontraron guÃ­as</div>';
+            container.innerHTML = '<div style="text-align:center; color:#999; padding:2rem;">No se encontraron guías</div>';
             return;
         }
 
@@ -2763,7 +2763,7 @@ class App {
                 <div style="padding:1.5rem; background:#f9fafb; min-height:100%; display:flex; flex-direction:column;">
                     <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:1rem;">
                     <div>
-                        <h3 style="color:var(--primary-color); margin:0;">Detalle de GuÃ­a</h3>
+                        <h3 style="color:var(--primary-color); margin:0;">Detalle de Guía</h3>
                         <div style="font-size:0.9rem; color:#666;">
                             <span style="font-weight:bold; color:#333;">${info.tipo}</span> | ${info.fecha}
                         </div>
@@ -2796,7 +2796,7 @@ class App {
                          style="max-height:180px; width:100%; object-fit:cover; display:block; cursor:zoom-in; transition:transform 0.2s;" 
                          onmouseover="this.style.opacity='0.9'"
                          onmouseout="this.style.opacity='1'"
-                         alt="Evidencia GuÃ­a"
+                         alt="Evidencia Guía"
                          title="Click para ampliar">
                 </div>
                 ` : ''
@@ -2829,7 +2829,7 @@ class App {
 
     shareGuiaWhatsapp(id) {
         const guiaInfo = this.data.movimientos.guias.find(g => g.id === id);
-        if (!guiaInfo) return alert('GuÃ­a no encontrada');
+        if (!guiaInfo) return alert('Guía no encontrada');
 
         // Normal Details
         const details = this.data.movimientos.detalles
@@ -2889,7 +2889,7 @@ class App {
 
     printGuiaTicket(id) {
         const guiaInfo = this.data.movimientos.guias.find(g => g.id === id);
-        if (!guiaInfo) return alert('GuÃ­a no encontrada');
+        if (!guiaInfo) return alert('Guía no encontrada');
 
         // Normal Details
         const details = this.data.movimientos.detalles
@@ -3051,13 +3051,13 @@ class App {
                 <div style="background:white; padding:1.5rem; border-radius:8px; width:90%; max-width:400px; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
                     <h3 style="margin-top:0; color:var(--primary-color);">Registrar Nuevo Producto</h3>
                     <div style="font-size:0.85rem; color:#666; margin-bottom:1rem;">
-                        Este producto se guardarÃ¡ como <strong>PENDIENTE</strong> hasta que sea validado por administraciÃ³n.
+                        Este producto se guardará como <strong>PENDIENTE</strong> hasta que sea validado por administración.
                     </div>
                     
                     <div style="display:flex; flex-direction:column; gap:0.75rem;">
                         <input type="text" id="np-marca" placeholder="Marca" style="padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
-                        <input type="text" id="np-desc" placeholder="DescripciÃ³n del Producto *" style="padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
-                        <input type="text" id="np-code" placeholder="CÃ³digo de Barra (Opcional)" style="padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
+                        <input type="text" id="np-desc" placeholder="Descripción del Producto *" style="padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
+                        <input type="text" id="np-code" placeholder="Código de Barra (Opcional)" style="padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
                         <div style="display:flex; gap:0.5rem;">
                              <input type="number" id="np-qty" placeholder="Cant. *" style="flex:1; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
                              <input type="date" id="np-date" style="flex:1; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
@@ -3081,7 +3081,7 @@ class App {
         const qty = document.getElementById('np-qty').value;
         const date = document.getElementById('np-date').value;
 
-        if (!desc || !qty) return alert('DescripciÃ³n y Cantidad son obligatorios');
+        if (!desc || !qty) return alert('Descripción y Cantidad son obligatorios');
 
         const payload = {
             idGuia: idGuia,
@@ -3306,7 +3306,7 @@ class App {
             pendingHtml = `
                 <div style="margin-top:1.5rem; border:1px dashed #f59e0b; background:#fffbeb; padding:1rem; border-radius:8px;">
                     <h5 style="margin:0 0 0.5rem 0; color:#b45309;"><i class="fa-solid fa-triangle-exclamation"></i> Productos Nuevos (Pendientes)</h5>
-                    <div style="font-size:0.8rem; color:#92400e; margin-bottom:0.5rem;">Estos productos estÃ¡n esperando validaciÃ³n administrativa.</div>
+                    <div style="font-size:0.8rem; color:#92400e; margin-bottom:0.5rem;">Estos productos están esperando validación administrativa.</div>
                     ${pendingProducts.map(p => `
                         <div style="display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0; border-bottom:1px solid #fcd34d;">
                             <div>
@@ -3322,7 +3322,7 @@ class App {
 
         panel.innerHTML = `
             <div style="padding:1.5rem; border-bottom:1px solid #eee; background:#f9fafb; display:flex; flex-direction:column; height:100%;">
-                <h3 style="color:var(--primary-color); margin-bottom:1rem;">Editar GuÃ­a</h3>
+                <h3 style="color:var(--primary-color); margin-bottom:1rem;">Editar Guía</h3>
                 
                 <div style="margin-bottom:0.5rem;">
                     <label style="font-size:0.8rem; font-weight:bold;">Proveedor / Destino</label>
@@ -3337,7 +3337,7 @@ class App {
                  <div style="margin-bottom:1rem; display:flex; justify-content:flex-end;">
                      <button onclick="app.showNewProductModal('${id}')" 
                              style="background:#f59e0b; color:white; border:none; padding:0.5rem 1rem; border-radius:4px; cursor:pointer; font-size:0.85rem; display:flex; align-items:center; gap:0.5rem;">
-                         <i class="fa-solid fa-plus-circle"></i> Nuevo Producto (No en CatÃ¡logo)
+                         <i class="fa-solid fa-plus-circle"></i> Nuevo Producto (No en Catálogo)
                      </button>
                 </div>
 
@@ -3366,7 +3366,7 @@ class App {
                         <i class="fa-solid fa-plus-circle" style="font-size:1.2rem; color:var(--primary-color);"></i>
                         <span>Agregar Producto</span>
                     </button>
-                    <div style="text-align:center; font-size:0.8rem; color:#888;">Presiona para buscar productos del catÃ¡logo...</div>
+                    <div style="text-align:center; font-size:0.8rem; color:#888;">Presiona para buscar productos del catálogo...</div>
                 </div>
 
                 <!-- SPOTLIGHT MODAL (Hidden by default) -->
@@ -3553,7 +3553,7 @@ class App {
         // Check if already exists
         const exists = this.editingDetails.find(d => String(d.codigo) === String(code));
         if (exists) {
-            alert('El producto ya estÃ¡ en la lista.');
+            alert('El producto ya está en la lista.');
             return;
         }
 
@@ -3780,7 +3780,7 @@ class App {
                             <button onclick="event.stopPropagation(); app.generateGuiaFromPreingreso('${p.id}')" 
                                     class="btn-sm" 
                                     style="margin-top:0.75rem; width:100%; background:var(--primary-color); color:white; border:none; border-radius:15px; padding:4px 0; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.4rem; font-size:0.75rem; font-weight:500; height: 28px;">
-                                <i class="fa-solid fa-file-import" style="font-size:0.7rem;"></i> Generar GuÃ­a
+                                <i class="fa-solid fa-file-import" style="font-size:0.7rem;"></i> Generar Guía
                             </button>
                          ` : ''}
                     </div>
@@ -3951,7 +3951,7 @@ class App {
         const pre = this.data.movimientos.preingresos.find(p => p.id === id);
         if (!pre) return;
 
-        if (!confirm(`Â¿Generar GuÃ­a de Ingreso para ${pre.proveedor}?`)) return;
+        if (!confirm(`¿Generar Guía de Ingreso para ${pre.proveedor}?`)) return;
 
         // Optimistic UI could go here, but let's wait for server
         const payload = {
@@ -3966,7 +3966,7 @@ class App {
         };
 
         try {
-            this.showToast('Generando guÃ­a...', 'info');
+            this.showToast('Generando guía...', 'info');
             const response = await fetch(LEVO_API_URL, {
                 method: 'POST',
                 redirect: 'follow',
@@ -3979,24 +3979,24 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                this.showToast('GuÃ­a generada exitosamente', 'success');
+                this.showToast('Guía generada exitosamente', 'success');
                 // Reload to update lists (hide button in preingreso, show in guias)
                 await this.loadMovimientosData(false);
                 // Switch key tabs
                 this.switchMovTab('guias');
             } else {
-                alert('Error al generar guÃ­a: ' + result.message);
+                alert('Error al generar guía: ' + result.message);
             }
         } catch (e) {
             console.error(e);
-            alert('Error de conexiÃ³n al generar guÃ­a');
+            alert('Error de conexión al generar guía');
         }
     }
 
     // MODALS & FORMS
     // MODALS & FORMS
     openNewGuiaModal(type) {
-        const title = type === 'INGRESO' ? 'Nueva GuÃ­a de Ingreso' : 'Nueva GuÃ­a de Salida';
+        const title = type === 'INGRESO' ? 'Nueva Guía de Ingreso' : 'Nueva Guía de Salida';
         // Fix Provider Source: Use mov data or fallback
         let providers = this.data.providers || [];
         if (providers.length === 0 && this.data.movimientos && this.data.movimientos.proveedores) {
@@ -4021,7 +4021,7 @@ class App {
                         <!-- Section 1: Information -->
                         <div class="form-section">
                             <div class="section-header">
-                                <h4>InformaciÃ³n General</h4>
+                                <h4>Información General</h4>
                             </div>
                             
                             <div class="input-group floating">
@@ -4043,7 +4043,7 @@ class App {
                             <div class="section-header" style="flex-direction:column; align-items:start; gap:0.5rem;">
                                 <h4>Productos</h4>
                                 <div style="position:relative; width:100%;">
-                                    <input type="text" id="guia-inline-search" class="neon-input" placeholder="Escanear cÃ³digo o buscar..." 
+                                    <input type="text" id="guia-inline-search" class="neon-input" placeholder="Escanear código o buscar..." 
                                            style="width:100%; padding:0.8rem 2.5rem 0.8rem 1rem; border-radius:8px;"
                                            onkeyup="app.handleInlineProdSearch(this, event)" autocomplete="off">
                                     <i class="fa-solid fa-barcode" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:#aaa;"></i>
@@ -4079,7 +4079,7 @@ class App {
                     <div class="modern-footer">
                         <button class="btn-secondary" onclick="app.closeModal()">Cancelar</button>
                         <button class="btn-primary" onclick="app.saveGuia('${type}')">
-                            Guardar GuÃ­a <i class="fa-solid fa-save"></i>
+                            Guardar Guía <i class="fa-solid fa-save"></i>
                         </button>
                     </div>
                 </div>
@@ -4137,7 +4137,7 @@ class App {
             <div class="modal-card" style="width:95%; max-width:1200px; height:90vh; display:flex; flex-direction:column; overflow:hidden;">
                 <div class="modern-header">
                     <button class="close-btn" onclick="app.closeModal()"><i class="fa-solid fa-xmark"></i></button>
-                    <h3><i class="fa-solid fa-clipboard-check"></i> AuditorÃ­a Diaria</h3>
+                    <h3><i class="fa-solid fa-clipboard-check"></i> Auditoría Diaria</h3>
                     <span style="background:var(--primary-light); color:var(--primary-color); padding:0.2rem 0.6rem; border-radius:12px; font-size:0.8rem; font-weight:bold;">${this.auditList.length} Pendientes</span>
                 </div>
                 <div class="modern-body" style="background:#f3f4f6; padding:1.5rem;">
@@ -4195,7 +4195,7 @@ class App {
         if (!input || input.value === '') return alert('Ingrese la cantidad real');
 
         const realQty = parseFloat(input.value);
-        if (isNaN(realQty)) return alert('Cantidad invÃ¡lida');
+        if (isNaN(realQty)) return alert('Cantidad inválida');
 
         // UPDATE LOCAL STATE
         const itemIndex = this.auditList.findIndex(i => i.id == idAudit);
@@ -4254,7 +4254,7 @@ class App {
             // For now, let it be.
         } catch (e) {
             console.error('Audit Error', e);
-            alert('Error al guardar auditorÃ­a');
+            alert('Error al guardar auditoría');
         }
     }
 
@@ -4526,7 +4526,7 @@ class App {
                         <!-- Section 1: General -->
                         <div class="form-section">
                             <div class="section-header">
-                                <h4>InformaciÃ³n General</h4>
+                                <h4>Información General</h4>
                             </div>
                             
                             <div class="input-group floating">
@@ -4574,7 +4574,7 @@ class App {
                         <!-- Section 3: Attachments -->
                         <div class="form-section">
                             <div class="section-header">
-                                <h4>Adjuntos (MÃ¡x 4)</h4>
+                                <h4>Adjuntos (Máx 4)</h4>
                             </div>
                             
                             <div class="photo-widget">
@@ -4616,7 +4616,7 @@ class App {
         const currentImgs = document.querySelectorAll('#pre-preview img');
 
         if (files.length + currentImgs.length > 4) {
-            alert("MÃ¡ximo 4 fotos permitidas.");
+            alert("Máximo 4 fotos permitidas.");
             input.value = ''; // Reset
             return;
         }
@@ -4761,7 +4761,7 @@ class App {
         if (!finalCode) return alert('Seleccione un producto');
         // Validate existence?
         if (!this.data.products[finalCode]) {
-            if (!confirm('El cÃ³digo no parece existir en la lista cargada. Â¿Agregar igual?')) return;
+            if (!confirm('El código no parece existir en la lista cargada. ¿Agregar igual?')) return;
         }
 
         const desc = this.data.products[finalCode] ? this.data.products[finalCode].desc : 'Producto Manual';
@@ -4785,7 +4785,7 @@ class App {
     renderTempProducts() {
         const container = document.getElementById('temp-prods-list');
         if (this.tempGuiaProducts.length === 0) {
-            container.innerHTML = '<div style="text-align:center; padding:1.5rem; color:#999; font-size:0.9rem;">NingÃºn producto agregado</div>';
+            container.innerHTML = '<div style="text-align:center; padding:1.5rem; color:#999; font-size:0.9rem;">Ningún producto agregado</div>';
             return;
         }
 
@@ -4831,7 +4831,7 @@ class App {
         const newQty = item.cantidad + change;
 
         if (newQty < 1) {
-            if (confirm('Â¿Desea eliminar este producto?')) {
+            if (confirm('¿Desea eliminar este producto?')) {
                 this.removeTempProduct(index);
             }
         } else {
@@ -5005,7 +5005,7 @@ class App {
         this.data.movimientos.guias.unshift(tempGuia);
         this.filterGuiasList(); // Update UI immediately
         this.closeModal();
-        this.showToast("Guardando guÃ­a en segundo plano...", "info");
+        this.showToast("Guardando guía en segundo plano...", "info");
 
         // 2. SEND DATA ONLY (Fast)
         const payload = {
@@ -5045,7 +5045,7 @@ class App {
                 // Re-render to show real ID/Status
                 this.filterGuiasList();
 
-                this.showToast("GuÃ­a guardada exitosamente.", "success");
+                this.showToast("Guía guardada exitosamente.", "success");
                 // Background refresh to be safe (syncs details etc)
                 this.loadMovimientosData(true);
 
@@ -5126,7 +5126,7 @@ class App {
             // Save
             const newVal = parseFloat(input.value);
             if (isNaN(newVal) || newVal < 0) {
-                alert('Cantidad invÃ¡lida');
+                alert('Cantidad inválida');
                 return;
             }
             this.saveSeparatedEdit(id, newVal, btn, input);
@@ -5137,7 +5137,7 @@ class App {
 
     async saveSeparatedEdit(id, newVal, btn, input) {
         if (newVal < 0.1) {
-            alert('La cantidad mÃ­nima es 0.1');
+            alert('La cantidad mínima es 0.1');
             // Find original value to reset input
             const originalReq = this.data.requests.find(r => r.idSolicitud === id);
             if (originalReq) {
@@ -5188,7 +5188,7 @@ class App {
 
         } catch (e) {
             console.error(e);
-            alert('Error de conexiÃ³n');
+            alert('Error de conexión');
             // Revert UI on network error
             input.disabled = false;
             btn.innerHTML = '<i class="fa-solid fa-check"></i>';
@@ -5218,11 +5218,11 @@ class App {
         });
 
         if (itemsToDispatch.length === 0) {
-            alert('No hay Ã­tems separados para despachar.');
+            alert('No hay ítems separados para despachar.');
             return;
         }
 
-        if (!confirm(`Â¿Confirmar despacho de ${itemsToDispatch.length} Ã­tems para ${zone.toUpperCase()}?`)) return;
+        if (!confirm(`¿Confirmar despacho de ${itemsToDispatch.length} ítems para ${zone.toUpperCase()}?`)) return;
 
         const btn = document.querySelector('.fab-dispatch');
         if (btn) {
@@ -5305,7 +5305,7 @@ class App {
         } catch (e) {
             console.error(e);
             if (printWindow) printWindow.close(); // Close empty window on error
-            alert('Error de conexiÃ³n: ' + e.message);
+            alert('Error de conexión: ' + e.message);
             if (btn) {
                 btn.innerHTML = '<i class="fa-solid fa-truck-fast fab-icon"></i>';
                 btn.disabled = false;
@@ -5603,7 +5603,7 @@ class App {
                     
                     .row { display: flex; justify-content: space-between; align-items: baseline; }
                     
-                    /* Code & Factor: "tamaÃ±o y grosor que el del nombre" (Standard Bold 13px) */
+                    /* Code & Factor: "tamaño y grosor que el del nombre" (Standard Bold 13px) */
                     .code { font-size: 13px; font-weight: bold; color: #000; }
                     .factor { font-size: 13px; font-weight: bold; margin-left:4px; }
                     
@@ -5688,7 +5688,7 @@ class App {
 
         if (newVal === null) return; // Cancel
         const numVal = parseFloat(newVal);
-        if (isNaN(numVal) || numVal <= 0) return alert('Ingrese un nÃºmero vÃ¡lido mayor a 0');
+        if (isNaN(numVal) || numVal <= 0) return alert('Ingrese un número válido mayor a 0');
 
         // Optimistic Update
         this.data.products[code].factor = numVal;
@@ -5934,12 +5934,12 @@ class App {
                                         ${requestListHtml}
                                     </div>
                                 ` : `
-                                    <div class="back-label">DescripciÃ³n</div>
+                                    <div class="back-label">Descripción</div>
                                     <div class="back-value">${item.desc}</div>
                                      
                                     <!-- Delete Button (Top Right) -->
                                     <button class="btn-delete-separated" onclick="app.deleteSeparatedRequest('${item.useId}')" 
-                                            title="Eliminar SeparaciÃ³n (Regresar a Pendientes)">
+                                            title="Eliminar Separación (Regresar a Pendientes)">
                                         <i class="fa-solid fa-rectangle-xmark"></i>
                                     </button>
                                     
@@ -6001,7 +6001,7 @@ class App {
                                 <div class="scroll-container" style="flex: 1; overflow-y: auto; padding-right: 5px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); grid-auto-rows: max-content; gap: 1rem; align-content: start;">
                                     ${pendingList.length > 0
                 ? pendingList.map(i => renderCard(i, true)).join('')
-                : '<div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:#999;">Todo al dÃ­a ðŸŽ‰</div>'}
+                : '<div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:#999;">Todo al día ðŸŽ‰</div>'}
                                 </div>
                             </div>
 
@@ -6019,13 +6019,13 @@ class App {
                                 <div class="scroll-container" style="flex: 1; overflow-y: auto; padding-right: 5px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); grid-auto-rows: max-content; gap: 1rem; align-content: start;">
                                     ${separatedList.length > 0
                 ? separatedList.map(i => renderCard(i, false)).join('')
-                : '<div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:#81c784; font-style:italic;">Nada separado aÃºn</div>'}
+                : '<div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:#81c784; font-style:italic;">Nada separado aún</div>'}
                                 </div>
                             </div>
                         </div>
                         
                         ${separatedList.length > 0 ? `
-                        <button class="fab-dispatch" onclick="app.handleDispatchZone('${zone}')" title="Despachar ${separatedList.length} Ã­tems">
+                        <button class="fab-dispatch" onclick="app.handleDispatchZone('${zone}')" title="Despachar ${separatedList.length} ítems">
                             <i class="fa-solid fa-truck-fast fab-icon"></i>
                         </button>` : ''}
                 `;
@@ -6239,7 +6239,7 @@ class App {
         }
 
         let newQty = parseFloat(qtyInput.value);
-        if (isNaN(newQty) || newQty <= 0) { alert('Cantidad invÃ¡lida'); return; }
+        if (isNaN(newQty) || newQty <= 0) { alert('Cantidad inválida'); return; }
 
         // Find Aggregated Item by iterating requests again? 
         // Better: We stored it in 'renderZonePickup'. But 'this.data' is raw requests.
@@ -6338,7 +6338,7 @@ class App {
 
         // ALLOW OVER-ALLOCATION WITH CONFIRMATION
         if (newQty > totalAvailable + 0.001) {
-            if (!confirm(`La cantidad (${newQty}) excede lo pendiente (${totalAvailable.toFixed(3)}). Â¿Desea separar el exceso de todas formas?`)) {
+            if (!confirm(`La cantidad (${newQty}) excede lo pendiente (${totalAvailable.toFixed(3)}). ¿Desea separar el exceso de todas formas?`)) {
                 return;
             }
         }
@@ -6351,7 +6351,7 @@ class App {
                 const fallback = solicitedItems[solicitedItems.length - 1]; // Use last
                 validQueue.push({ ...fallback, available: 0 }); // Add with 0 available, loop will force-fill
             } else {
-                alert("No existe ninguna solicitud base para asociar esta separaciÃ³n.");
+                alert("No existe ninguna solicitud base para asociar esta separación.");
                 return;
             }
         }
@@ -6505,7 +6505,7 @@ class App {
             })
             .catch(err => {
                 console.error("Batch Sep Failed", err);
-                alert("Error guardando separaciÃ³n: " + err.message);
+                alert("Error guardando separación: " + err.message);
                 // Rollback
                 const index = this.data.requests.findIndex(r => r.idSolicitud === tempId);
                 if (index > -1) this.data.requests.splice(index, 1);
@@ -6523,7 +6523,7 @@ class App {
 
 
     async dispatchAll(zone) {
-        if (!confirm('Â¿Despachar todos los Ã­tems separados?')) return;
+        if (!confirm('¿Despachar todos los ítems separados?')) return;
 
         if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
@@ -6532,7 +6532,7 @@ class App {
             .map(r => ({ idSolicitud: r.idSolicitud, categoria: 'despachado' }));
 
         if (toDispatch.length === 0) {
-            alert('No hay Ã­tems para despachar');
+            alert('No hay ítems para despachar');
             if (btn) btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Despachar Todo';
             return;
         }
@@ -6551,7 +6551,7 @@ class App {
             const zoneContainer = document.getElementById('zone-content');
             if (zoneContainer) this.renderZonePickup(zone, zoneContainer);
 
-            alert('Despacho realizado con Ã©xito');
+            alert('Despacho realizado con éxito');
 
         } catch (e) {
             console.error(e);
@@ -6573,8 +6573,8 @@ class App {
                 <form id="new-request-form">
                     <div class="modal-body">
                         <div class="input-group">
-                            <p style="margin-bottom:0.5rem; font-size:0.9rem; color:#666;">Producto (Escanee o Escriba CÃ³digo)</p>
-                            <input type="text" id="req-code" placeholder="Escanee aquÃ­..." required autocomplete="off">
+                            <p style="margin-bottom:0.5rem; font-size:0.9rem; color:#666;">Producto (Escanee o Escriba Código)</p>
+                            <input type="text" id="req-code" placeholder="Escanee aquí..." required autocomplete="off">
                             <div id="product-preview" style="margin-top:0.5rem; font-size:0.9rem; color:var(--primary-color); font-weight:600; min-height:1.2em;"></div>
                         </div>
                         <div class="input-group">
@@ -6662,7 +6662,7 @@ class App {
 
             if (result.status === 'success') {
                 this.closeModal();
-                alert('Solicitud guardada con Ã©xito');
+                alert('Solicitud guardada con éxito');
                 this.renderDispatchRequests(document.getElementById('dispatch-content')); // Refresh
             } else {
                 alert('Error: ' + result.message);
@@ -6671,7 +6671,7 @@ class App {
             }
         } catch (e) {
             console.error(e);
-            alert('Error de conexiÃ³n');
+            alert('Error de conexión');
             btn.disabled = false;
             btn.innerHTML = 'Guardar Solicitud';
         }
@@ -6695,7 +6695,7 @@ class App {
 
         const container = document.getElementById('prepedidos-container');
 
-        // 1. Mostrar cachÃ© si existe (InstantÃ¡neo)
+        // 1. Mostrar caché si existe (Instantáneo)
         if (this.providersData) {
             this.renderProviders(this.providersData);
         } else {
@@ -6706,21 +6706,21 @@ class App {
         // 2. Fetch actualizado siempre (Background refresh)
         await this.fetchProvidersBackground();
 
-        // 3. Iniciar Auto-Refresh si no estÃ¡ activo
+        // 3. Iniciar Auto-Refresh si no está activo
         if (!this.providerRefreshInterval) {
             this.startProviderAutoRefresh();
         }
     }
 
     startProviderAutoRefresh() {
-        // Evitar mÃºltiples intervalos
+        // Evitar múltiples intervalos
         if (this.providerRefreshInterval) clearInterval(this.providerRefreshInterval);
 
         console.log("Iniciando auto-refresh de proveedores (60s)...");
         this.providerRefreshInterval = setInterval(() => {
-            // Solo refrescar si la pestaÃ±a estÃ¡ activa (opcional, pero buena prÃ¡ctica)
+            // Solo refrescar si la pestaña está activa (opcional, pero buena práctica)
             // O simplemente verificar si estamos en la vista de prepedidos (si tu app es SPA real)
-            // AquÃ­ asumimos siempre refrescar.
+            // Aquí asumimos siempre refrescar.
             this.fetchProvidersBackground();
         }, 60000); // 60 segundos
     }
@@ -6736,7 +6736,7 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                this.providersData = result.data; // Guardar en cachÃ©
+                this.providersData = result.data; // Guardar en caché
 
                 // Si estamos viendo la pantalla de prepedidos, actualizar UI silenciosamente
                 // (Verificamos si existe el contenedor en el DOM)
@@ -6850,7 +6850,7 @@ class App {
     }
 
     async deleteSeparatedRequest(id) {
-        if (!confirm('Â¿Devolver este Ã­tem a pendiente?')) return;
+        if (!confirm('¿Devolver este ítem a pendiente?')) return;
 
         // Visual Feedback
         const card = document.querySelector(`.request-card .btn-delete-separated[onclick*="${id}"]`).closest('.request-card');
@@ -6893,7 +6893,7 @@ class App {
             }
         } catch (e) {
             console.error(e);
-            alert('Error de conexiÃ³n');
+            alert('Error de conexión');
             if (card) card.style.opacity = '1';
         }
     }
@@ -6952,7 +6952,7 @@ class App {
             }
         } catch (e) {
             console.error(e);
-            alert('Error de conexiÃ³n al obtener historial.');
+            alert('Error de conexión al obtener historial.');
             this.closeModal();
         }
     }
@@ -7169,7 +7169,7 @@ class App {
             </div>
             <div class="modal-body" style="padding: 1rem;">
                 <div class="alert-info" style="font-size:0.9rem; color:#666; margin-bottom:1rem;">
-                    <i class="fa-solid fa-info-circle"></i> Productos con pedido sugerido estÃ¡n resaltados.
+                    <i class="fa-solid fa-info-circle"></i> Productos con pedido sugerido están resaltados.
                      <span style="color:#007bff; font-weight:bold; margin-left:10px;">Pedido = Calculado (Origen + Hijos)</span>.
                      <br><i class="fa-solid fa-layer-group" style="margin-right:5px;"></i> Los productos repetidos suman su stock total.
                 </div>
@@ -7179,7 +7179,7 @@ class App {
                         <thead>
                             <tr>
                                 <th style="width:30px;"><i class="fa-solid fa-check-double"></i></th>
-                                <th>CÃ³digo</th>
+                                <th>Código</th>
                                 <th style="width:50px;">Pedido</th> <!-- Reduced width -->
                                 <th>Producto</th>
                                 <th style="width:80px;">Min - Stock</th>
@@ -7242,7 +7242,7 @@ class App {
             }
         });
 
-        if (selected.length === 0) return alert('Seleccione al menos un producto con cantidad vÃ¡lida.');
+        if (selected.length === 0) return alert('Seleccione al menos un producto con cantidad válida.');
 
         // Close History Modal
         this.closeModal();
@@ -7253,7 +7253,7 @@ class App {
 
     sendPrepedidoWhatsApp(phone) {
         if (!phone) {
-            return alert('Este proveedor no tiene registrado un nÃºmero de telÃ©fono para WhatsApp.');
+            return alert('Este proveedor no tiene registrado un número de teléfono para WhatsApp.');
         }
 
         const selected = [];
@@ -7267,16 +7267,16 @@ class App {
             }
         });
 
-        if (selected.length === 0) return alert('Seleccione al menos un producto con cantidad vÃ¡lida para enviar.');
+        if (selected.length === 0) return alert('Seleccione al menos un producto con cantidad válida para enviar.');
 
         // Time-based Greeting
         const hour = new Date().getHours();
-        let greeting = 'Buenos dÃ­as';
+        let greeting = 'Buenos días';
         if (hour >= 12 && hour < 19) greeting = 'Buenas tardes';
         else if (hour >= 19) greeting = 'Buenas noches';
 
         // Format Message
-        let msg = `${greeting}, le envÃ­o esta lista para que me despache:\n\n`;
+        let msg = `${greeting}, le envío esta lista para que me despache:\n\n`;
         selected.forEach(item => {
             msg += `${item.cantidad} - ${item.desc}\n`;
         });
@@ -7403,7 +7403,7 @@ class App {
                  <div class="search-neon-wrapper" style="position: relative; width: 300px;">
                     <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#999;"></i>
                     <input type="text" id="packing-search" 
-                        placeholder="Buscar por CÃ³digo o Nombre..." 
+                        placeholder="Buscar por Código o Nombre..." 
                         style="width:100%; padding-left:35px; height:40px; border-radius: 20px; border: 1px solid #ddd;"
                         onkeyup="app.filterPackingList(this.value)">
                 </div>
@@ -7638,7 +7638,7 @@ class App {
             const isCritical = item.batteryClass === 'critical';
             // If missing Min, show Alert Icon overlay
             const alertOverlay = item.missingMin ?
-                `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#ef4444; font-size:1.5rem; text-shadow:0 1px 3px rgba(255,255,255,0.8); z-index:2;" title="Stock MÃ­nimo no definido">
+                `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#ef4444; font-size:1.5rem; text-shadow:0 1px 3px rgba(255,255,255,0.8); z-index:2;" title="Stock Mínimo no definido">
                     <i class="fa-solid fa-triangle-exclamation fa-beat-fade"></i>
                  </div>` : '';
 
@@ -7822,7 +7822,7 @@ class App {
     }
 
     async registerEnvasado(productCode, quantity) {
-        if (!confirm(`Â¿Confirmar envasado de ${quantity} unidades para ${productCode}?`)) return;
+        if (!confirm(`¿Confirmar envasado de ${quantity} unidades para ${productCode}?`)) return;
 
         // Find Item metadata (Origin, Factor)
         const item = this.packingList.find(p => p.codigo === productCode);
@@ -7849,7 +7849,7 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                this.showToast('Envasado registrado con Ã©xito', 'success');
+                this.showToast('Envasado registrado con éxito', 'success');
                 this.closePackingDrawer();
 
                 // Refresh Totals & UI immediately
@@ -7862,7 +7862,7 @@ class App {
             }
         } catch (e) {
             console.error(e);
-            alert('Error de conexiÃ³n al guardar.');
+            alert('Error de conexión al guardar.');
         }
     }
     /* STOCK HISTORY MODAL */
@@ -7889,7 +7889,7 @@ class App {
                 this.openModal(`<div class="error-msg">Error: ${result.message}</div>`);
             }
         } catch (e) {
-            this.openModal(`<div class="error-msg">Error de conexiÃ³n: ${e.message}</div>`);
+            this.openModal(`<div class="error-msg">Error de conexión: ${e.message}</div>`);
         }
     }
 
@@ -8022,7 +8022,7 @@ class App {
         const qtyToSave = parseFloat(document.getElementById('adj-qty').value);
         const reason = document.getElementById('adj-reason').value;
 
-        if (isNaN(qtyToSave) || qtyToSave === 0) return alert('Ingrese una cantidad vÃ¡lida (positiva o negativa).');
+        if (isNaN(qtyToSave) || qtyToSave === 0) return alert('Ingrese una cantidad válida (positiva o negativa).');
         if (!reason) return alert('Ingrese un motivo.');
 
         const btn = document.querySelector('#adjust-form button');
@@ -8052,7 +8052,7 @@ class App {
             }
         } catch (e) {
             console.error(e);
-            alert('Error de conexiÃ³n');
+            alert('Error de conexión');
             btn.disabled = false;
             btn.innerHTML = 'Guardar Ajuste';
         }
@@ -8062,7 +8062,7 @@ class App {
         const modalHtml = `
             <div class="modal-card">
                 <div class="modal-header">
-                    <h3>Despacho RÃ¡pido: ${desc}</h3>
+                    <h3>Despacho Rápido: ${desc}</h3>
                     <button class="modal-close" onclick="app.closeModal()">&times;</button>
                 </div>
                 <div class="modal-body" style="padding: 1.5rem;">
@@ -8105,7 +8105,7 @@ class App {
         const client = clientBtn ? clientBtn.innerText : 'ZONA1';
         const qty = parseFloat(document.getElementById('qd-qty').value);
 
-        if (!qty || qty <= 0) return alert('Cantidad invÃ¡lida');
+        if (!qty || qty <= 0) return alert('Cantidad inválida');
 
         const btn = document.querySelector('.modal-body .btn-primary');
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
@@ -8148,7 +8148,7 @@ class App {
             }
         } catch (e) {
             console.error(e);
-            alert('Error de conexiÃ³n');
+            alert('Error de conexión');
             btn.disabled = false;
             btn.innerHTML = 'Confirmar y Despachar';
         }
@@ -8474,7 +8474,7 @@ class App {
             statusEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Procesando ${files.length} archivo(s)...`;
         }
 
-        if (carouselEl && carouselEl.innerHTML.includes("No hay imÃ¡genes")) {
+        if (carouselEl && carouselEl.innerHTML.includes("No hay imágenes")) {
             carouselEl.innerHTML = "";
         }
 
@@ -8788,8 +8788,8 @@ class App {
     }
 
     clearOCRWorkspace() {
-        if (!confirm('Â¿Borrar todo?')) return;
-        document.getElementById('ocr-carousel').innerHTML = '<div style="text-align:center; color:#ccc; padding:2rem; font-style:italic;">No hay imÃ¡genes</div>';
+        if (!confirm('¿Borrar todo?')) return;
+        document.getElementById('ocr-carousel').innerHTML = '<div style="text-align:center; color:#ccc; padding:2rem; font-style:italic;">No hay imágenes</div>';
         document.getElementById('ocr-result-body').innerHTML = '';
         document.getElementById('ocr-preview-img').style.display = 'none';
         document.getElementById('ocr-preview-placeholder').style.display = 'block';
