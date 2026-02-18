@@ -9039,118 +9039,150 @@ class App {
         // 1. Calculate FIFO Status
         const analysis = this.calculateStockFIFO(code);
 
-        // 2. Identify the specific batch user clicked
-        const clickedBatch = analysis.allBatches.find(b => b.idGuia === guiaId && b.fechaVencimiento === expDate);
+        // 2. Identify specific batch if clicked (optional context)
+        // const clickedBatch = analysis.allBatches.find(b => b.idGuia === guiaId && b.fechaVencimiento === expDate);
 
         let verdictHtml = '';
+        const targetBatch = analysis.allBatches.find(b => b.idGuia === guiaId);
 
-        // Match Target
-        const targetBatch = clickedBatch || analysis.allBatches.find(b => b.idGuia === guiaId);
-
+        // -- VERDICT LOGIC (Keep existing logic but style better) --
         if (targetBatch) {
             if (targetBatch.status === 'SOLD') {
                 verdictHtml = `
-                    <div style="background:#f8f9fa; border:1px solid #ddd; padding:1.2rem; border-radius:8px; margin-bottom:1.5rem; text-align:center;">
-                        <h4 style="margin:0; color:#444; font-size:1.1rem;"><i class="fa-solid fa-check-circle" style="color:#22c55e;"></i> Stock Correcto (Teórico)</h4>
-                        <div style="margin-top:0.5rem; color:#666; font-size:0.9rem;">
-                            Según PEPS, este lote ya se vendió. Si físicamente no está, todo está en orden.
+                    <div class="alert-box success">
+                        <div class="alert-icon"><i class="fa-solid fa-check-circle"></i></div>
+                        <div class="alert-content">
+                            <h4>Stock Correcto (Teórico)</h4>
+                            <p>Según FIFO, este lote ya se agotó hace tiempo. Si no está físicamente, todo en orden.</p>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             } else if (targetBatch.status === 'ACTIVE') {
                 verdictHtml = `
-                    <div style="background:#fff1f2; border:1px solid #fda4af; padding:1.2rem; border-radius:8px; margin-bottom:1.5rem; text-align:center;">
-                        <h4 style="margin:0; color:#e11d48; font-size:1.1rem;"><i class="fa-solid fa-triangle-exclamation"></i> Alerta: Vencido en Stock</h4>
-                        <div style="margin-top:0.5rem; color:#9f1239; font-size:0.9rem;">
-                            Según análisis PEPS, este lote sigue en tu almacén y está vencido.
+                    <div class="alert-box danger">
+                        <div class="alert-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div class="alert-content">
+                            <h4>¡Alerta! Vencido en Stock</h4>
+                            <p>Según FIFO, <strong>${targetBatch.cantidad} un.</strong> de este lote siguen en inventario.</p>
                         </div>
-                        <div style="margin-top:0.5rem; font-weight:bold; color:#be123c;">
-                            Acción Recomendada: Retirar / Mermar
-                        </div>
-                    </div>
-                `;
-            } else {
+                    </div>`;
+            } else { // PARTIAL
                 verdictHtml = `
-                    <div style="background:#fff7ed; border:1px solid #fed7aa; padding:1.2rem; border-radius:8px; margin-bottom:1.5rem; text-align:center;">
-                         <h4 style="margin:0; color:#9a3412; font-size:1.1rem;"><i class="fa-solid fa-circle-exclamation"></i> Lote Parcial</h4>
-                         <div style="margin-top:0.5rem; color:#c2410c; font-size:0.9rem;">
-                            Quedan unidades de este lote por vender. Revisar prioridad.
+                    <div class="alert-box warning">
+                        <div class="alert-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                        <div class="alert-content">
+                            <h4>Lote Parcialmente Activo</h4>
+                            <p>Quedan aprox. <strong>${targetBatch.remaining} un.</strong> de este lote.</p>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             }
-        } else {
-            verdictHtml = `<div style="padding:1rem; color:#888; text-align:center;">Información del lote no encontrada en historial.</div>`;
         }
 
-
-        const html = `
-            <div style="padding:0rem; position:relative;">
-                <button onclick="app.closeModal()" style="position:absolute; top:0; right:0; background:none; border:none; font-size:1.5rem; color:#666; cursor:pointer; padding:0.5rem 1rem;">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-
-                <h3 style="margin-top:0; padding-right:2rem; font-size:1.3rem; margin-bottom:0.0rem;">Auditoría PEPS</h3>
-                <div style="font-size:0.95rem; color:#555; margin-bottom:1.5rem; border-bottom:1px solid #eee; padding-bottom:1rem;">
-                    <div>Producto: <strong style="color:#000;">${product.desc}</strong></div>
-                    <div>Stock Actual: <strong style="color:var(--primary-color); font-size:1.1rem;">${analysis.currentStock}</strong> un.</div>
+        // -- MODERN MODAL HTML --
+        const modalHtml = `
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h3><i class="fa-solid fa-boxes-stacked"></i> Auditoría PEPS (FIFO)</h3>
+                    <button class="modal-close" onclick="app.closeModal()">&times;</button>
                 </div>
+                
+                <div class="modal-body" style="padding:1.5rem;">
+                    
+                    <!-- PRODUCT INFO HEADER -->
+                    <div style="background:#f8fafc; padding:1rem; border-radius:8px; display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; border:1px solid #e2e8f0;">
+                         <div>
+                            <div style="font-size:0.85rem; color:#64748b; font-weight:600; margin-bottom:0.2rem;">PRODUCTO</div>
+                            <div style="font-size:1.1rem; color:#0f172a; font-weight:bold;">${product.desc}</div>
+                            <div style="font-size:0.85rem; color:#475569;">${code}</div>
+                         </div>
+                         <div style="text-align:right;">
+                            <div style="font-size:0.85rem; color:#64748b; font-weight:600; margin-bottom:0.2rem;">STOCK ACTUAL</div>
+                            <div style="font-size:1.8rem; color:var(--primary-color); font-weight:bold; line-height:1;">${analysis.currentStock}</div>
+                            <div style="font-size:0.8rem; color:#64748b;">Unidades</div>
+                         </div>
+                    </div>
 
-                ${verdictHtml}
+                    ${verdictHtml}
 
-                <h4 style="font-size:1rem; margin-bottom:0.8rem; color:#333;">Historial de Lotes (Ingresos)</h4>
-                <div class="custom-scrollbar" style="max-height:250px; overflow-y:auto; border:1px solid #eee; border-radius:6px;">
-                    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
-                        <thead style="background:#f9fafb; position:sticky; top:0; z-index:1;">
-                            <tr>
-                                <th style="text-align:left; padding:0.75rem; color:#666; font-weight:600;">Fecha Ingreso</th>
-                                <th style="text-align:left; padding:0.75rem; color:#666; font-weight:600;">Guía</th>
-                                <th style="text-align:right; padding:0.75rem; color:#666; font-weight:600;">Cant. Inicial</th>
-                                <th style="text-align:center; padding:0.75rem; color:#666; font-weight:600;">Estado</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${analysis.allBatches.map(b => {
-            let style = '';
-            let icon = '';
+                    <h4 style="font-size:1rem; color:#334155; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+                        <i class="fa-solid fa-clock-rotate-left"></i> Historial de Ingresos
+                    </h4>
+                    
+                    <div class="custom-scrollbar" style="max-height:300px; overflow-y:auto; border:1px solid #cbd5e1; border-radius:8px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                        <table class="modern-table" style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                            <thead style="background:#f1f5f9; position:sticky; top:0; z-index:10;">
+                                <tr>
+                                    <th style="padding:10px; text-align:left; color:#475569; font-weight:600; border-bottom:2px solid #e2e8f0;">Fecha</th>
+                                    <th style="padding:10px; text-align:left; color:#475569; font-weight:600; border-bottom:2px solid #e2e8f0;">Proveedor</th>
+                                    <th style="padding:10px; text-align:center; color:#475569; font-weight:600; border-bottom:2px solid #e2e8f0;">Cant. Inicial</th>
+                                    <th style="padding:10px; text-align:center; color:#475569; font-weight:600; border-bottom:2px solid #e2e8f0;">Estado</th>
+                                    <th style="padding:10px; text-align:center; color:#475569; font-weight:600; border-bottom:2px solid #e2e8f0;">Saldo Calc.</th>
+                                </tr>
+                            </thead>
+                            <tbody style="background:white;">
+                                ${analysis.allBatches.length > 0 ? analysis.allBatches.map(b => {
+            let statusBadge = '';
+            let rowBg = '';
+            let saldoDisplay = '-';
 
             if (b.status === 'SOLD') {
-                style = 'color:#aaa; background:#f9fafb;';
-                icon = '<span style="color:#888; font-size:0.75rem; border:1px solid #ddd; padding:2px 6px; border-radius:4px;">Agotado</span>';
+                statusBadge = `<span class="badge gray">Agotado</span>`;
+                rowBg = 'color:#94a3b8;';
+                saldoDisplay = '0';
             } else if (b.status === 'ACTIVE') {
-                style = 'font-weight:bold; color:#be123c; background:#fff1f2;';
-                icon = '<span style="color:#e11d48; font-weight:bold; font-size:0.75rem; background:white; border:1px solid #fda4af; padding:2px 6px; border-radius:4px;">En Stock</span>';
+                // Check expiration relative to today
+                // (Assuming we might want to flag if this ACTIVE batch is theoretically expired)
+                statusBadge = `<span class="badge green">En Stock</span>`;
+                saldoDisplay = `<b>${b.cantidad}</b>`;
+                rowBg = 'background:#f0fdf4;';
             } else {
-                style = 'font-weight:bold; color:#c2410c; background:#fff7ed;';
-                icon = '<span style="color:#ea580c; font-weight:bold; font-size:0.75rem; background:white; border:1px solid #fed7aa; padding:2px 6px; border-radius:4px;">Parcial</span>';
-            }
-
-            // Highlight target
-            if (targetBatch && b.idGuia === targetBatch.idGuia) {
-                style += 'border-left: 4px solid var(--primary-color);';
-            } else {
-                style += 'border-left: 4px solid transparent;';
+                statusBadge = `<span class="badge orange">Parcial</span>`;
+                saldoDisplay = `<b style="color:#c2410c;">${b.remaining}</b>`;
+                rowBg = 'background:#fff7ed;';
             }
 
             return `
-                                    <tr style="border-bottom:1px solid #eee; ${style}">
-                                        <td style="padding:0.75rem;">${b.fecha ? b.fecha.split(' ')[0] : 'N/A'}</td>
-                                        <td style="padding:0.75rem;">
-                                            <div style="font-family:monospace; font-size:0.8rem;">${b.idGuia.substring(0, 8)}...</div>
-                                            <div style="font-size:0.7rem; color:#888;">${b.proveedor || ''}</div>
+                                    <tr style="border-bottom:1px solid #f1f5f9; ${rowBg}">
+                                        <td style="padding:10px;">
+                                            <div style="font-weight:500;">${b.fecha}</div>
+                                            <div style="font-size:0.75rem; opacity:0.8;">Guía: ${b.idGuia.substring(0, 8)}...</div>
                                         </td>
-                                        <td style="text-align:right; padding:0.75rem;">${isNaN(b.cantidad) ? 'N/A' : b.cantidad}</td>
-                                        <td style="text-align:center; padding:0.75rem;">${icon}</td>
-                                    </tr>
-                                `;
-        }).join('')}
-                        </tbody>
-                    </table>
+                                        <td style="padding:10px;">
+                                            <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px;" title="${b.proveedor}">
+                                                ${b.proveedor || 'Sin Proveedor'}
+                                            </div>
+                                        </td>
+                                        <td style="padding:10px; text-align:center;">${b.cantidad}</td>
+                                        <td style="padding:10px; text-align:center;">${statusBadge}</td>
+                                        <td style="padding:10px; text-align:center;">${saldoDisplay}</td>
+                                    </tr>`;
+        }).join('') : '<tr><td colspan="5" style="padding:2rem; text-align:center; color:#94a3b8;">Sin historial de ingresos registrado</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div style="margin-top:1rem; font-size:0.8rem; color:#64748b; text-align:center; font-style:italic;">
+                        <i class="fa-solid fa-circle-info"></i> El cálculo asume que siempre se despacha el lote más antiguo (First-In, First-Out).
+                    </div>
                 </div>
             </div>
+            
+            <style>
+                .alert-box { display:flex; align-items:start; padding:1rem; border-radius:8px; margin-bottom:1.5rem; gap:1rem; }
+                .alert-box.success { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+                .alert-box.danger { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; }
+                .alert-box.warning { background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+                .alert-icon { font-size:1.5rem; }
+                .alert-content h4 { margin:0 0 0.25rem 0; font-size:1rem; }
+                .alert-content p { margin:0; font-size:0.9rem; }
+                
+                .badge { padding:0.25rem 0.6rem; border-radius:12px; font-size:0.75rem; font-weight:600; text-transform:uppercase; display:inline-block; }
+                .badge.gray { background:#f1f5f9; color:#64748b; }
+                .badge.green { background:#dcfce7; color:#166534; }
+                .badge.orange { background:#ffedd5; color:#c2410c; }
+            </style>
         `;
 
-        this.openModal(html);
+        this.openModal(modalHtml, 'fifo-modal');
     }
 
     calculateStockFIFO(code) {
