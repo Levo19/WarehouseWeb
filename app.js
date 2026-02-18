@@ -1671,16 +1671,16 @@ class App {
     renderProductMasterList(filteredEntries = null) {
         if (!this.data.products || Object.keys(this.data.products).length === 0) {
             return `
-    < div style = "text-align:center; padding:2rem; color:#666;" >
-        <i class="fa-solid fa-spinner fa-spin"></i> Cargando inventario...
-<div style="margin-top:1rem;">
-    <small>¿Tarda demasiado?</small><br>
-        <button class="btn-sm" style="margin-top:0.5rem;" onclick="app.fetchProducts()">
-            <i class="fa-solid fa-rotate"></i> Forzar Recarga
-        </button>
-</div>
-                </div >
-    `;
+        <div style="text-align:center; padding:2rem; color:#666;">
+            <i class="fa-solid fa-spinner fa-spin"></i> Cargando inventario...
+            <div style="margin-top:1rem;">
+                <small>¿Tarda demasiado?</small><br>
+                <button class="btn-sm" style="margin-top:0.5rem;" onclick="app.fetchProducts()">
+                    <i class="fa-solid fa-rotate"></i> Forzar Recarga
+                </button>
+            </div>
+        </div>
+`;
         }
 
         // 1. Prepare Entries
@@ -1697,19 +1697,19 @@ class App {
 
         // 3. Return Scaffold
         return `
-    < div style = "margin-top:1rem; padding-bottom: 3rem;" >
-        <div id="${gridId}" style="
-                    display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-                    gap: 1rem;
-                ">
-            <div style="grid-column: 1 / -1; text-align:center; padding: 3rem; color:#999;">
-                <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;"></i>
-                <div style="margin-top:1rem;">Renderizando ${productEntries.length} productos...</div>
+        <div style="margin-top:1rem; padding-bottom: 3rem;">
+            <div id="${gridId}" style="
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 1rem;
+            ">
+                <div style="grid-column: 1 / -1; text-align:center; padding: 3rem; color:#999;">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;"></i>
+                    <div style="margin-top:1rem;">Renderizando ${productEntries.length} productos...</div>
+                </div>
             </div>
         </div>
-            </div >
-    `;
+`;
     }
 
     /* --- ASYNC RENDERER --- */
