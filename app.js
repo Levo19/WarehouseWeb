@@ -1409,10 +1409,10 @@ class App {
         // Restore Default Actions
         if (headerActions) {
             headerActions.innerHTML = `
-    < div id = "header-dynamic-actions" ></div >
-                <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
-                <button class="icon-btn"><i class="fa-solid fa-gear"></i></button>
-`;
+            <div id="header-dynamic-actions"></div>
+            <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
+            <button class="icon-btn"><i class="fa-solid fa-gear"></i></button>
+        `;
 
             // RE-INITIALIZE NOTIFICATIONS
             // Because we just wiped the header, we must re-attach the bell logic.
