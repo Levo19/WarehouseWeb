@@ -7185,7 +7185,7 @@ class App {
                                 <th style="width:80px;">Min - Stock</th>
                                 <!-- 'A Comprar' Hidden -->
                                 <th>Costo Ref.</th>
-                                <th>Ãšlt. Compra</th>
+                                <th>Últ. Compra</th>
                             </tr>
                         </thead>
                         <tbody>
