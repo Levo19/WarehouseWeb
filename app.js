@@ -3913,11 +3913,17 @@ class App {
             carouselHtml = `<div style="margin-top:1.5rem; color:#999; font-style:italic;">No hay imagenes adjuntas.</div>`;
         }
 
+        const todayStr = new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const isToday = info.fecha && info.fecha.includes(todayStr);
+
         panel.innerHTML = `
-                    <div style="padding:1.5rem; border-bottom:1px solid #eee; background:#f9fafb;">
+            <div style="padding:1.5rem; border-bottom:1px solid #eee; background:#f9fafb;">
                 <div style="display:flex; justify-content:space-between; align-items:start;">
                     <h3 style="margin:0 0 0.5rem 0; color:var(--primary-color);">Detalle Preingreso</h3>
-                    <button onclick="app.closePreingresoDetails()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#666;">&times;</button>
+                    <div>
+                        ${isToday ? `<button onclick="app.editPreingreso('${info.id}')" style="margin-right:10px; background:none; border:none; font-size:1.1rem; cursor:pointer; color:var(--primary-color);"><i class="fa-solid fa-pen"></i></button>` : ''}
+                        <button onclick="app.closePreingresoDetails()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#666;">&times;</button>
+                    </div>
                 </div>
                 <div style="font-size:0.9rem; color:#555;">${info.fecha}</div>
             </div>
@@ -4004,10 +4010,15 @@ class App {
     }
 
     async generateGuiaFromPreingreso(id) {
+        if (this.isGeneratingGuia) return;
         const pre = this.data.movimientos.preingresos.find(p => p.id === id);
         if (!pre) return;
 
         if (!confirm(`¿Generar Guía de Ingreso para ${pre.proveedor}?`)) return;
+
+        this.isGeneratingGuia = true;
+        const btn = document.querySelector(`#pre-row-${id} button`);
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generando...';
 
         // Optimistic UI could go here, but let's wait for server
         const payload = {
@@ -4042,10 +4053,14 @@ class App {
                 this.switchMovTab('guias');
             } else {
                 alert('Error al generar guía: ' + result.message);
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-file-import" style="font-size:0.7rem;"></i> Generar Guía';
             }
         } catch (e) {
             console.error(e);
             alert('Error de conexión al generar guía');
+            if (btn) btn.innerHTML = '<i class="fa-solid fa-file-import" style="font-size:0.7rem;"></i> Generar Guía';
+        } finally {
+            this.isGeneratingGuia = false;
         }
     }
 
@@ -4564,6 +4579,7 @@ class App {
     }
 
     openNewPreingresoModal() {
+        this.editingPreingresoId = null;
         const providers = this.data.providers || [];
         const datalistOpts = providers.map(p => `<option value="${p.nombre}">`).join('');
 
@@ -4658,6 +4674,47 @@ class App {
             </div>
         `;
         this.openModal(modalHtml, 'modern-modal');
+    }
+
+    editPreingreso(id) {
+        this.openNewPreingresoModal();
+        this.editingPreingresoId = id; // Set it after opening
+
+        // Populate Fields
+        setTimeout(() => {
+            const header = document.querySelector('.modern-header h3');
+            if (header) header.innerText = 'Editar Preingreso';
+
+            const pre = this.data.movimientos.preingresos.find(p => p.id === id);
+            if (!pre) return;
+
+            document.getElementById('pre-proveedor').value = pre.proveedor || '';
+            document.getElementById('pre-comentario').value = pre.comentario || '';
+            document.getElementById('pre-etiqueta').value = pre.etiqueta || 'Pedido Incompleto';
+            document.getElementById('pre-comprobante').value = pre.comprobante || 'Sin Comprobante';
+
+            this.togglePreingresoMonto();
+            if (pre.monto) document.getElementById('pre-monto').value = pre.monto;
+
+            // Populate Photos
+            const previewContainer = document.getElementById('pre-preview');
+            previewContainer.innerHTML = '';
+            if (pre.fotos && pre.fotos.length > 0) {
+                pre.fotos.forEach((url, i) => {
+                    const optUrl = this.getOptimizedImageUrl(url);
+                    const wrap = document.createElement('div');
+                    wrap.className = 'photo-preview-item';
+                    wrap.style.position = 'relative';
+                    wrap.style.width = '100%';
+                    wrap.style.paddingTop = '100%';
+                    wrap.innerHTML = `
+                        <img src="${optUrl}" data-base64="${url}" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; border-radius:8px;">
+                        <button class="remove-photo-btn" onclick="this.parentElement.remove()" style="position:absolute; top:-5px; right:-5px; background:red; color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:0.7rem; cursor:pointer; z-index:10;">&times;</button>
+                    `;
+                    previewContainer.appendChild(wrap);
+                });
+            }
+        }, 100);
     }
 
     togglePreingresoMonto() {
@@ -4927,29 +4984,51 @@ class App {
             b.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
         });
 
-        // 1. OPTIMISTIC UI: Create Temp Item
+        // 1. OPTIMISTIC UI: Create or Edit Temp Item
         const tempId = 'TEMP-' + Date.now();
         const now = new Date();
         const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-        const tempItem = {
-            id: tempId,
-            fecha: dateStr,
-            proveedor: provider,
-            etiqueta: etiqueta, // PENDIENTE/PROCESADO typically comes from backend, but we act as PENDIENTE
-            estado: 'GUARDANDO...',
-            fotos: images || [],
-            comentario: comment,
-            isTemp: true
-        };
+        const isEditing = !!this.editingPreingresoId;
+        const targetId = isEditing ? this.editingPreingresoId : tempId;
 
-        if (!this.data.movimientos) this.data.movimientos = { preingresos: [] };
-        if (!this.data.movimientos.preingresos) this.data.movimientos.preingresos = [];
+        let oldPreingreso = null;
+        if (isEditing) {
+            oldPreingreso = this.data.movimientos.preingresos.find(p => p.id === targetId);
+            if (oldPreingreso) {
+                oldPreingreso.proveedor = provider;
+                oldPreingreso.comentario = comment;
+                oldPreingreso.etiqueta = etiqueta;
+                oldPreingreso.comprobante = comprobante;
+                oldPreingreso.monto = monto;
+                oldPreingreso.fotos = images;
+                oldPreingreso.isTemp = true;
+                this.renderPreingresos();
 
-        this.data.movimientos.preingresos.unshift(tempItem);
-        this.filterPreingresosList();
+                const panel = document.getElementById('preingreso-detail-panel');
+                if (panel && panel.innerHTML.trim().length > 0) {
+                    this.renderPreingresoDetailContent(oldPreingreso);
+                }
+            }
+        } else {
+            const tempItem = {
+                id: tempId,
+                fecha: dateStr,
+                proveedor: provider,
+                etiqueta: etiqueta,
+                estado: 'GUARDANDO...',
+                fotos: images || [],
+                comentario: comment,
+                isTemp: true
+            };
+            if (!this.data.movimientos) this.data.movimientos = { preingresos: [] };
+            if (!this.data.movimientos.preingresos) this.data.movimientos.preingresos = [];
+            this.data.movimientos.preingresos.unshift(tempItem);
+            this.filterPreingresosList();
+        }
+
         this.closeModal();
-        this.showToast("Guardando preingreso en segundo plano...", "info");
+        this.showToast(isEditing ? "Actualizando preingreso..." : "Guardando preingreso en segundo plano...", "info");
 
         try {
             const response = await fetch(LEVO_API_URL, {
@@ -4957,8 +5036,9 @@ class App {
                 redirect: 'follow', // FIXED
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify({
-                    action: 'savePreingreso',
+                    action: isEditing ? 'updatePreingreso' : 'savePreingreso',
                     payload: {
+                        idPreingreso: isEditing ? targetId : undefined,
                         proveedor: provider,
                         comentario: comment,
                         fotos: images,
@@ -4971,18 +5051,31 @@ class App {
             const result = await response.json();
 
             if (result.status === 'success') {
-                // Update Temp Item
-                const realId = result.id || result.data?.id; // backend response might vary
+                if (isEditing) {
+                    const idx = this.data.movimientos.preingresos.findIndex(p => p.id === targetId);
+                    if (idx !== -1) {
+                        delete this.data.movimientos.preingresos[idx].isTemp;
+                        if (result.data && result.data.fotos) {
+                            this.data.movimientos.preingresos[idx].fotos = result.data.fotos; // updated URLs
+                            if (document.getElementById('preingreso-detail-panel') && document.getElementById('preingreso-detail-panel').innerHTML.length > 0) {
+                                this.renderPreingresoDetailContent(this.data.movimientos.preingresos[idx]);
+                            }
+                        }
+                    }
+                } else {
+                    // Update Temp Item
+                    const realId = result.id || result.data?.id; // backend response might vary
 
-                const idx = this.data.movimientos.preingresos.findIndex(p => p.id === tempId);
-                if (idx !== -1) {
-                    this.data.movimientos.preingresos[idx].id = realId || 'NEW-' + Date.now();
-                    this.data.movimientos.preingresos[idx].estado = 'PENDIENTE'; // Default
-                    delete this.data.movimientos.preingresos[idx].isTemp;
+                    const idx = this.data.movimientos.preingresos.findIndex(p => p.id === tempId);
+                    if (idx !== -1) {
+                        this.data.movimientos.preingresos[idx].id = realId || 'NEW-' + Date.now();
+                        this.data.movimientos.preingresos[idx].estado = 'PENDIENTE'; // Default
+                        delete this.data.movimientos.preingresos[idx].isTemp;
+                    }
                 }
 
                 this.filterPreingresosList();
-                this.showToast("Preingreso guardado.", "success");
+                this.showToast(isEditing ? "Preingreso actualizado." : "Preingreso guardado.", "success");
                 this.loadMovimientosData(true); // Sync
             } else {
                 throw new Error(result.message);
@@ -4991,7 +5084,11 @@ class App {
             console.error(e);
             alert('Error al guardar: ' + e.message);
             // Revert
-            this.data.movimientos.preingresos = this.data.movimientos.preingresos.filter(p => p.id !== tempId);
+            if (!isEditing) {
+                this.data.movimientos.preingresos = this.data.movimientos.preingresos.filter(p => p.id !== tempId);
+            } else if (oldPreingreso) {
+                delete oldPreingreso.isTemp;
+            }
             this.filterPreingresosList();
         }
     }
@@ -9267,7 +9364,7 @@ class App {
                         // Parse DD/MM/YYYY HH:MM:SS
                         const parts = header.fecha.split(/[\\s/:]+/);
                         if (parts.length >= 3 && parts[2].length === 4) {
-                            tStamp = new Date(parts[2], parts[1] - 1, parts[0], parts[3]||0, parts[4]||0, parts[5]||0).getTime();
+                            tStamp = new Date(parts[2], parts[1] - 1, parts[0], parts[3] || 0, parts[4] || 0, parts[5] || 0).getTime();
                         }
                     }
 
