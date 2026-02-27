@@ -9262,13 +9262,22 @@ class App {
                     // If header not found (maybe Preingreso without Guia?), skip or fallback
                     if (!header || header.tipo !== 'INGRESO') return null;
 
+                    let tStamp = new Date(header.fecha).getTime();
+                    if (isNaN(tStamp) && header.fecha) {
+                        // Parse DD/MM/YYYY HH:MM:SS
+                        const parts = header.fecha.split(/[\\s/:]+/);
+                        if (parts.length >= 3 && parts[2].length === 4) {
+                            tStamp = new Date(parts[2], parts[1] - 1, parts[0], parts[3]||0, parts[4]||0, parts[5]||0).getTime();
+                        }
+                    }
+
                     return {
                         idGuia: d.idGuia,
                         fecha: header.fecha,
                         proveedor: header.proveedor,
                         cantidad: typeof d.cantidad === 'string' ? parseFloat(d.cantidad.replace(',', '.')) : Number(d.cantidad),
                         fechaVencimiento: d.fechaVencimiento,
-                        timestamp: new Date(header.fecha).getTime() // For sorting
+                        timestamp: isNaN(tStamp) ? 0 : tStamp // For sorting
                     };
                 })
                 .filter(b => b !== null)
