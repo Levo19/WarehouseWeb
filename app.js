@@ -9359,12 +9359,15 @@ class App {
                     // If header not found (maybe Preingreso without Guia?), skip or fallback
                     if (!header || header.tipo !== 'INGRESO') return null;
 
-                    let tStamp = new Date(header.fecha).getTime();
-                    if (isNaN(tStamp) && header.fecha) {
-                        // Parse DD/MM/YYYY HH:MM:SS
-                        const parts = header.fecha.split(/[\\s/:]+/);
-                        if (parts.length >= 3 && parts[2].length === 4) {
-                            tStamp = new Date(parts[2], parts[1] - 1, parts[0], parts[3] || 0, parts[4] || 0, parts[5] || 0).getTime();
+                    let tStamp = 0;
+                    if (header.fecha) {
+                        const parts = String(header.fecha).trim().split(/[\\s/:]+/);
+                        // If it looks like DD/MM/YYYY (first part is day 1-31, third is 4-digit year)
+                        if (parts.length >= 3 && parts[2].length === 4 && parts[0].length <= 2) {
+                            tStamp = new Date(parts[2], parseInt(parts[1]) - 1, parts[0], parts[3] || 0, parts[4] || 0, parts[5] || 0).getTime();
+                        } else {
+                            // Fallback to standard
+                            tStamp = new Date(header.fecha).getTime();
                         }
                     }
 
@@ -9399,10 +9402,10 @@ class App {
         });
 
         // 4. Return formatted data
-        // Sort Oldest -> Newest for display per user request logic (entry order)
+        // Sort Newest -> Oldest for display per user request logic
         return {
             currentStock: currentStock,
-            allBatches: batches.sort((a, b) => a.timestamp - b.timestamp)
+            allBatches: batches.sort((a, b) => b.timestamp - a.timestamp)
         };
     }
 }
