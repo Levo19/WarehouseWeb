@@ -9361,13 +9361,23 @@ class App {
 
                     let tStamp = 0;
                     if (header.fecha) {
-                        const parts = String(header.fecha).trim().split(/[\\s/:]+/);
-                        // If it looks like DD/MM/YYYY (first part is day 1-31, third is 4-digit year)
-                        if (parts.length >= 3 && parts[2].length === 4 && parts[0].length <= 2) {
-                            tStamp = new Date(parts[2], parseInt(parts[1]) - 1, parts[0], parts[3] || 0, parts[4] || 0, parts[5] || 0).getTime();
+                        const dateString = String(header.fecha).trim();
+                        // Try matching DD/MM/YYYY HH:mm:ss
+                        const parts = dateString.split(/[\\s/:]+/);
+                        if (parts.length >= 3 && parts[2].length === 4) {
+                            // Extract parts: 0=DD, 1=MM, 2=YYYY, 3=HH, 4=mm, 5=ss
+                            const y = parts[2];
+                            const m = parts[1].padStart(2, '0');
+                            const dDay = parts[0].padStart(2, '0');
+                            const h = (parts[3] || '0').padStart(2, '0');
+                            const min = (parts[4] || '0').padStart(2, '0');
+                            const s = (parts[5] || '0').padStart(2, '0');
+
+                            // Reconstruct as safe ISO String: YYYY-MM-DDTHH:mm:ss
+                            const safeIsoStr = `${y}-${m}-${dDay}T${h}:${min}:${s}`;
+                            tStamp = new Date(safeIsoStr).getTime();
                         } else {
-                            // Fallback to standard
-                            tStamp = new Date(header.fecha).getTime();
+                            tStamp = new Date(dateString).getTime();
                         }
                     }
 
