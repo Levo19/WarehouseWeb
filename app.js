@@ -9382,9 +9382,9 @@ class App {
                             const min = nums[4] ? nums[4].padStart(2, '0') : '00';
                             const s = nums[5] ? nums[5].padStart(2, '0') : '00';
 
-                            // Transform to purely numeric 14-digit integer YYYYMMDDHHmmss to bypass Browser Date quirks
-                            const timeStr = `${y}${m}${dDay}${h}${min}${s}`;
-                            tStamp = parseInt(timeStr, 10);
+                            // Safe numeric timestamp fallback
+                            let numStr = `${y}${m}${dDay}${h}${min}${s}`;
+                            tStamp = parseInt(numStr, 10);
                         } else {
                             tStamp = 0;
                         }
@@ -9398,44 +9398,48 @@ class App {
                         fechaVencimiento: d.fechaVencimiento,
                         timestamp: isNaN(tStamp) ? 0 : tStamp // For sorting
                     };
-                })
-                .filter(b => b !== null)
-                .sort((a, b) => a.timestamp - b.timestamp); // OLDEST FIRST to consume correctly in FIFO order
+                }).filter(b => b !== null);
         }
 
-        // 3. Consume from Stock to determine ACTIVE batches (FIFO: First In First Out)
-        // If we have 100 in stock, and batches are: 
-        // 1. Old (60)
-        // 2. Mid (40)
-        // 3. New (20)
-        // Wait, PEPS means Old is SOLD first. The stock remaining represents the NEWEST items!
-        // We should consume backwards from NEWEST to OLDEST to mark what is ACTIVE.
+        // 1. Preserve Original Order (in case timestamps match or fail)
+        batches.forEach((b, i) => b.originalIndex = i);
 
-        // So let's sort NEWEST FIRST to map remaining stock:
-        batches.sort((a, b) => b.timestamp - a.timestamp);
-
-        let remainingStockToCover = currentStock;
-
-        batches.forEach(b => {
-            if (remainingStockToCover <= 0) {
-                b.status = 'SOLD'; // Already sold via FIFO (First In First OUT)
-            } else if (remainingStockToCover >= b.cantidad) {
-                b.status = 'ACTIVE'; // Fully in stock
-                remainingStockToCover -= b.cantidad;
-            } else {
-                b.status = 'PARTIAL'; // Split
-                b.remaining = remainingStockToCover;
-                remainingStockToCover = 0;
-            }
-            console.log(`[PEPS DEBUG] Date: ${b.fecha} | TS: ${b.timestamp} | Qty: ${b.cantidad} | Status: ${b.status}`);
+        // 2. Sort OLD TO NEW (Ascending explicitly) for correct FIFO Deduction
+        batches.sort((a, b) => {
+            if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
+            return a.originalIndex - b.originalIndex;
         });
 
-        // 4. Return formatted data
-        // Sorted Newest -> Oldest for display
+        // 3. FIFO Deduction Logic
+        // Calculate how many items were completely sold historically
+        const historicalTotal = batches.reduce((sum, b) => sum + b.cantidad, 0);
+        let soldStock = historicalTotal - currentStock;
+
+        batches.forEach(b => {
+            if (soldStock >= b.cantidad) {
+                b.status = 'SOLD';
+                b.remaining = 0;
+                soldStock -= b.cantidad;
+            } else if (soldStock > 0) {
+                b.status = 'PARTIAL';
+                b.remaining = b.cantidad - soldStock;
+                soldStock = 0;
+            } else {
+                b.status = 'ACTIVE';
+                b.remaining = b.cantidad;
+            }
+            console.log(`[PEPS DEBUG] TS: ${b.timestamp} | Qty: ${b.cantidad} | Left: ${b.remaining} | Status: ${b.status}`);
+        });
+
+        // 4. Sort NEW TO OLD (Descending explicitly) for User Display
+        batches.sort((a, b) => {
+            if (a.timestamp !== b.timestamp) return b.timestamp - a.timestamp;
+            return b.originalIndex - a.originalIndex;
+        });
+
         return {
             currentStock: currentStock,
-            allBatches: batches // Already sorted newest first
-
+            allBatches: batches
         };
     }
 }
