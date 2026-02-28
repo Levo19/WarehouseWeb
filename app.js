@@ -9362,18 +9362,34 @@ class App {
                     let tStamp = 0;
                     if (header.fecha) {
                         const dateString = String(header.fecha).trim();
-                        // Try matching DD/MM/YYYY HH:mm:ss
-                        const parts = dateString.split(/[\\s/:]+/);
-                        if (parts.length >= 3 && parts[2].length === 4) {
-                            // Extract parts: 0=DD, 1=MM, 2=YYYY, 3=HH, 4=mm, 5=ss
-                            const y = parts[2];
-                            const m = parts[1].padStart(2, '0');
-                            const dDay = parts[0].padStart(2, '0');
-                            const h = (parts[3] || '0').padStart(2, '0');
-                            const min = (parts[4] || '0').padStart(2, '0');
-                            const s = (parts[5] || '0').padStart(2, '0');
+                        // Extract all numbers from string
+                        const nums = dateString.match(/\\d+/g);
+                        if (nums && nums.length >= 3) {
+                            let y, m, dDay;
+                            // Check pattern YYYY-MM-DD vs DD/MM/YYYY
+                            if (nums[0].length === 4) {
+                                y = nums[0];
+                                m = nums[1];
+                                dDay = nums[2];
+                            } else if (nums[2].length === 4) {
+                                dDay = nums[0];
+                                m = nums[1];
+                                y = nums[2];
+                            } else {
+                                // Default fallback to assuming DD/MM/YYYY if 2 digits
+                                dDay = nums[0];
+                                m = nums[1];
+                                y = nums[2];
+                                // if year is 2 digits like 26, make it 2026
+                                if (y.length === 2) y = '20' + y;
+                            }
 
-                            // Reconstruct as safe ISO String: YYYY-MM-DDTHH:mm:ss
+                            m = m.padStart(2, '0');
+                            dDay = dDay.padStart(2, '0');
+                            const h = nums[3] ? nums[3].padStart(2, '0') : '00';
+                            const min = nums[4] ? nums[4].padStart(2, '0') : '00';
+                            const s = nums[5] ? nums[5].padStart(2, '0') : '00';
+
                             const safeIsoStr = `${y}-${m}-${dDay}T${h}:${min}:${s}`;
                             tStamp = new Date(safeIsoStr).getTime();
                         } else {
