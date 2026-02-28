@@ -9382,10 +9382,11 @@ class App {
                             const min = nums[4] ? nums[4].padStart(2, '0') : '00';
                             const s = nums[5] ? nums[5].padStart(2, '0') : '00';
 
-                            const safeIsoStr = `${y}-${m}-${dDay}T${h}:${min}:${s}`;
-                            tStamp = new Date(safeIsoStr).getTime();
+                            // Transform to purely numeric 14-digit integer YYYYMMDDHHmmss to bypass Browser Date quirks
+                            const timeStr = `${y}${m}${dDay}${h}${min}${s}`;
+                            tStamp = parseInt(timeStr, 10);
                         } else {
-                            tStamp = new Date(dateString).getTime();
+                            tStamp = 0;
                         }
                     }
 
