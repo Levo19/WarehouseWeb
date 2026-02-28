@@ -2461,16 +2461,8 @@ class App {
 
         // 1. Try Cache First (Fast Load)
         if (!isBackground) {
-            const cached = localStorage.getItem(CACHE_KEY);
-            if (cached) {
-                try {
-                    const parsed = JSON.parse(cached);
-                    this.data.movimientos = parsed;
-                    this.renderGuiasList();
-                    this.renderPreingresos();
-                    console.log('Loaded from Cache');
-                } catch (e) { console.error('Cache error', e); }
-            }
+            // FORCED CACHE CLEAR TO ENSURE NEW DATE LOGIC IN PEPS
+            localStorage.removeItem(CACHE_KEY);
 
             if (container) {
                 // Show spinner only if no cache or empty
@@ -9413,7 +9405,9 @@ class App {
         // 3. Walk Backwards from Stock to determine ACTIVE batches
         let remainingStockToCover = currentStock;
 
-        // Add Status to batches
+        // NEWEST FIRST logic means we are looking at the most recently arrived boxes.
+        // Those are the ones that SHOULD still be in stock under FIFO/PEPS.
+        // The oldest ones should be SOLD first.
         batches.forEach(b => {
             if (remainingStockToCover <= 0) {
                 b.status = 'SOLD'; // Already sold via FIFO (First In First OUT)
@@ -9425,6 +9419,7 @@ class App {
                 b.remaining = remainingStockToCover;
                 remainingStockToCover = 0;
             }
+            console.log(`[PEPS DEBUG] ${b.fecha} (TS: ${b.timestamp}) | Qty: ${b.cantidad} | Status: ${b.status} | Left: ${b.remaining || 0}`);
         });
 
         // 4. Return formatted data
