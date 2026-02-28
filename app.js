@@ -9400,15 +9400,22 @@ class App {
                     };
                 })
                 .filter(b => b !== null)
-                .sort((a, b) => b.timestamp - a.timestamp); // NEWEST FIRST to work backwards
+                .sort((a, b) => a.timestamp - b.timestamp); // OLDEST FIRST to consume correctly in FIFO order
         }
 
-        // 3. Walk Backwards from Stock to determine ACTIVE batches
+        // 3. Consume from Stock to determine ACTIVE batches (FIFO: First In First Out)
+        // If we have 100 in stock, and batches are: 
+        // 1. Old (60)
+        // 2. Mid (40)
+        // 3. New (20)
+        // Wait, PEPS means Old is SOLD first. The stock remaining represents the NEWEST items!
+        // We should consume backwards from NEWEST to OLDEST to mark what is ACTIVE.
+
+        // So let's sort NEWEST FIRST to map remaining stock:
+        batches.sort((a, b) => b.timestamp - a.timestamp);
+
         let remainingStockToCover = currentStock;
 
-        // NEWEST FIRST logic means we are looking at the most recently arrived boxes.
-        // Those are the ones that SHOULD still be in stock under FIFO/PEPS.
-        // The oldest ones should be SOLD first.
         batches.forEach(b => {
             if (remainingStockToCover <= 0) {
                 b.status = 'SOLD'; // Already sold via FIFO (First In First OUT)
@@ -9420,14 +9427,15 @@ class App {
                 b.remaining = remainingStockToCover;
                 remainingStockToCover = 0;
             }
-            console.log(`[PEPS DEBUG] ${b.fecha} (TS: ${b.timestamp}) | Qty: ${b.cantidad} | Status: ${b.status} | Left: ${b.remaining || 0}`);
+            console.log(`[PEPS DEBUG] Date: ${b.fecha} | TS: ${b.timestamp} | Qty: ${b.cantidad} | Status: ${b.status}`);
         });
 
         // 4. Return formatted data
-        // Sort Newest -> Oldest for display per user request logic
+        // Sorted Newest -> Oldest for display
         return {
             currentStock: currentStock,
-            allBatches: batches.sort((a, b) => b.timestamp - a.timestamp)
+            allBatches: batches // Already sorted newest first
+
         };
     }
 }
