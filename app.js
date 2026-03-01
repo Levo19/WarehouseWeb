@@ -9256,7 +9256,8 @@ class App {
                         <table class="modern-table" style="width:100%; border-collapse:collapse; font-size:0.9rem;">
                             <thead style="background:#f1f5f9; position:sticky; top:0; z-index:10;">
                                 <tr>
-                                    <th style="padding:10px; text-align:left; color:#475569; font-weight:600; border-bottom:2px solid #e2e8f0;">Fecha</th>
+                                    <th style="padding:10px; text-align:left; color:#475569; font-weight:600; border-bottom:2px solid #e2e8f0;">Ingreso</th>
+                                    <th style="padding:10px; text-align:left; color:#475569; font-weight:600; border-bottom:2px solid #e2e8f0;">Vencimiento</th>
                                     <th style="padding:10px; text-align:left; color:#475569; font-weight:600; border-bottom:2px solid #e2e8f0;">Proveedor</th>
                                     <th style="padding:10px; text-align:center; color:#475569; font-weight:600; border-bottom:2px solid #e2e8f0;">Cant. Inicial</th>
                                     <th style="padding:10px; text-align:center; color:#475569; font-weight:600; border-bottom:2px solid #e2e8f0;">Estado</th>
@@ -9274,8 +9275,6 @@ class App {
                 rowBg = 'color:#94a3b8;';
                 saldoDisplay = '0';
             } else if (b.status === 'ACTIVE') {
-                // Check expiration relative to today
-                // (Assuming we might want to flag if this ACTIVE batch is theoretically expired)
                 statusBadge = `<span class="badge green">En Stock</span>`;
                 saldoDisplay = `<b>${b.cantidad}</b>`;
                 rowBg = 'background:#f0fdf4;';
@@ -9285,11 +9284,21 @@ class App {
                 rowBg = 'background:#fff7ed;';
             }
 
+            // Format expiration date and add warning color if expired AND NOT SOLD
+            let vencimientoDisplay = b.fechaVencimiento || '<span style="color:#94a3b8; font-style:italic;">N/R</span>';
+            // Optional basic visual flag if we want it (could be elaborated later)
+            if (b.fechaVencimiento && b.status !== 'SOLD') {
+                vencimientoDisplay = `<span style="color:#0f172a; font-weight:500;">${b.fechaVencimiento}</span>`;
+            }
+
             return `
                                     <tr style="border-bottom:1px solid #f1f5f9; ${rowBg}">
                                         <td style="padding:10px;">
                                             <div style="font-weight:500;">${b.fecha}</div>
                                             <div style="font-size:0.75rem; opacity:0.8;">Guía: ${b.idGuia.substring(0, 8)}...</div>
+                                        </td>
+                                        <td style="padding:10px; white-space:nowrap;">
+                                            ${vencimientoDisplay}
                                         </td>
                                         <td style="padding:10px;">
                                             <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px;" title="${b.proveedor}">
@@ -9300,7 +9309,7 @@ class App {
                                         <td style="padding:10px; text-align:center;">${statusBadge}</td>
                                         <td style="padding:10px; text-align:center;">${saldoDisplay}</td>
                                     </tr>`;
-        }).join('') : '<tr><td colspan="5" style="padding:2rem; text-align:center; color:#94a3b8;">Sin historial de ingresos registrado</td></tr>'}
+        }).join('') : '<tr><td colspan="6" style="padding:2rem; text-align:center; color:#94a3b8;">Sin historial de ingresos registrado</td></tr>'}
                             </tbody>
                         </table>
                     </div>
