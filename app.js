@@ -2365,7 +2365,7 @@ class App {
                     <div class="header">
                         <h1>Historial de Producto</h1>
                         <div style="font-size:1.2rem; font-weight:bold; margin: 5px 0;">${name}</div>
-                        <div style="color:#666;">CÃ“DIGO: ${code}</div>
+                        <div style="color:#666;">CÓDIGO: ${code}</div>
                         <div style="color:#888; font-size:12px; margin-top:5px;">Impreso: ${now}</div>
                     </div>
                     
@@ -2961,8 +2961,8 @@ class App {
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${id}`;
 
         // Title Logic
-        const tipoTitulo = guiaInfo.tipo === 'INGRESO' ? 'GUÃA DE INGRESO' :
-            guiaInfo.tipo === 'SALIDA' ? 'GUÃA DE SALIDA' : guiaInfo.tipo;
+        const tipoTitulo = guiaInfo.tipo === 'INGRESO' ? 'GUÍA DE INGRESO' :
+            guiaInfo.tipo === 'SALIDA' ? 'GUÍA DE SALIDA' : guiaInfo.tipo;
 
         let rowsHtml = '';
 
@@ -3064,7 +3064,7 @@ class App {
                     <table>
                         <thead>
                             <tr>
-                                <th style="text-align:left;">DESCRIPCIÃ“N</th>
+                                <th style="text-align:left;">DESCRIPCIÓN</th>
                                 <th style="text-align:right;">CANT.</th>
                             </tr>
                         </thead>
@@ -5569,7 +5569,7 @@ class App {
             <body>
                 <div class="header">
                     <h2 style="margin:5px 0;">LEVO ERP</h2>
-                    <div style="font-weight:bold;">GUÃA DE SALIDA</div>
+                    <div style="font-weight:bold;">GUÍA DE SALIDA</div>
                     <!-- QR Code uses simple API -->
                     <img class="qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${guiaId}" alt="QR ID">
                 </div>
@@ -8310,7 +8310,7 @@ class App {
 
         this.writeReceiptHtml(win, {
             title: 'LEVO ERP',
-            subtitle: 'GUÃA DE SALIDA',
+            subtitle: 'GUÍA DE SALIDA',
             meta: {
                 'ID': data.idGuia.substring(0, 13) + '...',
                 'Fecha': data.fecha,
