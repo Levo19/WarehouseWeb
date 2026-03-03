@@ -1426,6 +1426,10 @@ class App {
             <button class="icon-btn"><i class="fa-solid fa-gear"></i></button>
         `;
 
+            // --- Ocultar Contador Envasados Global ---
+            const badgeEnv = document.getElementById('daily-total-badge');
+            if (badgeEnv) badgeEnv.style.display = 'none';
+
             // RE-INITIALIZE NOTIFICATIONS
             // Because we just wiped the header, we must re-attach the bell logic.
             this.renderNotificationIcon();
@@ -7741,6 +7745,8 @@ class App {
 
         if (badge) {
             document.getElementById('daily-total-value').innerText = this.globalDailyTotal || 0;
+            // Force toggle visibility if we are currently in Envasador
+            badge.style.display = (this.state.currentModule === 'envasador') ? 'flex' : 'none';
         }
     }
 
@@ -9528,26 +9534,78 @@ class App {
         }
 
         let html = '';
+
+        // --- 1. Ordenamiento Descendente ---
+        items.sort((a, b) => this.parseDate(b.fechaIngreso) - this.parseDate(a.fechaIngreso));
+
+        // --- 2. Lógica de Agrupación por Semana Actual ---
+        const now = new Date();
+        const currentWeekStart = new Date(now);
+        currentWeekStart.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+        currentWeekStart.setHours(0, 0, 0, 0);
+        let currentGroup = '';
+
         items.forEach(m => {
+            const mDate = this.parseDate(m.fechaIngreso);
+            const isCurrentWeek = mDate >= currentWeekStart;
+            const groupName = isCurrentWeek ? '🗓️ Semana Actual' : '🕰️ Semanas Anteriores';
+
+            if (groupName !== currentGroup) {
+                html += `
+                    <div class="week-group-header" style="padding:10px 14px; background:#f8fafc; color:#334155; font-weight:700; font-size:0.9rem; border-radius:8px; margin: 18px 0 12px 0; border-left:4px solid var(--primary-color); box-shadow:0 1px 3px rgba(0,0,0,0.05); display:flex; align-items:center; justify-content:space-between;">
+                        <span>${groupName}</span>
+                    </div>`;
+                currentGroup = groupName;
+            }
+
+            // --- 3. Mapeo Nombre del Producto ---
+            let productName = m.codigoProducto; // fallback al código
+            // Intentar matchear con base de datos de productos cargada
+            if (this.data.products && this.data.products[m.codigoProducto]) {
+                productName = this.data.products[m.codigoProducto].desc;
+            } else {
+                // Try loose matching just in case
+                const looseMatch = Object.values(this.data.products || {}).find(p => p.codigo == m.codigoProducto);
+                if (looseMatch) productName = looseMatch.desc;
+            }
+
+            // --- 4. Formateo de Fecha (Dia de Semana) ---
+            const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            const dayName = days[mDate.getDay()];
+            const timeStr = mDate.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true });
+
             // Check Age > 48h
-            const diffHours = (new Date() - this.parseDate(m.fechaIngreso)) / 3600000;
+            const diffHours = (new Date() - mDate) / 3600000;
             const isCritical = (m.estado === 'PENDIENTE' || m.estado === 'PARCIAL') && diffHours > 48;
 
             const stateColor = m.estado === 'PENDIENTE' ? '#f59e0b' : m.estado === 'PARCIAL' ? '#3b82f6' : '#10b981';
-            const borderGlow = isCritical ? 'border: 2px solid #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.3);' : 'border: 1px solid #eee;';
+            const borderGlow = isCritical ? 'border: 2px solid #ef4444; box-shadow: 0 4px 12px rgba(239,68,68,0.15);' : 'border: 1px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.04);';
 
             html += `
-                <div class="merma-card" style="background:white; padding:15px; border-radius:8px; margin-bottom:10px; cursor:pointer; ${borderGlow}" onclick="app.openMermaDetails('${m.idMerma}')">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                        <strong style="color:var(--primary-color)">${m.idMerma}</strong>
-                        <span style="background:${stateColor}; color:white; font-size:12px; padding:3px 8px; border-radius:12px;">${m.estado}</span>
+                <div class="merma-card" style="background:white; padding:18px; border-radius:12px; margin-bottom:14px; cursor:pointer; transition: transform 0.2s, box-shadow 0.2s; ${borderGlow}" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 15px rgba(0,0,0,0.06)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='${isCritical ? '0 4px 12px rgba(239,68,68,0.15)' : '0 2px 5px rgba(0,0,0,0.04)'}';" onclick="app.slideDetailPanel('${m.idMerma}')">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                        <strong style="color:#0f172a; font-size:1.05rem; line-height:1.3; flex:1; padding-right:12px; font-family:'Poppins',sans-serif;">${productName}</strong>
+                        <span style="background:${stateColor}; color:white; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:12px; white-space:nowrap; letter-spacing:0.5px;">${m.estado}</span>
                     </div>
-                    <div style="font-size:14px; margin-bottom:4px;"><strong>Código:</strong> ${m.codigoProducto}</div>
-                    <div style="font-size:14px; margin-bottom:4px;"><strong>Origen:</strong> ${m.origen} | <strong>Motivo:</strong> ${m.motivo}</div>
-                    <div style="font-size:14px; color:#666;">
-                        Pendiente: <b style="color:#d97706">${m.cantidadPendiente}</b> / ${m.cantidadOriginal}
+                    
+                    <div style="display:flex; flex-wrap:wrap; gap:15px; margin-bottom:14px; color:#64748b; font-size:0.85rem; font-weight:500;">
+                        <div title="Día de Registro y Hora"><i class="fa-regular fa-clock" style="color:#94a3b8; width:16px;"></i> ${dayName} ${timeStr}</div>
+                        <div title="Código del Sistema"><i class="fa-solid fa-barcode" style="color:#94a3b8; width:16px;"></i> ${m.codigoProducto}</div>
                     </div>
-                    ${isCritical ? `<div style="color:#ef4444; font-size:12px; font-weight:bold; margin-top:8px;"><i class="fa-solid fa-triangle-exclamation"></i> Más de 48h sin resolver</div>` : ''}
+
+                    <div style="background:#f8fafc; padding:12px; border-radius:8px; margin-bottom:14px; border:1px solid #f1f5f9;">
+                        <div style="font-size:0.85rem; color:#475569; margin-bottom:6px;"><strong><i class="fa-solid fa-location-dot" style="color:#94a3b8; width:18px;"></i> Origen:</strong> ${m.origen}</div>
+                        <div style="font-size:0.85rem; color:#475569; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis;"><strong><i class="fa-solid fa-comment-dots" style="color:#94a3b8; width:18px;"></i> Motivo:</strong> ${m.motivo || 'N/A'}</div>
+                    </div>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="font-size:0.9rem; color:#475569; font-weight:600; display:flex; align-items:center;">
+                            Pendientes: <span style="color:#d97706; font-size:1.1rem; background:#fef3c7; padding:2px 8px; border-radius:6px; margin:0 6px;">${m.cantidadPendiente}</span> <span style="color:#94a3b8; font-weight:400; font-size:0.8rem;">de ${m.cantidadOriginal}</span>
+                        </div>
+                        <div style="color:#cbd5e1; font-size:0.7rem; font-family:monospace;">${m.idMerma}</div>
+                    </div>
+
+                    ${isCritical ? `<div style="color:#ef4444; font-size:0.8rem; font-weight:bold; margin-top:14px; background:#fee2e2; padding:8px 12px; border-radius:6px; display:inline-block;"><i class="fa-solid fa-triangle-exclamation"></i> Alerta: Más de 48h sin resolver</div>` : ''}
                 </div>
             `;
         });
@@ -9568,7 +9626,7 @@ class App {
         return new Date(dateStr);
     }
 
-    openMermaDetails(id) {
+    slideDetailPanel(id) {
         const merma = (this.data.mermas || []).find(m => m.idMerma === id);
         if (!merma) return;
 
@@ -9576,98 +9634,185 @@ class App {
         const detailPanel = document.getElementById('merma-detail-panel');
         if (!leftCol || !detailPanel) return;
 
-        leftCol.style.display = 'none';
-        detailPanel.style.width = '100%';
-        detailPanel.style.borderLeft = 'none';
+        // Transition Layout
+        leftCol.style.flex = '1';
+        detailPanel.style.width = '450px';
+        detailPanel.style.borderLeft = '1px solid #e2e8f0';
 
         const needsAction = merma.cantidadPendiente > 0;
         let resLogHtml = '';
         if (merma.resoluciones && merma.resoluciones.length > 0) {
-            resLogHtml = `<div style="margin-top:15px;"><h4 style="margin:5px 0;">Historial de Resoluciones</h4>`;
+            resLogHtml = `<div style="margin-top:20px;"><h4 style="margin:5px 0 10px 0; color:#334155; font-size:0.95rem;">Historial de Resoluciones</h4>`;
             merma.resoluciones.forEach(r => {
-                resLogHtml += `<div style="font-size:13px; background:#f9f9f9; padding:8px; border-radius:4px; margin-bottom:5px; border-left: 3px solid #ccc;">
-                    <b>${r.tipo}</b> - ${r.cantidad} un.<br>
-                    <span style="color:#666">${r.fecha} por ${r.usuario}</span>
-                    ${r.obs ? `<div style="font-style:italic; font-size:12px; margin-top:3px;">"${r.obs}"</div>` : ''}
+                resLogHtml += `<div style="font-size:13px; background:#f8fafc; padding:10px; border-radius:6px; margin-bottom:8px; border-left: 3px solid #cbd5e1;">
+                    <strong style="color:#0f172a;">${r.tipo}</strong> - <span style="color:#d97706; font-weight:bold;">${r.cantidad} unds.</span><br>
+                    <span style="color:#64748b; font-size:11px;"><i class="fa-regular fa-clock"></i> ${r.fecha} por ${r.usuario}</span>
+                    ${r.obs ? `<div style="font-style:italic; font-size:12px; margin-top:5px; color:#475569;">"${r.obs}"</div>` : ''}
                 </div>`;
             });
             resLogHtml += `</div>`;
         }
 
-        detailPanel.innerHTML = `
-            <div class="detail-header" style="padding:1rem; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; background:#fafafa;">
-                <div>
-                    <h3 style="margin:0; color:var(--primary-color);">${merma.idMerma}</h3>
-                    <div style="font-size:0.85rem; color:#666;">Ingresó: ${merma.fechaIngreso}</div>
+        let resolveFormHtml = '';
+        if (needsAction) {
+            resolveFormHtml = `
+                <div style="margin-top:25px; padding-top:20px; border-top:1px dashed #cbd5e1;">
+                    <h4 style="margin:0 0 15px 0; color:#0f172a; display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-gavel" style="color:var(--primary-color);"></i> Resolver Pendiente (${merma.cantidadPendiente} unds)</h4>
+                    
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <div>
+                            <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Acción a tomar:</label>
+                            <select id="rm-tipo" class="form-input" style="height:40px; border-radius:6px; border:1px solid #cbd5e1; background:#fff;" onchange="document.getElementById('rm-newcode-container').style.display = this.value === 'TRANSFORMADO' ? 'block' : 'none'">
+                                <option value="RECUPERADO">Sanear / Recuperar (Mismo código)</option>
+                                <option value="ELIMINADO">Desechar / Eliminar (Baja general)</option>
+                                <option value="TRANSFORMADO">Transformar en producto alterno</option>
+                            </select>
+                        </div>
+                        
+                        <div id="rm-newcode-container" style="display:none;">
+                            <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Nuevo Código Transformado:</label>
+                            <input type="text" id="rm-newcode" placeholder="Ej. AJI-GRANEL" class="form-input" style="height:40px; border-radius:6px; border:1px solid #cbd5e1;">
+                        </div>
+
+                        <div style="display:flex; gap:10px;">
+                            <div style="flex:1;">
+                                <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Unidades a procesar:</label>
+                                <div style="position:relative;">
+                                    <input type="number" id="rm-qty" value="${merma.cantidadPendiente}" max="${merma.cantidadPendiente}" min="0.01" step="0.01" class="form-input" style="height:40px; border-radius:6px; border:1px solid #cbd5e1; padding-right:45px;">
+                                    <span style="position:absolute; right:10px; top:11px; font-size:12px; color:#94a3b8; font-weight:bold;">MAX</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Observación / Detalle:</label>
+                            <textarea id="rm-obs" placeholder="Describe brevemente la acción realizada..." class="form-input" rows="2" style="border-radius:6px; border:1px solid #cbd5e1; resize:vertical;"></textarea>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:1.2rem;">
+                        <button class="btn-primary" style="width:100%; padding:10px; font-size:14px; border-radius:8px; display:flex; justify-content:center; align-items:center; gap:8px;" onclick="app.submitMermaResolution('${merma.idMerma}')">
+                            <i class="fa-solid fa-check-double"></i> Aplicar Resolución
+                        </button>
+                    </div>
                 </div>
-                <button class="icon-btn" onclick="app.closeMermaDetails()">
-                    <i class="fa-solid fa-times"></i>
+            `;
+        } else {
+            resolveFormHtml = `<div style="margin-top:30px; padding:15px; background:#ecfdf5; border-radius:8px; border:1px solid #a7f3d0; text-align:center; color:#059669; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px;"><i class="fa-solid fa-circle-check" style="font-size:18px;"></i> Merma procesada en su totalidad</div>`;
+        }
+
+        let productName = merma.codigoProducto;
+        if (this.data.products && this.data.products[merma.codigoProducto]) {
+            productName = this.data.products[merma.codigoProducto].desc;
+        } else {
+            const looseMatch = Object.values(this.data.products || {}).find(p => p.codigo == merma.codigoProducto);
+            if (looseMatch) productName = looseMatch.desc;
+        }
+
+        detailPanel.innerHTML = `
+            <div class="detail-header" style="padding:18px 20px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:flex-start; background:#f8fafc;">
+                <div>
+                    <h2 style="margin:0 0 5px 0; color:#0f172a; font-size:1.15rem; font-family:'Poppins',sans-serif; line-height:1.2;">${productName}</h2>
+                    <div style="font-size:0.8rem; color:#64748b; font-family:monospace; margin-bottom:5px;">ID: ${merma.idMerma}</div>
+                    <div style="font-size:0.8rem; color:#94a3b8;"><i class="fa-regular fa-calendar" style="margin-right:4px;"></i> Inyectado: ${merma.fechaIngreso}</div>
+                </div>
+                <button class="icon-btn" onclick="app.closeDetailPanel()" style="background:none; border:none; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#e2e8f0; color:#475569; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='#cbd5e1'" onmouseout="this.style.background='#e2e8f0'">
+                    <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <div class="detail-body" style="padding:1.5rem; flex:1; overflow-y:auto;">
-                <div style="background:#fff; border:1px solid #eee; border-radius:8px; padding:15px; margin-bottom:15px;">
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                        <div><label style="color:#888; font-size:12px;">Código Producto</label><div style="font-weight:600;">${merma.codigoProducto}</div></div>
-                        <div><label style="color:#888; font-size:12px;">Origen</label><div>${merma.origen}</div></div>
-                        <div><label style="color:#888; font-size:12px;">Cantidad Original</label><div>${merma.cantidadOriginal}</div></div>
-                        <div><label style="color:#888; font-size:12px;">Pendiente</label><div style="color:#d97706; font-weight:bold;">${merma.cantidadPendiente}</div></div>
+            
+            <div class="detail-body" style="padding:20px; flex:1; overflow-y:auto; background:#fff;">
+                
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:15px; margin-bottom:20px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
+                        <div><label style="color:#64748b; font-size:11px; text-transform:uppercase; font-weight:700; display:block; margin-bottom:2px;">Código Base</label><div style="font-weight:600; color:#0f172a; font-size:0.95rem;">${merma.codigoProducto}</div></div>
+                        <div><label style="color:#64748b; font-size:11px; text-transform:uppercase; font-weight:700; display:block; margin-bottom:2px;">Origen</label><div style="color:#334155; font-size:0.95rem;">${merma.origen}</div></div>
                     </div>
-                    <div style="margin-top:10px;"><label style="color:#888; font-size:12px;">Motivo del Daño</label><div>${merma.motivo}</div></div>
+                    <div style="background:#fff; border:1px solid #e2e8f0; padding:10px; border-radius:6px; margin-bottom:12px;">
+                        <label style="color:#64748b; font-size:11px; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px;">Motivo Principal</label>
+                        <div style="color:#334155; font-size:0.9rem; line-height:1.4;">${merma.motivo || 'No se especificó motivo.'}</div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:#ebf8ff; padding:8px 12px; border-radius:6px; border:1px solid #bae6fd;">
+                        <div><span style="color:#0369a1; font-weight:600; font-size:0.9rem;">Saldo Pendiente:</span></div>
+                        <div style="font-size:1.1rem; color:#0c4a6e; font-weight:800;">${merma.cantidadPendiente} <span style="font-size:0.8rem; font-weight:400; color:#0369a1;">/ ${merma.cantidadOriginal} orig.</span></div>
+                    </div>
                 </div>
 
                 ${resLogHtml}
-
-                ${needsAction ? `
-                <div style="margin-top:20px; text-align:center;">
-                    <button class="btn-primary" style="width:100%; padding:12px; font-size:16px;" onclick="app.openResolveMermaModal('${merma.idMerma}')">
-                        <i class="fa-solid fa-gavel"></i> Resolver Merma
-                    </button>
-                </div>
-                ` : `<div style="margin-top:20px; text-align:center; color:#10b981; font-weight:bold;"><i class="fa-solid fa-check-circle"></i> Merma Resuelta</div>`}
+                ${resolveFormHtml}
             </div>
         `;
     }
 
-    closeMermaDetails() {
+    closeDetailPanel() {
         const leftCol = document.getElementById('mermas-left-col');
         const detailPanel = document.getElementById('merma-detail-panel');
         if (leftCol && detailPanel) {
-            leftCol.style.display = 'flex';
             detailPanel.style.width = '0';
+            detailPanel.style.padding = '0';
+            detailPanel.style.borderLeft = 'none';
         }
     }
 
     openNewMermaModal() {
         const modalHtml = `
-            <div id="new-merma-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:10000;">
-                <div style="background:white; padding:1.5rem; border-radius:8px; width:90%; max-width:400px; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
-                    <h3 style="margin-top:0; color:var(--primary-color);"><i class="fa-solid fa-triangle-exclamation"></i> Registrar Merma</h3>
-                    <div style="display:flex; flex-direction:column; gap:10px;">
-                        
+            <div id="new-merma-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.6); backdrop-filter: blur(4px); display:flex; justify-content:center; align-items:center; z-index:10000; animation: fadeIn 0.2s ease-out;">
+                <div style="background:white; padding:2rem; border-radius:16px; width:95%; max-width:500px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1); animation: slideUp 0.3s ease-out;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:1rem; margin-bottom:1.5rem;">
+                        <h3 style="margin:0; color:var(--primary-color); font-size:1.3rem; display:flex; align-items:center; gap:0.5rem; font-family:'Poppins',sans-serif;">
+                            <i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;"></i> Registrar Merma
+                        </h3>
+                        <button onclick="document.getElementById('new-merma-modal').remove()" style="background:none; border:none; color:#94a3b8; font-size:1.2rem; cursor:pointer; padding:5px; border-radius:50%; transition:background 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    
+                    <div style="display:flex; flex-direction:column; gap:1.2rem;">
                         <!-- Search Box -->
                         <div style="position:relative; width:100%;">
-                            <input type="text" id="nm-search-input" class="form-input" placeholder="Buscar código o producto..." 
-                                   onkeyup="app.handleMermaProdSearch(this, event)" autocomplete="off">
-                            <i class="fa-solid fa-magnifying-glass" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#aaa;"></i>
-                            <div id="nm-search-results" class="spotlight-results" style="position:absolute; top:100%; left:0; right:0; max-height:200px; display:none; border:1px solid #ddd; background:white; z-index:10000; box-shadow:0 10px 15px rgba(0,0,0,0.1); border-radius: 4px; overflow-y:auto;"></div>
+                            <label style="font-size:0.85rem; font-weight:600; color:#475569; margin-bottom:0.4rem; display:block;">Producto a reportar <span style="color:#ef4444">*</span></label>
+                            <div style="position:relative;">
+                                <input type="text" id="nm-search-input" class="form-input" placeholder="Escribe el código o nombre del producto..." 
+                                       onkeyup="app.handleMermaProdSearch(this, event)" autocomplete="off"
+                                       style="padding-left:38px; border-radius:8px; border:1px solid #cbd5e1; height:45px; background:#f8fafc; transition:border 0.2s;">
+                                <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:14px; top:15px; color:#64748b;"></i>
+                            </div>
+                            <div id="nm-search-results" class="spotlight-results" style="position:absolute; top:100%; left:0; right:0; max-height:220px; display:none; border:1px solid #e2e8f0; background:white; z-index:10000; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1); border-radius: 8px; overflow-y:auto; margin-top:4px;"></div>
                         </div>
 
                         <!-- Selected Info -->
                         <input type="hidden" id="nm-codigo">
-                        <div id="nm-desc" style="font-size:0.85rem; color:#16a34a; font-weight:bold; min-height:18px;"></div>
+                        <div id="nm-desc" style="font-size:0.85rem; color:#10b981; font-weight:600; min-height:18px; padding-left:4px; margin-top:-0.5rem;"></div>
 
-                        <input type="number" id="nm-qty" placeholder="Cantidad *" class="form-input" min="1">
-                        <select id="nm-origen" class="form-input">
-                            <option value="ALMACÉN">Pérdida en Almacén</option>
-                            <option value="ZONA 1">Devolución Zona 1</option>
-                            <option value="ZONA 2">Devolución Zona 2</option>
-                            <option value="OTRO">Otro</option>
-                        </select>
-                        <textarea id="nm-motivo" placeholder="Motivo (Ej. bolsa rota, vencido...)" class="form-input" rows="3"></textarea>
+                        <div style="display:flex; gap:1rem;">
+                            <div style="flex:1;">
+                                <label style="font-size:0.85rem; font-weight:600; color:#475569; margin-bottom:0.4rem; display:block;">Cantidad Perdida <span style="color:#ef4444">*</span></label>
+                                <div style="position:relative;">
+                                    <input type="number" id="nm-qty" placeholder="0.00" class="form-input" min="0.01" step="0.01" style="padding-left:38px; border-radius:8px; height:45px; border:1px solid #cbd5e1;">
+                                    <i class="fa-solid fa-box-open" style="position:absolute; left:14px; top:15px; color:#64748b;"></i>
+                                </div>
+                            </div>
+                            <div style="flex:1;">
+                                <label style="font-size:0.85rem; font-weight:600; color:#475569; margin-bottom:0.4rem; display:block;">Ubicación / Origen <span style="color:#ef4444">*</span></label>
+                                <div style="position:relative;">
+                                    <select id="nm-origen" class="form-input" style="padding-left:38px; border-radius:8px; height:45px; border:1px solid #cbd5e1; appearance:none;">
+                                        <option value="ALMACÉN">Almacén Principal</option>
+                                        <option value="ZONA 1">Devolución Z-1</option>
+                                        <option value="ZONA 2">Devolución Z-2</option>
+                                        <option value="PROC_INTERNO">Proceso Interno</option>
+                                    </select>
+                                    <i class="fa-solid fa-location-dot" style="position:absolute; left:14px; top:15px; color:#64748b;"></i>
+                                    <i class="fa-solid fa-chevron-down" style="position:absolute; right:14px; top:15px; color:#94a3b8; pointer-events:none;"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label style="font-size:0.85rem; font-weight:600; color:#475569; margin-bottom:0.4rem; display:block;">Observaciones / Motivo</label>
+                            <textarea id="nm-motivo" placeholder="Ej. Bolsa rota, fecha de caducidad expirada, producto maltratado..." class="form-input" rows="3" style="border-radius:8px; border:1px solid #cbd5e1; resize:vertical; padding:12px; font-family:inherit;"></textarea>
+                        </div>
                     </div>
-                    <div style="margin-top:1.5rem; display:flex; justify-content:flex-end; gap:0.5rem;">
-                        <button class="btn-secondary" onclick="document.getElementById('new-merma-modal').remove()">Cancelar</button>
-                        <button class="btn-primary" onclick="app.saveMerma()">Guardar Merma</button>
+                    <div style="margin-top:2rem; display:flex; justify-content:flex-end; gap:1rem; border-top:1px solid #f1f5f9; padding-top:1.5rem;">
+                        <button class="btn-secondary" onclick="document.getElementById('new-merma-modal').remove()" style="padding:10px 24px; border-radius:8px; font-weight:600;">Cancelar</button>
+                        <button class="btn-primary" onclick="app.saveMerma()" style="padding:10px 24px; border-radius:8px; display:flex; align-items:center; gap:0.5rem; font-weight:600;"><i class="fa-solid fa-check"></i> Registrar Merma</button>
                     </div>
                 </div>
             </div>
@@ -9739,16 +9884,36 @@ class App {
 
     async saveMerma() {
         const codigo = document.getElementById('nm-codigo').value;
-        const qty = document.getElementById('nm-qty').value;
+        const qty = parseFloat(document.getElementById('nm-qty').value);
         const origen = document.getElementById('nm-origen').value;
-        const motivo = document.getElementById('nm-motivo').value;
+        const motivo = document.getElementById('nm-motivo').value || 'Dañado';
 
-        if (!codigo) return alert('Debes buscar y seleccionar un producto de la lista primero.');
-        if (!qty) return alert('La cantidad es obligatoria.');
+        if (!codigo) return this.showToast('Debes seleccionar un producto de la lista.', 'error');
+        if (!qty || qty <= 0) return this.showToast('La cantidad es inválida.', 'error');
 
+        document.getElementById('new-merma-modal').remove();
+
+        // 1. Optimistic UI Injection
+        const tempId = "MRM-" + Math.random().toString(36).substr(2, 6).toUpperCase();
+        const now = new Date();
+        const tempMerma = {
+            idMerma: tempId,
+            fechaIngreso: now.toLocaleDateString('en-GB') + ' ' + now.toLocaleTimeString('en-US', { hour12: false }),
+            origen: origen,
+            codigoProducto: codigo,
+            cantidadOriginal: qty,
+            cantidadPendiente: qty,
+            motivo: motivo,
+            estado: 'PENDIENTE',
+            resoluciones: []
+        };
+
+        if (!this.data.mermas) this.data.mermas = [];
+        this.data.mermas.unshift(tempMerma); // Insert at beginning
+        this.renderMermasList(); // Instant re-render
+
+        // 2. Background Saving
         try {
-            document.getElementById('new-merma-modal').innerHTML = '<div style="background:white; padding:2rem; border-radius:8px; text-align:center;"><i class="fa-solid fa-spinner fa-spin fa-2x"></i><br>Guardando...</div>';
-
             const response = await fetch(LEVO_API_URL, {
                 method: 'POST',
                 redirect: 'follow',
@@ -9759,75 +9924,56 @@ class App {
                 })
             });
             const res = await response.json();
-            if (res.status !== 'success') throw new Error(res.message);
 
-            this.showToast('Merma registrada exitosamente.');
-            document.getElementById('new-merma-modal').remove();
-            this.loadMermasData(true);
+            if (res.status === 'success') {
+                this.showToast('Merma registrada exitosamente.');
+                this.loadMermasData(false); // Background Sync
+            } else {
+                throw new Error(res.message);
+            }
         } catch (e) {
-            alert('Error: ' + e.message);
-            document.getElementById('new-merma-modal').remove();
+            this.showToast('Error al procesar merma: ' + e.message, 'error');
+            // Rollback optimistic insert
+            this.data.mermas = this.data.mermas.filter(m => m.idMerma !== tempId);
+            this.renderMermasList();
         }
     }
 
-    openResolveMermaModal(id) {
-        const merma = (this.data.mermas || []).find(m => m.idMerma === id);
-        if (!merma) return;
-
-        const modalHtml = `
-            <div id="resolve-merma-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:10000;">
-                <div style="background:white; padding:1.5rem; border-radius:8px; width:90%; max-width:400px; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
-                    <h3 style="margin-top:0; color:var(--primary-color);"><i class="fa-solid fa-gavel"></i> Resolver Merma</h3>
-                    <div style="font-size:13px; color:#666; margin-bottom:15px;">Usted puede resolver parcial o totalmente las <b>${merma.cantidadPendiente}</b> unidades pendientes.</div>
-                    
-                    <div style="display:flex; flex-direction:column; gap:12px;">
-                        <div>
-                            <label style="font-size:12px; font-weight:bold;">Acción a tomar:</label>
-                            <select id="rm-tipo" class="form-input" onchange="document.getElementById('rm-newcode-container').style.display = this.value === 'TRANSFORMADO' ? 'block' : 'none'">
-                                <option value="RECUPERADO">Sanear / Recuperar (Al mismo código)</option>
-                                <option value="ELIMINADO">Desechar / Eliminar (Baja definitiva)</option>
-                                <option value="TRANSFORMADO">Transformar en producto alterno</option>
-                            </select>
-                        </div>
-                        
-                        <div id="rm-newcode-container" style="display:none;">
-                            <label style="font-size:12px; font-weight:bold;">Nuevo Código Transformado:</label>
-                            <input type="text" id="rm-newcode" placeholder="Ej. AJI-GRANEL" class="form-input">
-                        </div>
-
-                        <div>
-                            <label style="font-size:12px; font-weight:bold;">Unidades a procesar (Max. ${merma.cantidadPendiente}):</label>
-                            <input type="number" id="rm-qty" value="${merma.cantidadPendiente}" max="${merma.cantidadPendiente}" min="0.01" step="0.01" class="form-input">
-                        </div>
-
-                        <div>
-                            <label style="font-size:12px; font-weight:bold;">Observación (opcional):</label>
-                            <input type="text" id="rm-obs" placeholder="..." class="form-input">
-                        </div>
-                    </div>
-
-                    <div style="margin-top:1.5rem; display:flex; justify-content:flex-end; gap:0.5rem;">
-                        <button class="btn-secondary" onclick="document.getElementById('resolve-merma-modal').remove()">Cancelar</button>
-                        <button class="btn-primary" onclick="app.resolveMerma('${id}')">Aplicar Resolución</button>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-    }
-
-    async resolveMerma(id) {
+    async submitMermaResolution(id) {
         const tipo = document.getElementById('rm-tipo').value;
         const qty = parseFloat(document.getElementById('rm-qty').value);
         const newCode = document.getElementById('rm-newcode').value;
         const obs = document.getElementById('rm-obs').value;
 
-        if (isNaN(qty) || qty <= 0) return alert('Cantidad inválida.');
-        if (tipo === 'TRANSFORMADO' && !newCode) return alert('Debe especificar el nuevo código producto.');
+        if (isNaN(qty) || qty <= 0) return this.showToast('Cantidad a procesar inválida.', 'error');
+        if (tipo === 'TRANSFORMADO' && !newCode) return this.showToast('Debe especificar el nuevo código producto.', 'error');
+
+        const merma = (this.data.mermas || []).find(m => m.idMerma === id);
+        if (!merma) return;
+        if (qty > merma.cantidadPendiente) return this.showToast(`Solo quedan ${merma.cantidadPendiente} unidades pendientes.`, 'error');
+
+        // Optimistic UI Update
+        const originalData = JSON.parse(JSON.stringify(merma)); // Backup for rollback
+
+        merma.cantidadPendiente -= qty;
+        merma.estado = merma.cantidadPendiente <= 0 ? 'RESUELTO' : 'PARCIAL';
+
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-GB') + ' ' + now.toLocaleTimeString('en-US', { hour12: false });
+        merma.resoluciones.push({
+            tipo: tipo,
+            cantidad: qty,
+            nuevoCodigo: newCode || '',
+            usuario: this.currentUser || 'Sistema',
+            fecha: dateStr,
+            obs: obs
+        });
+
+        // Instant Render
+        this.renderMermasList();
+        this.slideDetailPanel(id);
 
         try {
-            document.getElementById('resolve-merma-modal').innerHTML = '<div style="background:white; padding:2rem; border-radius:8px; text-align:center;"><i class="fa-solid fa-spinner fa-spin fa-2x"></i><br>Procesando y Consolidando Guías...</div>';
-
             const response = await fetch(LEVO_API_URL, {
                 method: 'POST',
                 redirect: 'follow',
@@ -9845,19 +9991,159 @@ class App {
                 })
             });
             const res = await response.json();
-            if (res.status !== 'success') throw new Error(res.message);
 
-            this.showToast('Acción de Merma aplicada correctamente.');
-            document.getElementById('resolve-merma-modal').remove();
-            this.closeMermaDetails();
-            this.loadMermasData(true);
-
-            // To be on the safe side, invalidate local storage if guides changed
-            this.cacheData.movimientos = null;
-
+            if (res.status === 'success') {
+                this.showToast('Acción de Merma aplicada correctamente.');
+                this.loadMermasData(false); // Background Sync
+                this.cacheData.movimientos = null; // Invalidate guide cache
+            } else {
+                throw new Error(res.message);
+            }
         } catch (e) {
-            alert('Error: ' + e.message);
-            document.getElementById('resolve-merma-modal').remove();
+            this.showToast('Error: ' + e.message, 'error');
+            // Rollback optimistic changes
+            const index = this.data.mermas.findIndex(m => m.idMerma === id);
+            if (index !== -1) {
+                this.data.mermas[index] = originalData;
+                this.renderMermasList();
+                this.slideDetailPanel(id);
+            }
+        }
+    }
+
+    printWeeklyMermas() {
+        if (!this.data.mermas || this.data.mermas.length === 0) return this.showToast('No hay mermas para imprimir.', 'error');
+
+        // Lógica para filtrar mermas de la semana en curso
+        const now = new Date();
+        const currentWeekStart = new Date(now);
+        currentWeekStart.setDate(now.getDate() - now.getDay()); // Domingo inicio
+        currentWeekStart.setHours(0, 0, 0, 0);
+
+        const weeklyMermas = this.data.mermas.filter(m => {
+            const mDate = this.parseDate(m.fechaIngreso);
+            return mDate >= currentWeekStart;
+        });
+
+        if (weeklyMermas.length === 0) return this.showToast('No hay mermas registradas durante la Semana Actual.', 'warning');
+
+        // Plantilla HTML de impresión
+        let printHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Reporte Semanal de Mermas</title>
+                <style>
+                    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; margin: 30px; color: #000; }
+                    h1 { font-size: 20px; text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+                    .header-info { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 12px; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                    th, td { border: 1px solid #333; padding: 10px 8px; text-align: left; vertical-align: middle; }
+                    th { border-bottom: 2px solid #000; background-color: #f2f2f2; text-transform: uppercase; font-size: 11px; }
+                    .res { color: #059669; font-weight: bold; }
+                    .pen { color: #dc2626; font-weight: bold; }
+                    .par { color: #d97706; font-weight: bold; }
+                    .firm { margin-top: 50px; text-align: center; }
+                    .firm span { display: inline-block; border-top: 1px solid #000; padding: 10px 40px; }
+                    @media print {
+                        body { margin: 0; }
+                        button { display: none; }
+                        @page { margin: 1.5cm; }
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>Control Semanal de Mermas</h1>
+                <div class="header-info">
+                    <div><strong>Semana de:</strong> ${currentWeekStart.toLocaleDateString('es-PE')} al ${now.toLocaleDateString('es-PE')}</div>
+                    <div><strong>Generado:</strong> ${now.toLocaleDateString('es-PE')} ${now.toLocaleTimeString('es-PE', { hour12: true })}</div>
+                    <div><strong>Emitido por:</strong> ${this.currentUser?.username || 'Sistema ERP'}</div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th width="10%">Fecha / Hora</th>
+                            <th width="10%">ID Merma</th>
+                            <th width="25%">Producto Dañado</th>
+                            <th width="15%">Origen</th>
+                            <th width="18%">Motivo Principal</th>
+                            <th width="7%" style="text-align:right;">Und. Merma</th>
+                            <th width="7%" style="text-align:right;">Und. Pdte</th>
+                            <th width="8%">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        weeklyMermas.sort((a, b) => this.parseDate(a.fechaIngreso) - this.parseDate(b.fechaIngreso)); // Ascendente para reporte
+
+        let totalOriginal = 0;
+        let totalPendiente = 0;
+
+        weeklyMermas.forEach(m => {
+            let productName = m.codigoProducto;
+            if (this.data.products && this.data.products[m.codigoProducto]) {
+                productName = this.data.products[m.codigoProducto].desc;
+            } else {
+                const looseMatch = Object.values(this.data.products || {}).find(p => p.codigo == m.codigoProducto);
+                if (looseMatch) productName = looseMatch.desc;
+            }
+
+            const stateCls = m.estado === 'RESUELTO' ? 'res' : (m.estado === 'PENDIENTE' ? 'pen' : 'par');
+
+            const orig = parseFloat(m.cantidadOriginal) || 0;
+            const pend = parseFloat(m.cantidadPendiente) || 0;
+            totalOriginal += orig;
+            totalPendiente += pend;
+
+            printHtml += `
+                <tr>
+                    <td style="font-size:11px;">${m.fechaIngreso}</td>
+                    <td style="font-family:monospace; font-size:11px;">${m.idMerma}</td>
+                    <td><strong style="font-size:13px;">${productName}</strong><br><span style="color:#555; font-size:10px;">CÓD: ${m.codigoProducto}</span></td>
+                    <td style="font-size:12px;">${m.origen}</td>
+                    <td style="font-size:11px; font-style:italic;">${m.motivo || ''}</td>
+                    <td style="text-align:right; font-weight:bold;">${orig.toFixed(2)}</td>
+                    <td style="text-align:right; font-weight:bold; color:#d97706;">${pend.toFixed(2)}</td>
+                    <td class="${stateCls}" style="font-size:11px;">${m.estado}</td>
+                </tr>
+            `;
+        });
+
+        printHtml += `
+                    </tbody>
+                    <tfoot>
+                        <tr style="background:#f9f9f9;">
+                            <td colspan="5" style="text-align:right; font-weight:bold; font-size:14px; text-transform:uppercase;">TOTAL ACUMULADO SEMA:</td>
+                            <td style="text-align:right; font-weight:bold; font-size:14px;">${totalOriginal.toFixed(2)}</td>
+                            <td style="text-align:right; font-weight:bold; font-size:14px; color:#d97706">${totalPendiente.toFixed(2)}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                
+                <div class="firm">
+                    <span>Firma / Sello del Supervisor de Planta</span>
+                </div>
+                
+                <script>
+                    window.onload = function() { 
+                        setTimeout(() => {
+                            window.print(); 
+                        }, 500); 
+                    }
+                </script>
+            </body>
+            </html>
+        `;
+
+        const printWin = window.open('', '_blank');
+        if (printWin) {
+            printWin.document.write(printHtml);
+            printWin.document.close();
+        } else {
+            this.showToast('Por favor, permite los pop-ups para imprimir el reporte.', 'warning');
         }
     }
 
