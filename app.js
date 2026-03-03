@@ -2444,8 +2444,6 @@ class App {
         // Refresh Data on Switch
         if (tab === 'guias') this.renderGuiasList();
         if (tab === 'preingresos') this.renderPreingresos();
-        if (tab === 'envasados') this.renderEnvasadosList();
-        if (tab === 'mermas') this.loadMermasData();
     }
 
     // Load Data
@@ -2635,16 +2633,30 @@ class App {
                     ? this.data.nuevosProductos.filter(p => p.idGuia === g.id && p.estado !== 'PROCESADO').length
                     : 0;
 
+                // EXTRA BADGES LOGIC
+                let extraBadge = '';
+                const provUpper = (g.proveedor || '').toUpperCase();
+                const comUpper = (g.comentario || '').toUpperCase();
+
+                if (provUpper.includes('ENVASAD')) {
+                    extraBadge = `<span style="font-size:0.75rem; color:#4c1d95; background:#ede9fe; padding:2px 6px; border-radius:12px; display:flex; align-items:center; gap:3px;" title="Envasado"><i class="fa-solid fa-box-open"></i> Envasado</span>`;
+                } else if (provUpper.includes('MERMA')) {
+                    extraBadge = `<span style="font-size:0.75rem; color:#9f1239; background:#ffe4e6; padding:2px 6px; border-radius:12px; display:flex; align-items:center; gap:3px;" title="Merma"><i class="fa-solid fa-recycle"></i> Merma</span>`;
+                } else if (comUpper.includes('RÁPID') || comUpper.includes('RAPID') || provUpper.includes('RÁPID')) {
+                    extraBadge = `<span style="font-size:0.75rem; color:#065f46; background:#d1fae5; padding:2px 6px; border-radius:12px; display:flex; align-items:center; gap:3px;" title="Despacho Rápido"><i class="fa-solid fa-bolt"></i> Rápido</span>`;
+                }
+
                 html += `
                 <div id="guia-row-${g.id}" class="guia-row-card" onclick="window.app.toggleGuiaDetail('${g.id}')">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
                                 <span class="badge ${tipoClass}">${tipo}</span>
+                                ${extraBadge}
                                 <span style="font-weight:bold; color:#333; margin-left:0.25rem; margin-right:0.25rem;">${g.proveedor || 'Sin Nombre'}</span>
                                 
                                 ${detailsCount > 0 ? `<span style="font-size:0.75rem; color:#4b5563; background:#f3f4f6; padding:2px 6px; border-radius:12px; display:flex; align-items:center; gap:3px;" title="Productos"><i class="fa-solid fa-box"></i> ${detailsCount}</span>` : ''}
                                 
-                                ${newCount > 0 ? `<span style="font-size:0.75rem; color:#b45309; background:#fef3c7; padding:2px 6px; border-radius:12px; display:flex; align-items:center; gap:3px;" title="Nuevos Productos"><i class="fa-solid fa-star"></i> ${newCount}</span>` : ''}
+                                \${newCount > 0 ? \`<span style="font-size:0.75rem; color:#b45309; background:#fef3c7; padding:2px 6px; border-radius:12px; display:flex; align-items:center; gap:3px;" title="Nuevos Productos"><i class="fa-solid fa-star"></i> \${newCount}</span>\` : ''}
                             </div>
                             <div style="font-size:0.8rem; color:#666; white-space:nowrap;">${g.fecha ? g.fecha.split(' ')[1] : ''}</div>
                         </div>
@@ -3769,6 +3781,16 @@ class App {
     renderPreingresosGrouped(list) {
         const container = document.getElementById('preingresos-list-scroll');
         if (!container) return; // Guard if view not ready
+
+        const btnPreingresos = document.getElementById('btn-preingresos');
+        if (btnPreingresos) {
+            const hasPending = list.some(p => p.estado === 'PENDIENTE');
+            if (hasPending) {
+                btnPreingresos.classList.add('pulse-red');
+            } else {
+                btnPreingresos.classList.remove('pulse-red');
+            }
+        }
 
         if (list.length === 0) {
             container.innerHTML = '<div style="text-align:center; color:#999; padding:2rem;">No se encontraron preingresos</div>';
@@ -9604,7 +9626,19 @@ class App {
                 <div style="background:white; padding:1.5rem; border-radius:8px; width:90%; max-width:400px; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
                     <h3 style="margin-top:0; color:var(--primary-color);"><i class="fa-solid fa-triangle-exclamation"></i> Registrar Merma</h3>
                     <div style="display:flex; flex-direction:column; gap:10px;">
-                        <input type="text" id="nm-codigo" placeholder="Código de Producto *" class="form-input">
+                        
+                        <!-- Search Box -->
+                        <div style="position:relative; width:100%;">
+                            <input type="text" id="nm-search-input" class="form-input" placeholder="Buscar código o producto..." 
+                                   onkeyup="app.handleMermaProdSearch(this, event)" autocomplete="off">
+                            <i class="fa-solid fa-magnifying-glass" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#aaa;"></i>
+                            <div id="nm-search-results" class="spotlight-results" style="position:absolute; top:100%; left:0; right:0; max-height:200px; display:none; border:1px solid #ddd; background:white; z-index:10000; box-shadow:0 10px 15px rgba(0,0,0,0.1); border-radius: 4px; overflow-y:auto;"></div>
+                        </div>
+
+                        <!-- Selected Info -->
+                        <input type="hidden" id="nm-codigo">
+                        <div id="nm-desc" style="font-size:0.85rem; color:#16a34a; font-weight:bold; min-height:18px;"></div>
+
                         <input type="number" id="nm-qty" placeholder="Cantidad *" class="form-input" min="1">
                         <select id="nm-origen" class="form-input">
                             <option value="ALMACÉN">Pérdida en Almacén</option>
@@ -9622,6 +9656,68 @@ class App {
             </div>
         `;
         document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        setTimeout(() => {
+            const searchInput = document.getElementById('nm-search-input');
+            if (searchInput) searchInput.focus();
+        }, 100);
+    }
+
+    handleMermaProdSearch(input, event) {
+        const term = input.value.toLowerCase().trim();
+        const resultsDiv = document.getElementById('nm-search-results');
+
+        if (event && event.key === 'Enter') {
+            event.preventDefault();
+            const exactCode = Object.keys(this.data.products).find(k => k.toLowerCase() === term);
+            if (exactCode) {
+                this.selectMermaProduct(exactCode);
+                resultsDiv.style.display = 'none';
+                return;
+            }
+        }
+
+        if (term.length < 2) {
+            resultsDiv.style.display = 'none';
+            return;
+        }
+
+        const products = Object.values(this.data.products);
+        const filtered = products.filter(p =>
+            (p.desc && p.desc.toLowerCase().includes(term)) ||
+            (p.codigo && String(p.codigo).toLowerCase().includes(term))
+        ).slice(0, 50);
+
+        if (filtered.length === 0) {
+            resultsDiv.innerHTML = '<div style="padding:0.5rem; color:#999; text-align:center;">No encontrado</div>';
+            resultsDiv.style.display = 'block';
+            return;
+        }
+
+        resultsDiv.innerHTML = filtered.map(p => {
+            const displayCode = p.codigo || 'N/A';
+            const safeDesc = (p.desc || '').replace(/'/g, "\\'");
+            return `
+            <div class="spotlight-item" onclick="app.selectMermaProduct('${displayCode}')" style="display:flex; justify-content:space-between; align-items:center; padding:0.5rem; cursor:pointer; border-bottom:1px solid #f1f5f9;">
+                <div style="flex:1;">
+                    <div class="spotlight-item-name" style="font-weight:bold; font-size:0.9rem;">${p.desc}</div>
+                    <div class="spotlight-item-code" style="color:#666; font-size:0.8rem;">Code: ${displayCode}</div>
+                </div>
+            </div>
+            `;
+        }).join('');
+        resultsDiv.style.display = 'block';
+    }
+
+    selectMermaProduct(code) {
+        const product = Object.values(this.data.products).find(p => String(p.codigo) === String(code));
+        if (!product) return;
+
+        document.getElementById('nm-codigo').value = code;
+        document.getElementById('nm-search-input').value = `${product.desc} (${code})`;
+        document.getElementById('nm-desc').innerText = `✓ Seleccionado: ${product.desc}`;
+        document.getElementById('nm-search-results').style.display = 'none';
+        document.getElementById('nm-qty').focus();
     }
 
     async saveMerma() {
@@ -9630,7 +9726,8 @@ class App {
         const origen = document.getElementById('nm-origen').value;
         const motivo = document.getElementById('nm-motivo').value;
 
-        if (!codigo || !qty) return alert('Código y Cantidad son obligatorios.');
+        if (!codigo) return alert('Debes buscar y seleccionar un producto de la lista primero.');
+        if (!qty) return alert('La cantidad es obligatoria.');
 
         try {
             document.getElementById('new-merma-modal').innerHTML = '<div style="background:white; padding:2rem; border-radius:8px; text-align:center;"><i class="fa-solid fa-spinner fa-spin fa-2x"></i><br>Guardando...</div>';
@@ -9752,8 +9849,7 @@ class App {
             if (!alertEl) {
                 alertEl = document.createElement('div');
                 alertEl.id = alertId;
-                alertEl.style.cssText = 'background:#fef2f2; border-left:4px solid #ef4444; border-radius:8px; padding:15px; margin-bottom:20px; box-shadow:0 2px 4px rgba(0,0,0,0.05); cursor:pointer; display:flex; align-items:center; gap:15px;';
-                alertEl.onclick = () => { window.app.switchTab('movements'); window.app.switchMovTab('mermas'); };
+                alertEl.style.cssText = 'background:#fef2f2; border-left:4px solid #ef4444; border-radius:8px; padding:15px; margin-bottom:20px; box-shadow:0 2px 4px rgba(0,0,0,0.05); display:flex; align-items:center; gap:15px;';
                 dashContainer.insertBefore(alertEl, dashContainer.firstChild);
             }
             alertEl.innerHTML = `
