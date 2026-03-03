@@ -173,12 +173,64 @@
 
                 <!-- DASHBOARD VIEW -->
                 <div id="view-dashboard" class="sub-view active">
-                    <div class="empty-state">
-                        <div class="empty-icon">
-                            <i class="fa-solid fa-chart-simple"></i>
+                    <!-- Dashboard container for dynamic alerts (Mermas critical) -->
+                    <div id="dashboard-overview" style="margin-bottom: 1rem;"></div>
+
+                    <!-- MERMAS EN DASHBOARD -->
+                    <div id="tab-mermas"
+                        style="display:block; flex:1; display:flex; flex-direction:column; height: calc(100vh - 120px);">
+                        <div class="action-bar" style="margin-top:0; margin-bottom: 0;">
+                            <h3 style="margin:0; flex:1; display:flex; align-items:center; gap:0.5rem; color:#475569;">
+                                <i class="fa-solid fa-recycle"></i> Gestión de Mermas
+                            </h3>
+                            <button class="btn-primary" onclick="window.app.openNewMermaModal()">
+                                <i class="fa-solid fa-plus"></i> Ingresar Merma
+                            </button>
                         </div>
-                        <h3>Panel de Control</h3>
-                        <p>Bienvenido al sistema LEVO. Seleccione un módulo para comenzar.</p>
+
+                        <!-- MERMAS LAYOUT WRAPPER -->
+                        <div id="mermas-layout-wrapper"
+                            style="display:flex; flex:1; gap: 1rem; position: relative; overflow: hidden; margin-top: 1rem;">
+
+                            <!-- LEFT COLUMN: LIST -->
+                            <div id="mermas-left-col"
+                                style="flex:1; display:flex; flex-direction:column; min-width: 0; transition: all 0.3s ease;">
+                                <!-- Filters -->
+                                <div class="filter-bar"
+                                    style="display:flex; gap:1rem; padding-bottom:1rem; border-bottom:1px solid #eee; margin-bottom:1rem; align-items: center;">
+                                    <div class="search-neon-wrapper" style="flex:1; position: relative;">
+                                        <i class="fa-solid fa-magnifying-glass"
+                                            style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#999;"></i>
+                                        <input type="text" id="merma-filter-text"
+                                            placeholder="Buscar merma por código o motivo..."
+                                            style="width:100%; padding-left:35px; height:40px; border-radius: 8px; border: 1px solid #ddd;"
+                                            onkeyup="window.app.filterMermasList()">
+                                    </div>
+                                    <div class="date-filter-wrapper" title="Filtrar por origen">
+                                        <select id="merma-filter-status" onchange="window.app.filterMermasList()"
+                                            style="height:40px; padding:0 10px; border-radius:8px; border:1px solid #ddd; outline:none; font-family:inherit;">
+                                            <option value="">Todos</option>
+                                            <option value="PENDIENTE">Pendientes</option>
+                                            <option value="PARCIAL">Parciales</option>
+                                            <option value="RESUELTO">Resueltos</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Scrollable List -->
+                                <div id="mermas-list-scroll" style="flex:1; overflow-y:auto; padding-right:0.5rem;">
+                                    <div style="text-align:center; padding:2rem; color:#999;">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Cargando mermas...
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- RIGHT COLUMN: DETAIL PANEL -->
+                            <div id="merma-detail-panel" class="detail-panel"
+                                style="width:0; overflow:hidden; border-left:1px solid #eee; background:white; display:flex; flex-direction:column; transition: width 0.3s ease;">
+                                <!-- Detail Content -->
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -193,12 +245,6 @@
                         <button id="btn-preingresos" class="mov-tab-btn"
                             onclick="window.app.switchMovTab('preingresos')">
                             <i class="fa-solid fa-boxes-packing"></i> Pre-Ingresos
-                        </button>
-                        <button id="btn-envasados" class="mov-tab-btn" onclick="window.app.switchMovTab('envasados')">
-                            <i class="fa-solid fa-box-open"></i> Envasados
-                        </button>
-                        <button id="btn-mermas" class="mov-tab-btn" onclick="window.app.switchMovTab('mermas')">
-                            <i class="fa-solid fa-recycle"></i> Mermas
                         </button>
                     </div>
 
@@ -327,58 +373,7 @@
 
             </div>
 
-            <!-- TAB: MERMAS -->
-            <div id="tab-mermas" class="mov-tab-content">
-                <div class="action-bar">
-                    <button class="btn-primary" onclick="window.app.openNewMermaModal()">
-                        <i class="fa-solid fa-plus"></i> Ingresar Merma
-                    </button>
-                </div>
 
-                <!-- MERMAS LAYOUT WRAPPER (Mirroring Guias) -->
-                <div id="mermas-layout-wrapper"
-                    style="display:flex; height: calc(100vh - 180px); gap: 1rem; position: relative; overflow: hidden; margin-top: 1rem;">
-
-                    <!-- LEFT COLUMN: LIST -->
-                    <div id="mermas-left-col"
-                        style="flex:1; display:flex; flex-direction:column; min-width: 0; transition: all 0.3s ease;">
-                        <!-- Filters -->
-                        <div class="filter-bar"
-                            style="display:flex; gap:1rem; padding-bottom:1rem; border-bottom:1px solid #eee; margin-bottom:1rem; align-items: center;">
-                            <div class="search-neon-wrapper" style="flex:1; position: relative;">
-                                <i class="fa-solid fa-magnifying-glass"
-                                    style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#999;"></i>
-                                <input type="text" id="merma-filter-text"
-                                    placeholder="Buscar merma por código o motivo..."
-                                    style="width:100%; padding-left:35px; height:40px; border-radius: 8px; border: 1px solid #ddd;"
-                                    onkeyup="window.app.filterMermasList()">
-                            </div>
-                            <div class="date-filter-wrapper" title="Filtrar por origen">
-                                <select id="merma-filter-status" onchange="window.app.filterMermasList()"
-                                    style="height:40px; padding:0 10px; border-radius:8px; border:1px solid #ddd; outline:none; font-family:inherit;">
-                                    <option value="">Todos</option>
-                                    <option value="PENDIENTE">Pendientes</option>
-                                    <option value="PARCIAL">Parciales</option>
-                                    <option value="RESUELTO">Resueltos</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Scrollable List -->
-                        <div id="mermas-list-scroll" style="flex:1; overflow-y:auto; padding-right:0.5rem;">
-                            <div style="text-align:center; padding:2rem; color:#999;">
-                                <i class="fa-solid fa-spinner fa-spin"></i> Cargando mermas...
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- RIGHT COLUMN: DETAIL PANEL -->
-                    <div id="merma-detail-panel" class="detail-panel"
-                        style="width:0; overflow:hidden; border-left:1px solid #eee; background:white; display:flex; flex-direction:column; transition: width 0.3s ease;">
-                        <!-- Detail Content -->
-                    </div>
-                </div>
-            </div>
 
             <!-- DISPATCH VIEW -->
             <div id="view-dispatch" class="sub-view">
