@@ -1021,7 +1021,7 @@ class App {
 
     renderDashboard() {
         // Check container
-        const container = document.getElementById('view-dashboard'); // Fixed: Target the correct sub-view
+        const container = document.getElementById('dashboard-widgets-container');
         if (!container) return;
 
         // Reset Header
@@ -1405,7 +1405,7 @@ class App {
         const headerTitle = document.getElementById('page-title');
         const headerActions = document.querySelector('.top-actions');
 
-        if (headerTitle) headerTitle.innerText = 'Dashboard'; // Or dynamic based on page
+        // Title logic is now handled exclusively by navigateTo
 
         // Restore Default Actions
         if (headerActions) {
@@ -2655,8 +2655,7 @@ class App {
                                 <span style="font-weight:bold; color:#333; margin-left:0.25rem; margin-right:0.25rem;">${g.proveedor || 'Sin Nombre'}</span>
                                 
                                 ${detailsCount > 0 ? `<span style="font-size:0.75rem; color:#4b5563; background:#f3f4f6; padding:2px 6px; border-radius:12px; display:flex; align-items:center; gap:3px;" title="Productos"><i class="fa-solid fa-box"></i> ${detailsCount}</span>` : ''}
-                                
-                                \${newCount > 0 ? \`<span style="font-size:0.75rem; color:#b45309; background:#fef3c7; padding:2px 6px; border-radius:12px; display:flex; align-items:center; gap:3px;" title="Nuevos Productos"><i class="fa-solid fa-star"></i> \${newCount}</span>\` : ''}
+                                ${newCount > 0 ? `<span style="font-size:0.75rem; color:#b45309; background:#fef3c7; padding:2px 6px; border-radius:12px; display:flex; align-items:center; gap:3px;" title="Nuevos Productos"><i class="fa-solid fa-star"></i> ${newCount}</span>` : ''}
                             </div>
                             <div style="font-size:0.8rem; color:#666; white-space:nowrap;">${g.fecha ? g.fecha.split(' ')[1] : ''}</div>
                         </div>
