@@ -760,9 +760,10 @@ class App {
         const p3 = this.fetchPackingList(true); // Envasador (Cache enabled)
         const p4 = this.fetchProvidersBackground(); // Prepedidos
         const p5 = this.loadMovimientosData(true); // Guias / History
+        const p6 = this.loadMermasData(true); // Mermas / Alerts
 
         // We do not await here to block UI, but we track them
-        Promise.allSettled([p1, p2, p3, p4, p5]).then(() => {
+        Promise.allSettled([p1, p2, p3, p4, p5, p6]).then(() => {
             console.log("✅ All Modules Preloaded & Cached");
         });
     }
@@ -2423,19 +2424,12 @@ class App {
                 `;
     }
 
-    // Switch Tabs (Guias vs Preingresos)
+    // Switch Tabs
     switchMovTab(tab) {
-        // Toggle Active Class on Header Buttons
-        const guiasBtn = document.getElementById('btn-mov-guias');
-        const preBtn = document.getElementById('btn-mov-preingresos');
-
-        if (guiasBtn && preBtn) {
-            guiasBtn.classList.remove('active');
-            preBtn.classList.remove('active');
-
-            if (tab === 'guias') guiasBtn.classList.add('active');
-            else preBtn.classList.add('active');
-        }
+        // Toggle Active Class on Header Buttons dynamically
+        document.querySelectorAll('.mov-tab-btn').forEach(btn => btn.classList.remove('active'));
+        const activeBtn = document.getElementById(`btn-${tab}`);
+        if (activeBtn) activeBtn.classList.add('active');
 
         // Toggle Content Views
         document.querySelectorAll('.mov-tab-content').forEach(c => c.classList.remove('active'));
@@ -2444,11 +2438,14 @@ class App {
 
         // Close Detail Panels for Fresh Start
         this.closeGuiaDetails();
-        this.closePreingresoDetails();
+        if (this.closePreingresoDetails) this.closePreingresoDetails();
+        if (this.closeMermaDetails) this.closeMermaDetails();
 
         // Refresh Data on Switch
         if (tab === 'guias') this.renderGuiasList();
         if (tab === 'preingresos') this.renderPreingresos();
+        if (tab === 'envasados') this.renderEnvasadosList();
+        if (tab === 'mermas') this.loadMermasData();
     }
 
     // Load Data
@@ -9450,6 +9447,325 @@ class App {
             currentStock: currentStock,
             allBatches: batches
         };
+    }
+
+    /* =========================================================================
+       MODULO MERMAS
+       ========================================================================= */
+
+    async loadMermasData(force = false) {
+        try {
+            if (!this.data.mermas || force) {
+                const res = await this.apiCall({ action: 'getMermas' });
+                this.data.mermas = res.data || [];
+            }
+            this.renderMermasList();
+        } catch (e) {
+            console.error("Error loading Mermas:", e);
+        }
+    }
+
+    renderMermasList() {
+        const container = document.getElementById('mermas-list-scroll');
+        if (!container) return;
+
+        let items = this.data.mermas || [];
+
+        // Apply Filters
+        const text = (document.getElementById('merma-filter-text')?.value || '').toLowerCase();
+        const status = document.getElementById('merma-filter-status')?.value || '';
+
+        items = items.filter(m => {
+            const matchesText = m.idMerma.toLowerCase().includes(text) ||
+                m.codigoProducto.toLowerCase().includes(text) ||
+                m.motivo.toLowerCase().includes(text);
+            const matchesStatus = status ? m.estado === status : true;
+            return matchesText && matchesStatus;
+        });
+
+        if (items.length === 0) {
+            container.innerHTML = `<div style="text-align:center; padding:2rem; color:#999;">No hay mermas registradas.</div>`;
+            return;
+        }
+
+        let html = '';
+        items.forEach(m => {
+            // Check Age > 48h
+            const diffHours = (new Date() - this.parseDate(m.fechaIngreso)) / 3600000;
+            const isCritical = (m.estado === 'PENDIENTE' || m.estado === 'PARCIAL') && diffHours > 48;
+
+            const stateColor = m.estado === 'PENDIENTE' ? '#f59e0b' : m.estado === 'PARCIAL' ? '#3b82f6' : '#10b981';
+            const borderGlow = isCritical ? 'border: 2px solid #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.3);' : 'border: 1px solid #eee;';
+
+            html += `
+                <div class="merma-card" style="background:white; padding:15px; border-radius:8px; margin-bottom:10px; cursor:pointer; ${borderGlow}" onclick="app.openMermaDetails('${m.idMerma}')">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                        <strong style="color:var(--primary-color)">${m.idMerma}</strong>
+                        <span style="background:${stateColor}; color:white; font-size:12px; padding:3px 8px; border-radius:12px;">${m.estado}</span>
+                    </div>
+                    <div style="font-size:14px; margin-bottom:4px;"><strong>Código:</strong> ${m.codigoProducto}</div>
+                    <div style="font-size:14px; margin-bottom:4px;"><strong>Origen:</strong> ${m.origen} | <strong>Motivo:</strong> ${m.motivo}</div>
+                    <div style="font-size:14px; color:#666;">
+                        Pendiente: <b style="color:#d97706">${m.cantidadPendiente}</b> / ${m.cantidadOriginal}
+                    </div>
+                    ${isCritical ? `<div style="color:#ef4444; font-size:12px; font-weight:bold; margin-top:8px;"><i class="fa-solid fa-triangle-exclamation"></i> Más de 48h sin resolver</div>` : ''}
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+        this.updateDashboardMermasAlert();
+    }
+
+    filterMermasList() {
+        this.renderMermasList();
+    }
+
+    parseDate(dateStr) {
+        if (!dateStr) return new Date();
+        const parts = dateStr.split(/[\s/:]+/);
+        if (parts.length >= 3) {
+            return new Date(parts[2], parts[1] - 1, parts[0], parts[3] || 0, parts[4] || 0, parts[5] || 0);
+        }
+        return new Date(dateStr);
+    }
+
+    openMermaDetails(id) {
+        const merma = (this.data.mermas || []).find(m => m.idMerma === id);
+        if (!merma) return;
+
+        const leftCol = document.getElementById('mermas-left-col');
+        const detailPanel = document.getElementById('merma-detail-panel');
+        if (!leftCol || !detailPanel) return;
+
+        leftCol.style.display = 'none';
+        detailPanel.style.width = '100%';
+        detailPanel.style.borderLeft = 'none';
+
+        const needsAction = merma.cantidadPendiente > 0;
+        let resLogHtml = '';
+        if (merma.resoluciones && merma.resoluciones.length > 0) {
+            resLogHtml = `<div style="margin-top:15px;"><h4 style="margin:5px 0;">Historial de Resoluciones</h4>`;
+            merma.resoluciones.forEach(r => {
+                resLogHtml += `<div style="font-size:13px; background:#f9f9f9; padding:8px; border-radius:4px; margin-bottom:5px; border-left: 3px solid #ccc;">
+                    <b>${r.tipo}</b> - ${r.cantidad} un.<br>
+                    <span style="color:#666">${r.fecha} por ${r.usuario}</span>
+                    ${r.obs ? `<div style="font-style:italic; font-size:12px; margin-top:3px;">"${r.obs}"</div>` : ''}
+                </div>`;
+            });
+            resLogHtml += `</div>`;
+        }
+
+        detailPanel.innerHTML = `
+            <div class="detail-header" style="padding:1rem; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; background:#fafafa;">
+                <div>
+                    <h3 style="margin:0; color:var(--primary-color);">${merma.idMerma}</h3>
+                    <div style="font-size:0.85rem; color:#666;">Ingresó: ${merma.fechaIngreso}</div>
+                </div>
+                <button class="icon-btn" onclick="app.closeMermaDetails()">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="detail-body" style="padding:1.5rem; flex:1; overflow-y:auto;">
+                <div style="background:#fff; border:1px solid #eee; border-radius:8px; padding:15px; margin-bottom:15px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div><label style="color:#888; font-size:12px;">Código Producto</label><div style="font-weight:600;">${merma.codigoProducto}</div></div>
+                        <div><label style="color:#888; font-size:12px;">Origen</label><div>${merma.origen}</div></div>
+                        <div><label style="color:#888; font-size:12px;">Cantidad Original</label><div>${merma.cantidadOriginal}</div></div>
+                        <div><label style="color:#888; font-size:12px;">Pendiente</label><div style="color:#d97706; font-weight:bold;">${merma.cantidadPendiente}</div></div>
+                    </div>
+                    <div style="margin-top:10px;"><label style="color:#888; font-size:12px;">Motivo del Daño</label><div>${merma.motivo}</div></div>
+                </div>
+
+                ${resLogHtml}
+
+                ${needsAction ? `
+                <div style="margin-top:20px; text-align:center;">
+                    <button class="btn-primary" style="width:100%; padding:12px; font-size:16px;" onclick="app.openResolveMermaModal('${merma.idMerma}')">
+                        <i class="fa-solid fa-gavel"></i> Resolver Merma
+                    </button>
+                </div>
+                ` : `<div style="margin-top:20px; text-align:center; color:#10b981; font-weight:bold;"><i class="fa-solid fa-check-circle"></i> Merma Resuelta</div>`}
+            </div>
+        `;
+    }
+
+    closeMermaDetails() {
+        const leftCol = document.getElementById('mermas-left-col');
+        const detailPanel = document.getElementById('merma-detail-panel');
+        if (leftCol && detailPanel) {
+            leftCol.style.display = 'flex';
+            detailPanel.style.width = '0';
+        }
+    }
+
+    openNewMermaModal() {
+        const modalHtml = `
+            <div id="new-merma-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:10000;">
+                <div style="background:white; padding:1.5rem; border-radius:8px; width:90%; max-width:400px; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+                    <h3 style="margin-top:0; color:var(--primary-color);"><i class="fa-solid fa-triangle-exclamation"></i> Registrar Merma</h3>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        <input type="text" id="nm-codigo" placeholder="Código de Producto *" class="form-input">
+                        <input type="number" id="nm-qty" placeholder="Cantidad *" class="form-input" min="1">
+                        <select id="nm-origen" class="form-input">
+                            <option value="ALMACÉN">Pérdida en Almacén</option>
+                            <option value="ZONA 1">Devolución Zona 1</option>
+                            <option value="ZONA 2">Devolución Zona 2</option>
+                            <option value="OTRO">Otro</option>
+                        </select>
+                        <textarea id="nm-motivo" placeholder="Motivo (Ej. bolsa rota, vencido...)" class="form-input" rows="3"></textarea>
+                    </div>
+                    <div style="margin-top:1.5rem; display:flex; justify-content:flex-end; gap:0.5rem;">
+                        <button class="btn-secondary" onclick="document.getElementById('new-merma-modal').remove()">Cancelar</button>
+                        <button class="btn-primary" onclick="app.saveMerma()">Guardar Merma</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    async saveMerma() {
+        const codigo = document.getElementById('nm-codigo').value;
+        const qty = document.getElementById('nm-qty').value;
+        const origen = document.getElementById('nm-origen').value;
+        const motivo = document.getElementById('nm-motivo').value;
+
+        if (!codigo || !qty) return alert('Código y Cantidad son obligatorios.');
+
+        try {
+            document.getElementById('new-merma-modal').innerHTML = '<div style="background:white; padding:2rem; border-radius:8px; text-align:center;"><i class="fa-solid fa-spinner fa-spin fa-2x"></i><br>Guardando...</div>';
+
+            await this.apiCall({
+                action: 'saveMerma',
+                payload: { codigoProducto: codigo, cantidad: qty, origen: origen, motivo: motivo }
+            });
+
+            this.showToast('Merma registrada exitosamente.');
+            document.getElementById('new-merma-modal').remove();
+            this.loadMermasData(true);
+        } catch (e) {
+            alert('Error: ' + e.message);
+            document.getElementById('new-merma-modal').remove();
+        }
+    }
+
+    openResolveMermaModal(id) {
+        const merma = (this.data.mermas || []).find(m => m.idMerma === id);
+        if (!merma) return;
+
+        const modalHtml = `
+            <div id="resolve-merma-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:10000;">
+                <div style="background:white; padding:1.5rem; border-radius:8px; width:90%; max-width:400px; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+                    <h3 style="margin-top:0; color:var(--primary-color);"><i class="fa-solid fa-gavel"></i> Resolver Merma</h3>
+                    <div style="font-size:13px; color:#666; margin-bottom:15px;">Usted puede resolver parcial o totalmente las <b>${merma.cantidadPendiente}</b> unidades pendientes.</div>
+                    
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <div>
+                            <label style="font-size:12px; font-weight:bold;">Acción a tomar:</label>
+                            <select id="rm-tipo" class="form-input" onchange="document.getElementById('rm-newcode-container').style.display = this.value === 'TRANSFORMADO' ? 'block' : 'none'">
+                                <option value="RECUPERADO">Sanear / Recuperar (Al mismo código)</option>
+                                <option value="ELIMINADO">Desechar / Eliminar (Baja definitiva)</option>
+                                <option value="TRANSFORMADO">Transformar en producto alterno</option>
+                            </select>
+                        </div>
+                        
+                        <div id="rm-newcode-container" style="display:none;">
+                            <label style="font-size:12px; font-weight:bold;">Nuevo Código Transformado:</label>
+                            <input type="text" id="rm-newcode" placeholder="Ej. AJI-GRANEL" class="form-input">
+                        </div>
+
+                        <div>
+                            <label style="font-size:12px; font-weight:bold;">Unidades a procesar (Max. ${merma.cantidadPendiente}):</label>
+                            <input type="number" id="rm-qty" value="${merma.cantidadPendiente}" max="${merma.cantidadPendiente}" min="0.01" step="0.01" class="form-input">
+                        </div>
+
+                        <div>
+                            <label style="font-size:12px; font-weight:bold;">Observación (opcional):</label>
+                            <input type="text" id="rm-obs" placeholder="..." class="form-input">
+                        </div>
+                    </div>
+
+                    <div style="margin-top:1.5rem; display:flex; justify-content:flex-end; gap:0.5rem;">
+                        <button class="btn-secondary" onclick="document.getElementById('resolve-merma-modal').remove()">Cancelar</button>
+                        <button class="btn-primary" onclick="app.resolveMerma('${id}')">Aplicar Resolución</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    async resolveMerma(id) {
+        const tipo = document.getElementById('rm-tipo').value;
+        const qty = parseFloat(document.getElementById('rm-qty').value);
+        const newCode = document.getElementById('rm-newcode').value;
+        const obs = document.getElementById('rm-obs').value;
+
+        if (isNaN(qty) || qty <= 0) return alert('Cantidad inválida.');
+        if (tipo === 'TRANSFORMADO' && !newCode) return alert('Debe especificar el nuevo código producto.');
+
+        try {
+            document.getElementById('resolve-merma-modal').innerHTML = '<div style="background:white; padding:2rem; border-radius:8px; text-align:center;"><i class="fa-solid fa-spinner fa-spin fa-2x"></i><br>Procesando y Consolidando Guías...</div>';
+
+            await this.apiCall({
+                action: 'resolveMerma',
+                payload: {
+                    idMerma: id,
+                    tipoResolucion: tipo,
+                    cantidadProceso: qty,
+                    nuevoCodigo: newCode,
+                    observacion: obs,
+                    usuario: this.currentUser || 'Sistema'
+                }
+            });
+
+            this.showToast('Acción de Merma aplicada correctamente.');
+            document.getElementById('resolve-merma-modal').remove();
+            this.closeMermaDetails();
+            this.loadMermasData(true);
+
+            // To be on the safe side, invalidate local storage if guides changed
+            this.cacheData.movimientos = null;
+
+        } catch (e) {
+            alert('Error: ' + e.message);
+            document.getElementById('resolve-merma-modal').remove();
+        }
+    }
+
+    updateDashboardMermasAlert() {
+        const dashContainer = document.getElementById('dashboard-overview');
+        if (!dashContainer || !this.data.mermas) return;
+
+        let criticalCount = 0;
+        this.data.mermas.forEach(m => {
+            const diffHours = (new Date() - this.parseDate(m.fechaIngreso)) / 3600000;
+            if ((m.estado === 'PENDIENTE' || m.estado === 'PARCIAL') && diffHours > 48) {
+                criticalCount++;
+            }
+        });
+
+        const alertId = 'merma-dash-alert';
+        let alertEl = document.getElementById(alertId);
+
+        if (criticalCount > 0) {
+            if (!alertEl) {
+                alertEl = document.createElement('div');
+                alertEl.id = alertId;
+                alertEl.style.cssText = 'background:#fef2f2; border-left:4px solid #ef4444; border-radius:8px; padding:15px; margin-bottom:20px; box-shadow:0 2px 4px rgba(0,0,0,0.05); cursor:pointer; display:flex; align-items:center; gap:15px;';
+                alertEl.onclick = () => { window.app.switchTab('movements'); window.app.switchMovTab('mermas'); };
+                dashContainer.insertBefore(alertEl, dashContainer.firstChild);
+            }
+            alertEl.innerHTML = `
+                <i class="fa-solid fa-triangle-exclamation" style="font-size:24px; color:#ef4444;"></i>
+                <div>
+                    <h3 style="color:#b91c1c; margin:0 0 5px 0;">¡Alerta de Mermas Expiradas!</h3>
+                    <div style="color:#991b1b; font-size:14px;">Tienes <b>${criticalCount}</b> mermas pendientes registradas hace más de 48 horas sin tomar acción. Atiéndelas para evitar desfases de almacén.</div>
+                </div>
+            `;
+        } else if (alertEl) {
+            alertEl.remove();
+        }
     }
 }
 // Initialize App
