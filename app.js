@@ -9477,7 +9477,14 @@ class App {
     async loadMermasData(force = false) {
         try {
             if (!this.data.mermas || force) {
-                const res = await this.apiCall({ action: 'getMermas' });
+                const response = await fetch(LEVO_API_URL, {
+                    method: 'POST',
+                    redirect: 'follow',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({ action: 'getMermas' })
+                });
+                const res = await response.json();
+                if (res.status !== 'success') throw new Error(res.message);
                 this.data.mermas = res.data || [];
             }
             this.renderMermasList();
@@ -9731,10 +9738,17 @@ class App {
         try {
             document.getElementById('new-merma-modal').innerHTML = '<div style="background:white; padding:2rem; border-radius:8px; text-align:center;"><i class="fa-solid fa-spinner fa-spin fa-2x"></i><br>Guardando...</div>';
 
-            await this.apiCall({
-                action: 'saveMerma',
-                payload: { codigoProducto: codigo, cantidad: qty, origen: origen, motivo: motivo }
+            const response = await fetch(LEVO_API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: 'saveMerma',
+                    payload: { codigoProducto: codigo, cantidad: qty, origen: origen, motivo: motivo }
+                })
             });
+            const res = await response.json();
+            if (res.status !== 'success') throw new Error(res.message);
 
             this.showToast('Merma registrada exitosamente.');
             document.getElementById('new-merma-modal').remove();
@@ -9803,17 +9817,24 @@ class App {
         try {
             document.getElementById('resolve-merma-modal').innerHTML = '<div style="background:white; padding:2rem; border-radius:8px; text-align:center;"><i class="fa-solid fa-spinner fa-spin fa-2x"></i><br>Procesando y Consolidando Guías...</div>';
 
-            await this.apiCall({
-                action: 'resolveMerma',
-                payload: {
-                    idMerma: id,
-                    tipoResolucion: tipo,
-                    cantidadProceso: qty,
-                    nuevoCodigo: newCode,
-                    observacion: obs,
-                    usuario: this.currentUser || 'Sistema'
-                }
+            const response = await fetch(LEVO_API_URL, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    action: 'resolveMerma',
+                    payload: {
+                        idMerma: id,
+                        tipoResolucion: tipo,
+                        cantidadProceso: qty,
+                        nuevoCodigo: newCode,
+                        observacion: obs,
+                        usuario: this.currentUser || 'Sistema'
+                    }
+                })
             });
+            const res = await response.json();
+            if (res.status !== 'success') throw new Error(res.message);
 
             this.showToast('Acción de Merma aplicada correctamente.');
             document.getElementById('resolve-merma-modal').remove();
