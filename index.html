@@ -41,6 +41,14 @@
 </head>
 
 <body>
+    <!-- PANTALLA DE CARGA / PRELOADER INICIAL -->
+    <div id="initial-loader"
+        style="position:fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%); z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; transition: opacity 0.5s ease, visibility 0.5s ease;">
+        <i class="fa-solid fa-boxes-packing fa-4x fa-bounce"
+            style="margin-bottom: 20px; color:var(--primary-color);"></i>
+        <h2 style="font-family: 'Poppins', sans-serif; font-weight: 700; letter-spacing: 2px; margin:0;">LEVO ERP</h2>
+        <p style="font-size: 0.95rem; color:#94a3b8; margin-top: 8px;">Conectando al sistema...</p>
+    </div>
 
     <!-- NOTIFICATION SYSTEM -->
     <div id="notification-container"></div>
@@ -202,7 +210,7 @@
                                 <!-- Filters -->
                                 <div class="filter-bar"
                                     style="display:flex; gap:1rem; padding-bottom:1rem; border-bottom:1px solid #eee; margin-bottom:1rem; align-items: center;">
-                                    <div class="search-neon-wrapper" style="flex:1; position: relative;">
+                                    <div class="search-neon-wrapper" style="flex:1 1 auto; position: relative;">
                                         <i class="fa-solid fa-magnifying-glass"
                                             style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#999;"></i>
                                         <input type="text" id="merma-filter-text"
@@ -210,9 +218,9 @@
                                             style="width:100%; padding-left:35px; height:40px; border-radius: 8px; border: 1px solid #ddd;"
                                             onkeyup="window.app.filterMermasList()">
                                     </div>
-                                    <div class="date-filter-wrapper" title="Filtrar por origen">
+                                    <div class="date-filter-wrapper" title="Filtrar por origen" style="flex: 0 0 auto;">
                                         <select id="merma-filter-status" onchange="window.app.filterMermasList()"
-                                            style="height:40px; min-width: 130px; padding:0 10px; border-radius:8px; border:1px solid #ddd; outline:none; font-family:inherit;">
+                                            style="height:40px; min-width: 150px; padding:0 10px; border-radius:8px; border:1px solid #ddd; outline:none; font-family:inherit;">
                                             <option value="">Todos</option>
                                             <option value="PENDIENTE">Pendientes</option>
                                             <option value="PARCIAL">Parciales</option>
