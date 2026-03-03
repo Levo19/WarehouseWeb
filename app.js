@@ -140,6 +140,15 @@ class App {
     /**
      * Session Management
      */
+    hideLoader() {
+        const loader = document.getElementById('initial-loader');
+        if (loader) {
+            loader.style.opacity = '0';
+            setTimeout(() => {
+                loader.style.visibility = 'hidden';
+            }, 500);
+        }
+    }
     checkSession() {
         const storedUser = localStorage.getItem('levo_user');
         if (storedUser) {
@@ -252,6 +261,7 @@ class App {
 
         this.startBackgroundSync();
 
+        this.hideLoader(); // REMOVE PRELOADER AFTER RENDERING APP
         this.navigateTo('dashboard');
     }
 
@@ -596,6 +606,7 @@ class App {
      * View Management
      */
     showLogin() {
+        this.hideLoader();
         this.loginView.classList.add('active');
         this.mainApp.classList.remove('active');
     }
