@@ -1352,7 +1352,7 @@ class App {
      */
     renderDispatchModule() {
         const container = document.getElementById('dispatch-content');
-        container.innerHTML = `<div id="zone-workspace" style="margin-top:1rem;"></div>`;
+        container.innerHTML = `<div id="zone-workspace" style="margin-top:1rem; height: calc(100vh - 100px); overflow-y: auto; padding-bottom: 2rem;"></div>`;
 
         // 1. Calculate Unique Clients
         const clients = this.getUniqueClients();
@@ -2404,7 +2404,12 @@ class App {
                     </table>
 
                     <script>
-                        window.onload = function() { window.print(); window.close(); }
+                        setTimeout(function() {
+                            window.print();
+                        }, 500);
+                        window.onafterprint = function() {
+                            window.close();
+                        };
                     </script>
                 </body>
             </html>
@@ -2919,12 +2924,12 @@ class App {
             : [];
 
         // Build Message
-        let text = `ðŸ“¦ *REPORTE DE GUÃA (LEVO ERP)*\n`;
+        let text = `📦 *REPORTE DE GUÍA (LEVO ERP)*\n`;
         text += `----------------------------\n`;
-        text += `ðŸ“… *Fecha:* ${guiaInfo.fecha}\n`;
-        text += `ðŸ¢ *Proveedor/Destino:* ${guiaInfo.proveedor || guiaInfo.destino || 'S/D'}\n`;
-        text += `ðŸ‘¤ *Usuario:* ${guiaInfo.usuario}\n`;
-        text += `ðŸ“ *Tipo:* ${guiaInfo.tipo}\n`;
+        text += `📅 *Fecha:* ${guiaInfo.fecha}\n`;
+        text += `🏢 *Proveedor/Destino:* ${guiaInfo.proveedor || guiaInfo.destino || 'S/D'}\n`;
+        text += `👤 *Usuario:* ${guiaInfo.usuario}\n`;
+        text += `🏷️ *Tipo:* ${guiaInfo.tipo}\n`;
         text += `----------------------------\n\n`;
 
         text += `*PRODUCTOS:*\n`;
@@ -2934,24 +2939,24 @@ class App {
         }
 
         enriched.forEach(p => {
-            text += `â€¢ ${p.cantidad} x ${p.descripcion}\n`;
+            text += `• ${p.cantidad} x ${p.descripcion}\n`;
         });
 
         if (newProds.length > 0) {
             text += `\n*NUEVOS (PENDIENTES):*\n`;
             newProds.forEach(p => {
-                text += `â€¢ ${p.cantidad} x ${p.descripcion} (NUEVO)\n`;
+                text += `• ${p.cantidad} x ${p.descripcion} (NUEVO)\n`;
             });
         }
 
         text += `\n----------------------------\n`;
         if (guiaInfo.comentario) {
-            text += `ðŸ’¬ *Nota:* ${guiaInfo.comentario}\n`;
+            text += `💬 *Nota:* ${guiaInfo.comentario}\n`;
         }
 
         if (guiaInfo.foto) {
             const imageUrl = this.getOptimizedImageUrl(guiaInfo.foto);
-            text += `ðŸ“· *Foto:* ${imageUrl}\n`;
+            text += `📷 *Foto:* ${imageUrl}\n`;
         }
 
         const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
@@ -3104,7 +3109,12 @@ class App {
                         <div style="font-size:10px; font-weight:500; margin-top:5px;">${new Date().toLocaleString()}</div>
                     </div>
                     <script>
-                        window.onload = function() { window.print(); window.close(); }
+                        setTimeout(function() {
+                            window.print();
+                        }, 500);
+                        window.onafterprint = function() {
+                            window.close();
+                        };
                     </script>
                 </body>
             </html>
@@ -4006,25 +4016,25 @@ class App {
         const info = this.data.movimientos.preingresos.find(p => p.id === id);
         if (!info) return alert('No encontrado');
 
-        let text = `ðŸ“‹ *REPORTE PRE-INGRESO (LEVO ERP)*\n`;
+        let text = `📋 *REPORTE PRE-INGRESO (LEVO ERP)*\n`;
         text += `----------------------------\n`;
-        text += `ðŸ“… *Fecha:* ${info.fecha}\n`;
-        text += `ðŸ¢ *Proveedor:* ${info.proveedor}\n`;
-        text += `ðŸ’° *Monto:* ${info.monto ? 'S/ ' + info.monto : '-'}\n`;
-        text += `ðŸ· *Etiqueta:* ${info.etiqueta || 'N/A'}\n`;
-        text += `ðŸ“„ *Comprobante:* ${info.comprobante || 'N/A'}\n`;
-        text += `ðŸš¦ *Estado:* ${info.estado}\n`;
+        text += `📅 *Fecha:* ${info.fecha}\n`;
+        text += `🏢 *Proveedor:* ${info.proveedor}\n`;
+        text += `💰 *Monto:* ${info.monto ? 'S/ ' + info.monto : '-'}\n`;
+        text += `🏷️ *Etiqueta:* ${info.etiqueta || 'N/A'}\n`;
+        text += `📄 *Comprobante:* ${info.comprobante || 'N/A'}\n`;
+        text += `🚦 *Estado:* ${info.estado}\n`;
         text += `----------------------------\n\n`;
 
         if (info.comentario) {
-            text += `ðŸ’¬ *Observaciones:*\n"${info.comentario}"\n\n`;
+            text += `💬 *Observaciones:*\n"${info.comentario}"\n\n`;
         }
 
         if (info.fotos && info.fotos.length > 0) {
-            text += `ðŸ“¸ *Evidencias Adjuntas (${info.fotos.length}):*\n`;
+            text += `📸 *Evidencias Adjuntas (${info.fotos.length}):*\n`;
             info.fotos.forEach((url, index) => {
                 const optUrl = this.getOptimizedImageUrl(url);
-                text += `â€¢ Foto ${index + 1}: ${optUrl}\n`;
+                text += `• Foto ${index + 1}: ${optUrl}\n`;
             });
         } else {
             text += `_(Sin fotos adjuntas)_\n`;
@@ -8417,7 +8427,7 @@ class App {
                     .footer { margin-top: 25px; text-align: center; font-size: 12px; font-weight: bold; border-top: 3px solid #000; padding-top: 15px; }
                 </style>
             </head>
-            <body onload="setTimeout(function(){window.print();window.close();}, 800)">
+            <body>
                 <div class="header">
                     <div class="title">${data.title || 'LEVO ERP'}</div>
                     <div class="subtitle">${data.subtitle}</div>
@@ -8438,8 +8448,16 @@ class App {
                 <div class="footer">
                     <div>RECIBIDO CONFORME</div>
                     <br><br><br>
-                    <div style="border-top:2px solid #000; width:70%; margin:0 auto; padding-top:4px;">Firma</div>
+                    <div class="code-text" style="text-align:center; margin-top:10px;">Ticket Generado Automáticamente</div>
                 </div>
+                <script>
+                    setTimeout(function() {
+                        window.print();
+                    }, 800);
+                    window.onafterprint = function() {
+                        window.close();
+                    };
+                </script>
             </body>
             </html>
         `);
