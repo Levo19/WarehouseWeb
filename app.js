@@ -8464,16 +8464,16 @@ class App {
         win.document.close();
     }
     // ==========================================
-// MODULE: TOOLS (N8N AI SMART PICKUP LIST)
-// ==========================================
+    // MODULE: TOOLS (N8N AI SMART PICKUP LIST)
+    // ==========================================
 
-renderToolsModule() {
-    const container = document.getElementById('tools-content');
+    renderToolsModule() {
+        const container = document.getElementById('tools-content');
 
-    // Define Webhook locally for this module
-    const N8N_WEBHOOK_URL = localStorage.getItem('levo_n8n_webhook_url') || '';
+        // Define Webhook locally for this module
+        const N8N_WEBHOOK_URL = localStorage.getItem('levo_n8n_webhook_url') || '';
 
-    container.innerHTML = `
+        container.innerHTML = `
             <div style="display:flex; flex-direction:column; height:100%; gap:1rem;">
                 <!-- Header -->
                 <div style="flex:0 0 auto; display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #eee; padding-bottom:1rem;">
@@ -8613,297 +8613,290 @@ renderToolsModule() {
                 </div>
             </div>
         `;
-}
+    }
 
     async handleOCRUpload(input) {
-    if (!input.files || input.files.length === 0) return;
+        if (!input.files || input.files.length === 0) return;
 
-    const file = input.files[0]; // Only process the first file for simplicity in this new flow
-    input.value = ""; // Reset form
+        const file = input.files[0]; // Only process the first file for simplicity in this new flow
+        input.value = ""; // Reset form
 
-    const webhookUrl = document.getElementById('n8n-webhook-input').value.trim();
-    if (!webhookUrl) {
-        return alert("Por favor, configure primero la URL de su Webhook de N8N en la parte superior.");
+        const webhookUrl = document.getElementById('n8n-webhook-input').value.trim();
+        if (!webhookUrl) {
+            return alert("Por favor, configure primero la URL de su Webhook de N8N en la parte superior.");
+        }
+
+        // Preview Image immediately
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => this.viewOCRImage(e.target.result);
+            reader.readAsDataURL(file);
+        } else {
+            document.getElementById('ocr-preview-placeholder').innerHTML = '<i class="fa-solid fa-file-pdf" style="font-size:2rem; margin-bottom:0.5rem; color:red;"></i><div>Archivo: ' + file.name + '</div>';
+            document.getElementById('ocr-preview-img').style.display = 'none';
+            document.getElementById('ocr-preview-placeholder').style.display = 'block';
+        }
+
+        await this.processImageWithN8N(file, webhookUrl);
     }
-
-    // Preview Image immediately
-    if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (e) => this.viewOCRImage(e.target.result);
-        reader.readAsDataURL(file);
-    } else {
-        document.getElementById('ocr-preview-placeholder').innerHTML = '<i class="fa-solid fa-file-pdf" style="font-size:2rem; margin-bottom:0.5rem; color:red;"></i><div>Archivo: ' + file.name + '</div>';
-        document.getElementById('ocr-preview-img').style.display = 'none';
-        document.getElementById('ocr-preview-placeholder').style.display = 'block';
-    }
-
-    await this.processImageWithN8N(file, webhookUrl);
-}
 
     async processImageWithN8N(file, webhookUrl) {
-    const statusEl = document.getElementById("ocr-status");
-    statusEl.style.display = "block";
-    statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Enviando archivo a IA (N8N)...';
+        const statusEl = document.getElementById("ocr-status");
+        statusEl.style.display = "block";
+        statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Enviando archivo a IA (N8N)...';
 
-    try {
-        // Convert to Base64 to send to n8n
-        const base64Data = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-        });
+        try {
+            // Use FormData so n8n automatically receives it as a Binary file named "data"
+            const formData = new FormData();
+            formData.append("data", file);
+            formData.append("filename", file.name);
+            formData.append("mimeType", file.type);
 
-        // Make POST request directly to the users n8n webhook
-        const response = await fetch(webhookUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                filename: file.name,
-                mimeType: file.type,
-                fileData: base64Data
-            })
-        });
+            // Make POST request directly to the users n8n webhook
+            const response = await fetch(webhookUrl, {
+                method: "POST",
+                body: formData
+            });
 
-        if (!response.ok) {
-            throw new Error("HTTP error " + response.status);
+            if (!response.ok) {
+                throw new Error("HTTP error " + response.status);
+            }
+
+            const aiResults = await response.json();
+
+            // Expected JSON format from n8n AI: 
+            // [{"nombre": "TRIUNFO FIDEO...", "cantidad": 6}, {"nombre": "OTRO PRODUCTO", "cantidad": 12}]
+
+            if (Array.isArray(aiResults)) {
+                statusEl.innerHTML = '<i class="fa-solid fa-gears fa-spin"></i> Cruzando datos con inventario...';
+                this.generatePickupList(aiResults);
+            } else if (aiResults.productos && Array.isArray(aiResults.productos)) {
+                this.generatePickupList(aiResults.productos);
+            } else {
+                throw new Error("Formato JSON invalido desde n8n. Se esperaba un Array de productos.");
+            }
+
+            statusEl.style.display = "none";
+            this.showToast("Búsqueda IA completada", "success");
+
+        } catch (err) {
+            console.error("N8N Processing Error:", err);
+            statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error al conectar con N8N.';
+            setTimeout(() => statusEl.style.display = 'none', 5000);
+            this.showToast("Error de conexión IA: " + err.message, "error");
         }
-
-        const aiResults = await response.json();
-
-        // Expected JSON format from n8n AI: 
-        // [{"nombre": "TRIUNFO FIDEO...", "cantidad": 6}, {"nombre": "OTRO PRODUCTO", "cantidad": 12}]
-
-        if (Array.isArray(aiResults)) {
-            statusEl.innerHTML = '<i class="fa-solid fa-gears fa-spin"></i> Cruzando datos con inventario...';
-            this.generatePickupList(aiResults);
-        } else if (aiResults.productos && Array.isArray(aiResults.productos)) {
-            this.generatePickupList(aiResults.productos);
-        } else {
-            throw new Error("Formato JSON invalido desde n8n. Se esperaba un Array de productos.");
-        }
-
-        statusEl.style.display = "none";
-        this.showToast("Búsqueda IA completada", "success");
-
-    } catch (err) {
-        console.error("N8N Processing Error:", err);
-        statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error al conectar con N8N.';
-        setTimeout(() => statusEl.style.display = 'none', 5000);
-        this.showToast("Error de conexión IA: " + err.message, "error");
     }
-}
 
     async triggerPaste() {
-    try {
-        const items = await navigator.clipboard.read();
-        for (const item of items) {
-            const imageType = item.types.find(type => type.startsWith('image/'));
-            if (imageType) {
-                const blob = await item.getType(imageType);
-                blob.name = "Pasted_Image_" + Date.now() + ".png";
+        try {
+            const items = await navigator.clipboard.read();
+            for (const item of items) {
+                const imageType = item.types.find(type => type.startsWith('image/'));
+                if (imageType) {
+                    const blob = await item.getType(imageType);
+                    blob.name = "Pasted_Image_" + Date.now() + ".png";
 
+                    const webhookUrl = document.getElementById('n8n-webhook-input').value.trim();
+                    if (!webhookUrl) return alert("Por favor configure la URL del Webhook N8N.");
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => this.viewOCRImage(e.target.result);
+                    reader.readAsDataURL(blob);
+
+                    await this.processImageWithN8N(blob, webhookUrl);
+                    return;
+                }
+            }
+            alert("No se encontró ninguna imagen en el portapapeles. Copia una imagen primero.");
+        } catch (err) {
+            console.error('Failed to read clipboard', err);
+            alert("Use Ctrl+V directamente en el panel.");
+        }
+    }
+
+    async handleOCRPaste(e) {
+        if (this.state.currentModule !== "tools") return;
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].kind === "file" && items[i].type.indexOf("image/") !== -1) {
+                const blob = items[i].getAsFile();
+                if (!blob.name || blob.name === "image.png") blob.name = "Pasted_Image_" + Date.now() + ".png";
+
+                e.preventDefault();
                 const webhookUrl = document.getElementById('n8n-webhook-input').value.trim();
                 if (!webhookUrl) return alert("Por favor configure la URL del Webhook N8N.");
 
                 const reader = new FileReader();
-                reader.onload = (e) => this.viewOCRImage(e.target.result);
+                reader.onload = (ev) => this.viewOCRImage(ev.target.result);
                 reader.readAsDataURL(blob);
 
                 await this.processImageWithN8N(blob, webhookUrl);
                 return;
             }
         }
-        alert("No se encontró ninguna imagen en el portapapeles. Copia una imagen primero.");
-    } catch (err) {
-        console.error('Failed to read clipboard', err);
-        alert("Use Ctrl+V directamente en el panel.");
     }
-}
 
-    async handleOCRPaste(e) {
-    if (this.state.currentModule !== "tools") return;
-    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-    for (let i = 0; i < items.length; i++) {
-        if (items[i].kind === "file" && items[i].type.indexOf("image/") !== -1) {
-            const blob = items[i].getAsFile();
-            if (!blob.name || blob.name === "image.png") blob.name = "Pasted_Image_" + Date.now() + ".png";
+    viewOCRImage(srcBase64) {
+        const preview = document.getElementById('ocr-preview-img');
+        const placeholder = document.getElementById('ocr-preview-placeholder');
+        if (srcBase64) {
+            preview.src = srcBase64;
+            preview.style.display = 'block';
+            placeholder.style.display = 'none';
+        }
+    }
 
-            e.preventDefault();
-            const webhookUrl = document.getElementById('n8n-webhook-input').value.trim();
-            if (!webhookUrl) return alert("Por favor configure la URL del Webhook N8N.");
+    // --- FUZZY ALGORITHM & DISTRIBUTOR ---
 
-            const reader = new FileReader();
-            reader.onload = (ev) => this.viewOCRImage(ev.target.result);
-            reader.readAsDataURL(blob);
+    // Simple Token intersection helper for fuzzy matching
+    calculateMatchScore(query, target) {
+        if (!query || !target) return 0;
+        const queryTokens = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(t => t.length > 1);
+        const targetTokens = target.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(t => t.length > 1);
 
-            await this.processImageWithN8N(blob, webhookUrl);
+        let matches = 0;
+        for (const qt of queryTokens) {
+            // Direct word match or partial word match > 3 chars
+            if (targetTokens.some(tt => tt === qt || (qt.length > 3 && (tt.includes(qt) || qt.includes(tt))))) {
+                matches++;
+            }
+        }
+        // Score based on how many query words were found in the target
+        return queryTokens.length > 0 ? matches / queryTokens.length : 0;
+    }
+
+    findBestProductMatch(aiProductName) {
+        let bestMatch = null;
+        let bestScore = 0;
+
+        // Iterate over master catalog
+        for (const code in this.data.products) {
+            const p = this.data.products[code];
+            const score = this.calculateMatchScore(aiProductName, p.desc);
+
+            // Bonus if exactly identical
+            let finalScore = score;
+            if (p.desc.toLowerCase().trim() === aiProductName.toLowerCase().trim()) finalScore = 1.5;
+
+            if (finalScore > bestScore) {
+                bestScore = finalScore;
+                bestMatch = { code, product: p, score: finalScore };
+            }
+        }
+
+        // Threshold of 0.5 means at least 50% of words match
+        if (bestScore > 0.45) return bestMatch.code;
+        return null; // No match found
+    }
+
+    // Stores current state of the parsed document
+    currentPickupList = [];
+
+    generatePickupList(aiList) {
+        // aiList = [{ nombre: 'Fideo', cantidad: 6, um: 'NIU' }, ...]
+        this.currentPickupList = [];
+
+        aiList.forEach((item, index) => {
+            const qtyReq = parseFloat(item.cantidad) || 1;
+            const originalName = item.nombre || 'Desconocido';
+
+            const matchedCode = this.findBestProductMatch(originalName);
+
+            if (matchedCode) {
+                const prod = this.data.products[matchedCode];
+                let currentStock = parseFloat(prod.stock) || 0;
+
+                this.currentPickupList.push({
+                    id: 'item_' + index,
+                    requestName: originalName,
+                    requestQty: qtyReq,
+                    matchedCode: matchedCode,
+                    prodDesc: prod.desc,
+                    prodUm: item.um || prod.um || 'NIU',  // if AI gives UM use it, else default
+                    stock: currentStock,
+                    dispatchQty: Math.min(qtyReq, Math.max(0, currentStock)) // Cannot dispatch more than stock, minimum 0
+                });
+            } else {
+                // No Match
+                this.currentPickupList.push({
+                    id: 'item_' + index,
+                    requestName: originalName,
+                    requestQty: qtyReq,
+                    matchedCode: null,
+                    prodDesc: '',
+                    prodUm: item.um || '',
+                    stock: 0,
+                    dispatchQty: 0
+                });
+            }
+        });
+
+        this.renderPickupLists();
+    }
+
+    handleManualCodeReassignment(itemId, inputElement) {
+        const newCode = inputElement.value.trim().toUpperCase();
+        if (!newCode) return;
+
+        const p = this.data.products[newCode];
+        if (!p) {
+            app.showToast('Código no existe en el catálogo', 'warning');
             return;
         }
-    }
-}
 
-viewOCRImage(srcBase64) {
-    const preview = document.getElementById('ocr-preview-img');
-    const placeholder = document.getElementById('ocr-preview-placeholder');
-    if (srcBase64) {
-        preview.src = srcBase64;
-        preview.style.display = 'block';
-        placeholder.style.display = 'none';
-    }
-}
+        // Found exactly! Update the item
+        const itemIndex = this.currentPickupList.findIndex(i => i.id === itemId);
+        if (itemIndex > -1) {
+            let item = this.currentPickupList[itemIndex];
+            item.matchedCode = newCode;
+            item.prodDesc = p.desc;
+            item.prodUm = p.um || item.prodUm || 'NIU';
+            item.stock = parseFloat(p.stock) || 0;
+            item.dispatchQty = Math.min(item.requestQty, Math.max(0, item.stock));
 
-// --- FUZZY ALGORITHM & DISTRIBUTOR ---
+            inputElement.value = ''; // clear input
 
-// Simple Token intersection helper for fuzzy matching
-calculateMatchScore(query, target) {
-    if (!query || !target) return 0;
-    const queryTokens = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(t => t.length > 1);
-    const targetTokens = target.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(t => t.length > 1);
-
-    let matches = 0;
-    for (const qt of queryTokens) {
-        // Direct word match or partial word match > 3 chars
-        if (targetTokens.some(tt => tt === qt || (qt.length > 3 && (tt.includes(qt) || qt.includes(tt))))) {
-            matches++;
-        }
-    }
-    // Score based on how many query words were found in the target
-    return queryTokens.length > 0 ? matches / queryTokens.length : 0;
-}
-
-findBestProductMatch(aiProductName) {
-    let bestMatch = null;
-    let bestScore = 0;
-
-    // Iterate over master catalog
-    for (const code in this.data.products) {
-        const p = this.data.products[code];
-        const score = this.calculateMatchScore(aiProductName, p.desc);
-
-        // Bonus if exactly identical
-        let finalScore = score;
-        if (p.desc.toLowerCase().trim() === aiProductName.toLowerCase().trim()) finalScore = 1.5;
-
-        if (finalScore > bestScore) {
-            bestScore = finalScore;
-            bestMatch = { code, product: p, score: finalScore };
+            // Re-render
+            this.renderPickupLists();
+            app.showToast('Producto enlazado correctamente', 'success');
         }
     }
 
-    // Threshold of 0.5 means at least 50% of words match
-    if (bestScore > 0.45) return bestMatch.code;
-    return null; // No match found
-}
+    handleQtyChange(itemId, newQtyStr) {
+        const newQty = parseFloat(newQtyStr) || 0;
+        const itemIndex = this.currentPickupList.findIndex(i => i.id === itemId);
 
-// Stores current state of the parsed document
-currentPickupList = [];
+        if (itemIndex > -1) {
+            const it = this.currentPickupList[itemIndex];
+            // Rule: user can lower it, but cannot exceed physical stock
+            const safeQty = Math.min(newQty, Math.max(0, it.stock));
+            it.dispatchQty = safeQty;
 
-generatePickupList(aiList) {
-    // aiList = [{ nombre: 'Fideo', cantidad: 6, um: 'NIU' }, ...]
-    this.currentPickupList = [];
-
-    aiList.forEach((item, index) => {
-        const qtyReq = parseFloat(item.cantidad) || 1;
-        const originalName = item.nombre || 'Desconocido';
-
-        const matchedCode = this.findBestProductMatch(originalName);
-
-        if (matchedCode) {
-            const prod = this.data.products[matchedCode];
-            let currentStock = parseFloat(prod.stock) || 0;
-
-            this.currentPickupList.push({
-                id: 'item_' + index,
-                requestName: originalName,
-                requestQty: qtyReq,
-                matchedCode: matchedCode,
-                prodDesc: prod.desc,
-                prodUm: item.um || prod.um || 'NIU',  // if AI gives UM use it, else default
-                stock: currentStock,
-                dispatchQty: Math.min(qtyReq, Math.max(0, currentStock)) // Cannot dispatch more than stock, minimum 0
-            });
-        } else {
-            // No Match
-            this.currentPickupList.push({
-                id: 'item_' + index,
-                requestName: originalName,
-                requestQty: qtyReq,
-                matchedCode: null,
-                prodDesc: '',
-                prodUm: item.um || '',
-                stock: 0,
-                dispatchQty: 0
-            });
+            if (newQty > it.stock) {
+                app.showToast('La cantidad excede el stock físico existente.', 'warning');
+            }
+            this.renderPickupLists();
         }
-    });
-
-    this.renderPickupLists();
-}
-
-handleManualCodeReassignment(itemId, inputElement) {
-    const newCode = inputElement.value.trim().toUpperCase();
-    if (!newCode) return;
-
-    const p = this.data.products[newCode];
-    if (!p) {
-        app.showToast('Código no existe en el catálogo', 'warning');
-        return;
     }
 
-    // Found exactly! Update the item
-    const itemIndex = this.currentPickupList.findIndex(i => i.id === itemId);
-    if (itemIndex > -1) {
-        let item = this.currentPickupList[itemIndex];
-        item.matchedCode = newCode;
-        item.prodDesc = p.desc;
-        item.prodUm = p.um || item.prodUm || 'NIU';
-        item.stock = parseFloat(p.stock) || 0;
-        item.dispatchQty = Math.min(item.requestQty, Math.max(0, item.stock));
+    renderPickupLists() {
+        const bStock = document.getElementById('bucket-stock');
+        const bNoStock = document.getElementById('bucket-nostock');
+        const bNoMatch = document.getElementById('bucket-nomatch');
 
-        inputElement.value = ''; // clear input
+        let htmlStock = '', htmlNoStock = '', htmlNoMatch = '';
+        let cStock = 0, cNoStock = 0, cNoMatch = 0;
 
-        // Re-render
-        this.renderPickupLists();
-        app.showToast('Producto enlazado correctamente', 'success');
-    }
-}
-
-handleQtyChange(itemId, newQtyStr) {
-    const newQty = parseFloat(newQtyStr) || 0;
-    const itemIndex = this.currentPickupList.findIndex(i => i.id === itemId);
-
-    if (itemIndex > -1) {
-        const it = this.currentPickupList[itemIndex];
-        // Rule: user can lower it, but cannot exceed physical stock
-        const safeQty = Math.min(newQty, Math.max(0, it.stock));
-        it.dispatchQty = safeQty;
-
-        if (newQty > it.stock) {
-            app.showToast('La cantidad excede el stock físico existente.', 'warning');
-        }
-        this.renderPickupLists();
-    }
-}
-
-renderPickupLists() {
-    const bStock = document.getElementById('bucket-stock');
-    const bNoStock = document.getElementById('bucket-nostock');
-    const bNoMatch = document.getElementById('bucket-nomatch');
-
-    let htmlStock = '', htmlNoStock = '', htmlNoMatch = '';
-    let cStock = 0, cNoStock = 0, cNoMatch = 0;
-
-    this.currentPickupList.forEach(item => {
-        if (item.matchedCode) {
-            // Has Match. Check Stock rules.
-            // Rule: If request was 0 logic might bend, but let's assume we want to ship > 0
-            if (item.stock >= item.requestQty && item.requestQty > 0) {
-                // Full stock valid OR partial stock valid
-                // Group 1: Encontrados con Stock (We have AT LEAST 1 unit, or we have EXACT req)
-                // Actually, let's put it in Group 1 if stock > 0
-                cStock++;
-                htmlStock += `
+        this.currentPickupList.forEach(item => {
+            if (item.matchedCode) {
+                // Has Match. Check Stock rules.
+                // Rule: If request was 0 logic might bend, but let's assume we want to ship > 0
+                if (item.stock >= item.requestQty && item.requestQty > 0) {
+                    // Full stock valid OR partial stock valid
+                    // Group 1: Encontrados con Stock (We have AT LEAST 1 unit, or we have EXACT req)
+                    // Actually, let's put it in Group 1 if stock > 0
+                    cStock++;
+                    htmlStock += `
                         <tr style="border-bottom:1px solid #f1f5f9; background:#fff;">
                             <td style="padding:6px 10px; font-weight:600; color:#0f172a;">${item.matchedCode}</td>
                             <td style="padding:6px 10px; font-size:0.8rem; color:#334155;">
@@ -8919,10 +8912,10 @@ renderPickupLists() {
                             </td>
                         </tr>
                     `;
-            } else if (item.stock > 0 && item.stock < item.requestQty) {
-                // Partial Stock - Group 1 but warning
-                cStock++;
-                htmlStock += `
+                } else if (item.stock > 0 && item.stock < item.requestQty) {
+                    // Partial Stock - Group 1 but warning
+                    cStock++;
+                    htmlStock += `
                         <tr style="border-bottom:1px solid #f1f5f9; background:#fff;">
                             <td style="padding:6px 10px; font-weight:600; color:#0f172a;">${item.matchedCode}</td>
                             <td style="padding:6px 10px; font-size:0.8rem; color:#334155;">
@@ -8938,11 +8931,11 @@ renderPickupLists() {
                             </td>
                         </tr>
                     `;
-            }
-            else {
-                // No Stock (0 or negative)
-                cNoStock++;
-                htmlNoStock += `
+                }
+                else {
+                    // No Stock (0 or negative)
+                    cNoStock++;
+                    htmlNoStock += `
                         <tr style="border-bottom:1px solid #f1f5f9; background:#fff;">
                             <td style="padding:6px 10px; font-weight:600; color:#0f172a;">${item.matchedCode}</td>
                             <td style="padding:6px 10px; font-size:0.8rem; color:#334155;">
@@ -8956,12 +8949,12 @@ renderPickupLists() {
                             </td>
                         </tr>
                     `;
-            }
+                }
 
-        } else {
-            // No Match Found! Group 3
-            cNoMatch++;
-            htmlNoMatch += `
+            } else {
+                // No Match Found! Group 3
+                cNoMatch++;
+                htmlNoMatch += `
                     <tr style="border-bottom:1px solid #f1f5f9; background:#fff;">
                         <td style="padding:6px 10px;">
                             <input type="text" placeholder="Asignar Cód..." 
@@ -8979,48 +8972,48 @@ renderPickupLists() {
                         </td>
                     </tr>
                 `;
-        }
-    });
+            }
+        });
 
-    if (cStock === 0) htmlStock = '<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#94a3b8; font-style:italic;">No hay items con stock disponible.</td></tr>';
-    if (cNoStock === 0) htmlNoStock = '<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#94a3b8; font-style:italic;">No hay faltantes.</td></tr>';
-    if (cNoMatch === 0) htmlNoMatch = '<tr><td colspan="4" style="text-align:center; padding:1.5rem; color:#94a3b8; font-style:italic;">No hay items huérfanos.</td></tr>';
+        if (cStock === 0) htmlStock = '<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#94a3b8; font-style:italic;">No hay items con stock disponible.</td></tr>';
+        if (cNoStock === 0) htmlNoStock = '<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#94a3b8; font-style:italic;">No hay faltantes.</td></tr>';
+        if (cNoMatch === 0) htmlNoMatch = '<tr><td colspan="4" style="text-align:center; padding:1.5rem; color:#94a3b8; font-style:italic;">No hay items huérfanos.</td></tr>';
 
-    bStock.innerHTML = htmlStock;
-    bNoStock.innerHTML = htmlNoStock;
-    bNoMatch.innerHTML = htmlNoMatch;
+        bStock.innerHTML = htmlStock;
+        bNoStock.innerHTML = htmlNoStock;
+        bNoMatch.innerHTML = htmlNoMatch;
 
-    document.getElementById('count-group1').innerText = cStock;
-    document.getElementById('count-group2').innerText = cNoStock;
-    document.getElementById('count-group3').innerText = cNoMatch;
-}
+        document.getElementById('count-group1').innerText = cStock;
+        document.getElementById('count-group2').innerText = cNoStock;
+        document.getElementById('count-group3').innerText = cNoMatch;
+    }
 
-removePickupItem(itemId) {
-    this.currentPickupList = this.currentPickupList.filter(i => i.id !== itemId);
-    this.renderPickupLists();
-}
+    removePickupItem(itemId) {
+        this.currentPickupList = this.currentPickupList.filter(i => i.id !== itemId);
+        this.renderPickupLists();
+    }
 
-clearOCRWorkspace() {
-    if (!confirm('¿Limpiar todo el espacio de trabajo?')) return;
-    this.currentPickupList = [];
-    this.renderPickupLists();
-    document.getElementById('ocr-preview-img').style.display = 'none';
-    document.getElementById('ocr-preview-placeholder').style.display = 'block';
-}
+    clearOCRWorkspace() {
+        if (!confirm('¿Limpiar todo el espacio de trabajo?')) return;
+        this.currentPickupList = [];
+        this.renderPickupLists();
+        document.getElementById('ocr-preview-img').style.display = 'none';
+        document.getElementById('ocr-preview-placeholder').style.display = 'block';
+    }
 
-printOCRTicket() {
-    if (!this.currentPickupList || this.currentPickupList.length === 0) return alert('No hay datos procesados para imprimir');
+    printOCRTicket() {
+        if (!this.currentPickupList || this.currentPickupList.length === 0) return alert('No hay datos procesados para imprimir');
 
-    // Filter only valid products to dispatch (Matched, and we decided to dispatch > 0)
-    const itemsToDispatch = this.currentPickupList.filter(i => i.matchedCode && i.dispatchQty > 0);
+        // Filter only valid products to dispatch (Matched, and we decided to dispatch > 0)
+        const itemsToDispatch = this.currentPickupList.filter(i => i.matchedCode && i.dispatchQty > 0);
 
-    let outOfStockNotes = this.currentPickupList.filter(i => i.matchedCode && i.dispatchQty === 0).map(i => i.prodDesc);
+        let outOfStockNotes = this.currentPickupList.filter(i => i.matchedCode && i.dispatchQty === 0).map(i => i.prodDesc);
 
-    if (itemsToDispatch.length === 0) return alert('No hay productos con cantidades válidas para despachar.');
+        if (itemsToDispatch.length === 0) return alert('No hay productos con cantidades válidas para despachar.');
 
-    const printWindow = window.open('', '_blank', 'width=450,height=700');
+        const printWindow = window.open('', '_blank', 'width=450,height=700');
 
-    let htmlContent = `
+        let htmlContent = `
             <!DOCTYPE html>
             <html>
             <head>
@@ -9066,8 +9059,8 @@ printOCRTicket() {
                 <div class="items-list">
         `;
 
-    itemsToDispatch.forEach(item => {
-        htmlContent += `
+        itemsToDispatch.forEach(item => {
+            htmlContent += `
                 <div class="item-row">
                     <div class="item-info">
                         <span class="item-name">${item.prodDesc}</span>
@@ -9079,20 +9072,20 @@ printOCRTicket() {
                     </div>
                 </div>
             `;
-    });
+        });
 
-    htmlContent += `</div>`; // Close items-list
+        htmlContent += `</div>`; // Close items-list
 
-    if (outOfStockNotes.length > 0) {
-        htmlContent += `
+        if (outOfStockNotes.length > 0) {
+            htmlContent += `
                 <div class="nostock-section">
                     <div class="nostock-title">NO HAY STOCK DE:</div>
                     ${outOfStockNotes.map(n => `<div class="nostock-item">- ${n}</div>`).join('')}
                 </div>
             `;
-    }
+        }
 
-    htmlContent += `
+        htmlContent += `
                 <div class="footer">
                     Válido sólo para almacén<br><br><br>
                     RECIBIDO / DESPACHADO
@@ -9107,9 +9100,9 @@ printOCRTicket() {
             </html>
         `;
 
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-}
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+    }
 
     // --- FIFO ANALYSIS & EXPIRATION LOGIC ---
 
