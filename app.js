@@ -8662,7 +8662,39 @@ class App {
                 throw new Error("HTTP error " + response.status);
             }
 
-            const aiResults = await response.json();
+            const responseText = await response.text();
+
+            let rawResponse;
+            try {
+                rawResponse = responseText ? JSON.parse(responseText) : {};
+            } catch (e) {
+                console.error("Respuesta cruda de n8n no es JSON:", responseText);
+                throw new Error("El Webhook de n8n devolvió texto vacío o no-JSON. Revisa el nodo Respond to Webhook.");
+            }
+
+            let aiResults = rawResponse;
+
+            // Muchas veces Gemini devuelve el texto con formato Markdown dentro de una estructura anidada
+            let textToParse = null;
+            if (rawResponse.content && rawResponse.content.parts && rawResponse.content.parts[0]) {
+                textToParse = rawResponse.content.parts[0].text;
+            } else if (rawResponse.text) {
+                textToParse = rawResponse.text;
+            } else if (typeof rawResponse === 'string') {
+                textToParse = rawResponse;
+            } else if (rawResponse.message && rawResponse.message.content) {
+                textToParse = rawResponse.message.content; // sometimes openAI style structure
+            }
+
+            // Si encontramos texto crudo de la IA, le quitamos las comillas invertidas de Markdown
+            if (textToParse) {
+                try {
+                    const cleaned = textToParse.replace(/```json/gi, '').replace(/```/g, '').trim();
+                    aiResults = JSON.parse(cleaned);
+                } catch (e) {
+                    console.error("No se pudo limpiar el markdown de Gemini", textToParse);
+                }
+            }
 
             // Expected JSON format from n8n AI: 
             // [{"nombre": "TRIUNFO FIDEO...", "cantidad": 6}, {"nombre": "OTRO PRODUCTO", "cantidad": 12}]
@@ -8670,15 +8702,13 @@ class App {
             if (Array.isArray(aiResults)) {
                 statusEl.innerHTML = '<i class="fa-solid fa-gears fa-spin"></i> Cruzando datos con inventario...';
                 this.generatePickupList(aiResults);
-            } else if (aiResults.productos && Array.isArray(aiResults.productos)) {
+            } else if (aiResults && aiResults.productos && Array.isArray(aiResults.productos)) {
                 this.generatePickupList(aiResults.productos);
             } else {
-                throw new Error("Formato JSON invalido desde n8n. Se esperaba un Array de productos.");
+                console.error("Estructura devuelta por n8n:", rawResponse);
+                throw new Error("Formato JSON inválido desde n8n. Se esperaba un Array de productos.");
             }
-
             statusEl.style.display = "none";
-            this.showToast("Búsqueda IA completada", "success");
-
         } catch (err) {
             console.error("N8N Processing Error:", err);
             statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error al conectar con N8N.';
