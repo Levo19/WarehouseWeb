@@ -872,7 +872,7 @@ class App {
                     this.data.products[p.codigo] = {
                         codigo: p.codigo,
                         desc: p.descripcion,
-                        stock: p.stock,
+                        stock: Math.round(parseFloat(p.stock || 0) * 100) / 100,
                         img: stableImg,
                         min: p.min,
                         factor: p.factor || 0,
@@ -2014,7 +2014,7 @@ class App {
             else if (m.type === 'SALIDA') delta = -qty;
             else if (m.type === 'AJUSTE') delta = qty;
 
-            runningStock += delta;
+            runningStock = Math.round((runningStock + delta) * 100) / 100;
 
             return {
                 ...m,
@@ -2187,7 +2187,7 @@ class App {
         // --- OPTIMISTIC UPDATE START ---
         // 1. Update Local Data Immediately
         if (this.data.products[code]) {
-            this.data.products[code].stock = realQty;
+            this.data.products[code].stock = Math.round(parseFloat(realQty) * 100) / 100;
         }
 
         // 2. Update Dashboard UI Immediately (If visible)
@@ -8464,48 +8464,58 @@ class App {
         win.document.close();
     }
     // ==========================================
-    // MODULE: TOOLS (OCR TICKET SCANNER)
-    // ==========================================
+// MODULE: TOOLS (N8N AI SMART PICKUP LIST)
+// ==========================================
 
-    renderToolsModule() {
-        const container = document.getElementById('tools-content');
-        container.innerHTML = `
+renderToolsModule() {
+    const container = document.getElementById('tools-content');
+
+    // Define Webhook locally for this module
+    const N8N_WEBHOOK_URL = localStorage.getItem('levo_n8n_webhook_url') || '';
+
+    container.innerHTML = `
             <div style="display:flex; flex-direction:column; height:100%; gap:1rem;">
                 <!-- Header -->
-                <div style="flex:0 0 auto; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:1rem;">
+                <div style="flex:0 0 auto; display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #eee; padding-bottom:1rem;">
                     <div>
-                        <h2 style="margin:0; color:var(--primary-color);"><i class="fa-solid fa-wand-magic-sparkles"></i> Escáner de Tickets (OCR)</h2>
-                        <p style="margin:0.25rem 0 0; color:#666; font-size:0.9rem;">Convierte fotos de WhatsApp o Excel en tickets imprimibles.</p>
+                        <h2 style="margin:0; color:var(--primary-color);"><i class="fa-solid fa-wand-magic-sparkles"></i> Asistente IA de Pedidos (N8N)</h2>
+                        <p style="margin:0.25rem 0 0; color:#666; font-size:0.9rem;">Sube una foto y la IA de n8n generará la lista de despacho con stock validado.</p>
+                        
+                        <div style="margin-top:0.5rem; display:flex; align-items:center; gap:0.5rem;">
+                            <span style="font-size:0.8rem; font-weight:bold; color:#555;">Webhook URL (N8N):</span>
+                            <input type="text" id="n8n-webhook-input" value="${N8N_WEBHOOK_URL}" placeholder="https://tu-n8n.com/webhook/..." style="font-size:0.8rem; padding:4px; width:280px; border:1px solid #ccc; border-radius:4px;">
+                            <button onclick="localStorage.setItem('levo_n8n_webhook_url', document.getElementById('n8n-webhook-input').value); app.showToast('Webhook guardado', 'success');" style="font-size:0.8rem; padding:4px 8px; border-radius:4px; background:#f1f5f9; border:1px solid #cbd5e1; cursor:pointer;">Guardar URL</button>
+                        </div>
                     </div>
-                     <div style="display:flex; gap:0.5rem;">
+                     <div style="display:flex; gap:0.5rem; height:fit-content;">
                          <button onclick="app.clearOCRWorkspace()" class="btn-secondary">
                             <i class="fa-solid fa-trash"></i> Limpiar Todo
                         </button>
                         <button onclick="app.printOCRTicket()" class="btn-primary" style="background:#333;">
-                            <i class="fa-solid fa-print"></i> Imprimir Ticket
+                            <i class="fa-solid fa-print"></i> Imprimir Lista Pickup
                         </button>
                     </div>
                 </div>
 
                 <!-- Main Workspace -->
-                <div style="flex:1; display:flex; gap:1.5rem; overflow:hidden;">
+                <div style="flex:1; display:flex; gap:1rem; overflow:hidden;">
                     
-                    <!-- LEFT: Upload & Carousel -->
-                    <div style="flex:0 0 320px; display:flex; flex-direction:column; gap:1rem; border-right:1px solid #eee; padding-right:1rem; overflow-y:auto;">
+                    <!-- LEFT: Upload Area -->
+                    <div style="flex:0 0 280px; display:flex; flex-direction:column; gap:1rem; border-right:1px solid #eee; padding-right:1rem; overflow-y:auto;">
                         
-                        <!-- Upload Area -->
+                        <!-- Upload Box -->
                         <div style="border:2px dashed #ccc; border-radius:12px; padding:2rem 1rem; text-align:center; background:#f9fafb; cursor:pointer; transition:all 0.2s;"
                              onmouseover="this.style.borderColor='var(--primary-color)'; this.style.background='#f0f9ff';"
                              onmouseout="this.style.borderColor='#ccc'; this.style.background='#f9fafb';"
                              onclick="document.getElementById('ocr-file-input').click()">
                             
-                            <i class="fa-solid fa-cloud-arrow-up" style="font-size:2rem; color:#aaa; margin-bottom:0.5rem;"></i>
+                            <i class="fa-solid fa-robot" style="font-size:2rem; color:var(--primary-color); margin-bottom:0.5rem;"></i>
                             <div style="font-weight:600; color:#555;">Subir o Pegar (Ctrl+V)</div>
-                            <div style="font-size:0.8rem; color:#888;">WhatsApp, Excel, Fotos</div>
-                            <input type="file" id="ocr-file-input" multiple accept="image/*, .xlsx, .xls" style="display:none;" onchange="app.handleOCRUpload(this)">
+                            <div style="font-size:0.8rem; color:#888;">Foto, PDF o Excel</div>
+                            <input type="file" id="ocr-file-input" multiple accept="image/*, .xlsx, .xls, .pdf" style="display:none;" onchange="app.handleOCRUpload(this)">
                         </div>
                         
-                        <!-- Manual Paste Button (Fallback) -->
+                        <!-- Manual Paste Button -->
                         <div style="margin-top:0.5rem; text-align:center;">
                             <button onclick="app.triggerPaste()" style="background:white; border:1px solid #ccc; padding:0.5rem 1rem; border-radius:6px; cursor:pointer; color:#555; font-size:0.85rem; width:100%; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                                 <i class="fa-regular fa-clipboard"></i> Pegar desde Portapapeles
@@ -8513,720 +8523,593 @@ class App {
                         </div>
 
                         <!-- Scan Status -->
-                        <div id="ocr-status" style="display:none; padding:1rem; background:#fff3cd; color:#856404; border-radius:8px; font-size:0.9rem;">
-                            <i class="fa-solid fa-circle-notch fa-spin"></i> Procesando imágenes...
+                        <div id="ocr-status" style="display:none; padding:1rem; background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; border-radius:8px; font-size:0.9rem;">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i> Enviando a IA (n8n)...
                         </div>
 
-                        <!-- Carousel -->
-                        <h4 style="margin:0.5rem 0 0; color:#444;">Imágenes Cargadas (<span id="ocr-img-count">0</span>)</h4>
-                        <div id="ocr-carousel" style="display:flex; flex-direction:column; gap:0.5rem;">
-                            <!-- Thumbs injected here -->
-                            <div style="text-align:center; color:#ccc; padding:2rem; font-style:italic;">No hay imágenes</div>
+                        <!-- Mini Image Preview -->
+                        <h4 style="margin:0.5rem 0 0; color:#444;">Vista Previa</h4>
+                        <div style="flex:1; background:#333; border-radius:8px; overflow:hidden; display:flex; justify-content:center; align-items:center; position:relative; min-height:150px;">
+                            <img id="ocr-preview-img" src="" style="max-width:100%; max-height:100%; object-fit:contain; display:none;">
+                            <div id="ocr-preview-placeholder" style="color:#666; text-align:center;">
+                                <i class="fa-regular fa-image" style="font-size:2rem; margin-bottom:0.5rem;"></i>
+                                <div style="font-size:0.8rem;">Sin imagen</div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- MIDDLE: Reference Viewer -->
-                    <div style="flex:1; background:#333; border-radius:12px; overflow:hidden; display:flex; justify-content:center; align-items:center; position:relative;">
-                        <img id="ocr-preview-img" src="" style="max-width:100%; max-height:100%; object-fit:contain; display:none;">
-                        <div id="ocr-preview-placeholder" style="color:#666; text-align:center;">
-                            <i class="fa-regular fa-image" style="font-size:3rem; margin-bottom:1rem;"></i>
-                            <div>Selecciona una imagen para verla</div>
-                        </div>
-                    </div>
-
-                    <!-- RIGHT: Editor -->
-                    <div style="flex:0 0 400px; display:flex; flex-direction:column; background:white; border-radius:12px; border:1px solid #eee; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
-                        <div style="padding:1rem; border-bottom:1px solid #eee; bg:#f8f9fa;">
-                            <h4 style="margin:0;">Datos Extraídos</h4>
-                        </div>
+                    <!-- RIGHT: The 3 Buckets Area -->
+                    <div style="flex:1; display:flex; flex-direction:column; gap:1rem; overflow-y:auto; padding-right:0.5rem;" class="custom-scrollbar">
                         
-                        <div class="custom-scrollbar" style="flex:1; overflow-y:auto; padding:0;">
-                            <table class="data-table" style="width:100%; border-collapse:collapse;">
-                                <thead style="background:#f8f9fa; position:sticky; top:0;">
+                        <!-- Grupo 1: Encontrados CON Stock -->
+                        <div style="background:white; border-radius:8px; border:1px solid #bbf7d0; box-shadow:0 2px 4px rgba(0,0,0,0.02); overflow:hidden;">
+                            <div style="background:#f0fdf4; padding:0.75rem 1rem; border-bottom:1px solid #bbf7d0; color:#166534; display:flex; justify-content:space-between; align-items:center;">
+                                <h4 style="margin:0;"><i class="fa-solid fa-check-circle"></i> Disponibles (Encontrados con Stock)</h4>
+                                <span class="badge" id="count-group1" style="background:#166534; color:white; border-radius:12px; padding:2px 8px;">0</span>
+                            </div>
+                            <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                                <thead style="background:#f8fafc; color:#64748b; border-bottom:1px solid #e2e8f0;">
                                     <tr>
-                                        <th style="padding:8px; width:90px; text-align:left; font-size:0.85rem; color:#666;">Código</th>
-                                        <th style="padding:8px; text-align:left; font-size:0.85rem; color:#666;">Descripción</th>
-                                        <th style="padding:8px; width:60px; text-align:right; font-size:0.85rem; color:#666;">Cant.</th>
-                                        <th style="padding:8px; width:60px; text-align:left; font-size:0.85rem; color:#666;">U.M.</th>
-                                        <th style="width:40px;"></th>
+                                        <th style="padding:6px 10px; text-align:left; width:15%;">Código</th>
+                                        <th style="padding:6px 10px; text-align:left;">Producto</th>
+                                        <th style="padding:6px 10px; text-align:center; width:10%;">U.M.</th>
+                                        <th style="padding:6px 10px; text-align:center; width:10%;">Pedido</th>
+                                        <th style="padding:6px 10px; text-align:center; width:15%;">Despachar</th>
                                     </tr>
                                 </thead>
-                                <tbody id="ocr-result-body">
-                                    <!-- Rows -->
+                                <tbody id="bucket-stock">
+                                    <tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#94a3b8; font-style:italic;">Esperando datos de n8n...</td></tr>
                                 </tbody>
                             </table>
                         </div>
 
-                        <div style="padding:1rem; border-top:1px solid #eee;">
-                            <button onclick="app.addOCRRow()" style="width:100%; padding:0.5rem; background:white; border:1px dashed #ddd; color:#666; border-radius:6px; cursor:pointer; font-size:0.9rem;">
-                                <i class="fa-solid fa-plus"></i> Agregar Fila Manual
-                            </button>
+                        <!-- Grupo 2: Encontrados SIN Stock -->
+                        <div style="background:white; border-radius:8px; border:1px solid #fef08a; box-shadow:0 2px 4px rgba(0,0,0,0.02); overflow:hidden;">
+                            <div style="background:#fefce8; padding:0.75rem 1rem; border-bottom:1px solid #fef08a; color:#854d0e; display:flex; justify-content:space-between; align-items:center;">
+                                <h4 style="margin:0;"><i class="fa-solid fa-triangle-exclamation"></i> Faltantes (Sin Stock o Stock Insuficiente)</h4>
+                                <span class="badge" id="count-group2" style="background:#854d0e; color:white; border-radius:12px; padding:2px 8px;">0</span>
+                            </div>
+                            <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                                <thead style="background:#f8fafc; color:#64748b; border-bottom:1px solid #e2e8f0;">
+                                    <tr>
+                                        <th style="padding:6px 10px; text-align:left; width:15%;">Código</th>
+                                        <th style="padding:6px 10px; text-align:left;">Producto</th>
+                                        <th style="padding:6px 10px; text-align:center; width:10%;">U.M.</th>
+                                        <th style="padding:6px 10px; text-align:center; width:10%;">Pedido</th>
+                                        <th style="padding:6px 10px; text-align:center; width:15%;">Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bucket-nostock">
+                                    <tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#94a3b8; font-style:italic;">No hay faltantes.</td></tr>
+                                </tbody>
+                            </table>
                         </div>
-                    </div>
 
-                </div>
+                        <!-- Grupo 3: No Encontrados -->
+                        <div style="background:white; border-radius:8px; border:1px solid #fecaca; box-shadow:0 2px 4px rgba(0,0,0,0.02); overflow:hidden;">
+                            <div style="background:#fef2f2; padding:0.75rem 1rem; border-bottom:1px solid #fecaca; color:#991b1b; display:flex; justify-content:space-between; align-items:center;">
+                                <h4 style="margin:0;"><i class="fa-solid fa-circle-question"></i> No Existe / Desconocido</h4>
+                                <span class="badge" id="count-group3" style="background:#991b1b; color:white; border-radius:12px; padding:2px 8px;">0</span>
+                            </div>
+                            <div style="padding:0.5rem 1rem; font-size:0.8rem; color:#7f1d1d; background:#fff5f5; border-bottom:1px solid #fee2e2;">
+                                💡 Tip: Digita manualmente el código correcto y presiona Enter para reasignarlo a esta lista.
+                            </div>
+                            <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                                <thead style="background:#f8fafc; color:#64748b; border-bottom:1px solid #e2e8f0;">
+                                    <tr>
+                                        <th style="padding:6px 10px; text-align:left; width:25%;">Reasignar (Código)</th>
+                                        <th style="padding:6px 10px; text-align:left;">Texto Leído por IA</th>
+                                        <th style="padding:6px 10px; text-align:center; width:10%;">Pedido</th>
+                                        <th style="padding:6px 10px; text-align:center; width:15%;">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bucket-nomatch">
+                                    <tr><td colspan="4" style="text-align:center; padding:1.5rem; color:#94a3b8; font-style:italic;">Todos los ítems identificados correctamente.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
 
-                <!-- HISTORY SECTION -->
-                <div style="margin-top:2rem; background:white; border-radius:12px; border:1px solid #eee; padding:1rem; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.5rem; border-bottom:1px solid #eee;">
-                        <h4 style="margin:0; color:#444;"><i class="fa-solid fa-clock-rotate-left"></i> Historial de Tickets Impresos</h4>
-                        <button onclick="app.loadOCRHistory()" style="background:none; border:none; color:var(--primary-color); cursor:pointer; font-size:0.9rem;">
-                            <i class="fa-solid fa-sync"></i> Actualizar
-                        </button>
-                    </div>
-                    <div id="ocr-history-container" style="max-height:200px; overflow-y:auto;">
-                        <!-- Table Loaded via JS -->
                     </div>
                 </div>
             </div>
         `;
-        // Auto Load
-        setTimeout(() => { if (this.state.currentModule === 'tools') this.loadOCRHistory(); }, 1000);
-    }
+}
 
     async handleOCRUpload(input) {
-        if (!input.files || input.files.length === 0) return;
-        await this.processOCRFiles(input.files);
-        input.value = ""; // Reset input
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0]; // Only process the first file for simplicity in this new flow
+    input.value = ""; // Reset form
+
+    const webhookUrl = document.getElementById('n8n-webhook-input').value.trim();
+    if (!webhookUrl) {
+        return alert("Por favor, configure primero la URL de su Webhook de N8N en la parte superior.");
     }
 
-    async triggerPaste() {
-        try {
-            const items = await navigator.clipboard.read();
-            const files = [];
-            for (const item of items) {
-                // Look for image types
-                const imageType = item.types.find(type => type.startsWith('image/'));
-                if (imageType) {
-                    const blob = await item.getType(imageType);
-                    blob.name = "Clipboard_" + Date.now() + ".png"; // Give it a name
-                    files.push(blob);
-                }
-            }
-            if (files.length > 0) {
-                this.processOCRFiles(files);
-                this.showToast("📋 Imagen obtenida del portapapeles", "success");
-            } else {
-                alert("No se encontró ninguna imagen en el portapapeles. Copia una imagen primero.");
-            }
-        } catch (err) {
-            console.error('Failed to read clipboard', err);
-            // Fallback: If permission denied or HTTP, suggest manual Ctrl+V
-            alert("No se pudo acceder al portapapeles automáticamente (bloqueo de navegador). Intenta usar Ctrl+V directamente.");
-        }
+    // Preview Image immediately
+    if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => this.viewOCRImage(e.target.result);
+        reader.readAsDataURL(file);
+    } else {
+        document.getElementById('ocr-preview-placeholder').innerHTML = '<i class="fa-solid fa-file-pdf" style="font-size:2rem; margin-bottom:0.5rem; color:red;"></i><div>Archivo: ' + file.name + '</div>';
+        document.getElementById('ocr-preview-img').style.display = 'none';
+        document.getElementById('ocr-preview-placeholder').style.display = 'block';
     }
 
-    async handleOCRPaste(e) {
-        if (this.state.currentModule !== "tools") return;
+    await this.processImageWithN8N(file, webhookUrl);
+}
 
-        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-        const files = [];
+    async processImageWithN8N(file, webhookUrl) {
+    const statusEl = document.getElementById("ocr-status");
+    statusEl.style.display = "block";
+    statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Enviando archivo a IA (N8N)...';
 
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].kind === "file" && items[i].type.indexOf("image/") !== -1) {
-                const blob = items[i].getAsFile();
-                // Fake a name for pasted images
-                if (!blob.name || blob.name === "image.png") {
-                    blob.name = "Pasted_Image_" + Date.now() + ".png";
-                }
-                files.push(blob);
-            }
-        }
-
-        if (files.length > 0) {
-            e.preventDefault();
-            this.showToast("ðŸ“‹ Imagen pegada del portapapeles", "info");
-            await this.processOCRFiles(files);
-        }
-    }
-
-    async processOCRFiles(files) {
-        if (!files || files.length === 0) return;
-
-        // HELPER: File to Base64
-        const fileToBase64 = (file) => new Promise((resolve, reject) => {
+    try {
+        // Convert to Base64 to send to n8n
+        const base64Data = await new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = () => resolve(reader.result);
             reader.onerror = error => reject(error);
         });
 
-        // HELPER: Read Excel File
-        const readExcelFile = (file) => new Promise((resolve, reject) => {
+        // Make POST request directly to the users n8n webhook
+        const response = await fetch(webhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                filename: file.name,
+                mimeType: file.type,
+                fileData: base64Data
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error("HTTP error " + response.status);
+        }
+
+        const aiResults = await response.json();
+
+        // Expected JSON format from n8n AI: 
+        // [{"nombre": "TRIUNFO FIDEO...", "cantidad": 6}, {"nombre": "OTRO PRODUCTO", "cantidad": 12}]
+
+        if (Array.isArray(aiResults)) {
+            statusEl.innerHTML = '<i class="fa-solid fa-gears fa-spin"></i> Cruzando datos con inventario...';
+            this.generatePickupList(aiResults);
+        } else if (aiResults.productos && Array.isArray(aiResults.productos)) {
+            this.generatePickupList(aiResults.productos);
+        } else {
+            throw new Error("Formato JSON invalido desde n8n. Se esperaba un Array de productos.");
+        }
+
+        statusEl.style.display = "none";
+        this.showToast("Búsqueda IA completada", "success");
+
+    } catch (err) {
+        console.error("N8N Processing Error:", err);
+        statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error al conectar con N8N.';
+        setTimeout(() => statusEl.style.display = 'none', 5000);
+        this.showToast("Error de conexión IA: " + err.message, "error");
+    }
+}
+
+    async triggerPaste() {
+    try {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+            const imageType = item.types.find(type => type.startsWith('image/'));
+            if (imageType) {
+                const blob = await item.getType(imageType);
+                blob.name = "Pasted_Image_" + Date.now() + ".png";
+
+                const webhookUrl = document.getElementById('n8n-webhook-input').value.trim();
+                if (!webhookUrl) return alert("Por favor configure la URL del Webhook N8N.");
+
+                const reader = new FileReader();
+                reader.onload = (e) => this.viewOCRImage(e.target.result);
+                reader.readAsDataURL(blob);
+
+                await this.processImageWithN8N(blob, webhookUrl);
+                return;
+            }
+        }
+        alert("No se encontró ninguna imagen en el portapapeles. Copia una imagen primero.");
+    } catch (err) {
+        console.error('Failed to read clipboard', err);
+        alert("Use Ctrl+V directamente en el panel.");
+    }
+}
+
+    async handleOCRPaste(e) {
+    if (this.state.currentModule !== "tools") return;
+    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    for (let i = 0; i < items.length; i++) {
+        if (items[i].kind === "file" && items[i].type.indexOf("image/") !== -1) {
+            const blob = items[i].getAsFile();
+            if (!blob.name || blob.name === "image.png") blob.name = "Pasted_Image_" + Date.now() + ".png";
+
+            e.preventDefault();
+            const webhookUrl = document.getElementById('n8n-webhook-input').value.trim();
+            if (!webhookUrl) return alert("Por favor configure la URL del Webhook N8N.");
+
             const reader = new FileReader();
-            reader.readAsArrayBuffer(file);
-            reader.onload = (e) => {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                resolve(workbook);
-            };
-            reader.onerror = error => reject(error);
-        });
+            reader.onload = (ev) => this.viewOCRImage(ev.target.result);
+            reader.readAsDataURL(blob);
 
-        const statusEl = document.getElementById("ocr-status");
-        const carouselEl = document.getElementById("ocr-carousel");
-        const countEl = document.getElementById("ocr-img-count");
-
-        if (statusEl) {
-            statusEl.style.display = "block";
-            statusEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Procesando ${files.length} archivo(s)...`;
+            await this.processImageWithN8N(blob, webhookUrl);
+            return;
         }
+    }
+}
 
-        if (carouselEl && carouselEl.innerHTML.includes("No hay imágenes")) {
-            carouselEl.innerHTML = "";
+viewOCRImage(srcBase64) {
+    const preview = document.getElementById('ocr-preview-img');
+    const placeholder = document.getElementById('ocr-preview-placeholder');
+    if (srcBase64) {
+        preview.src = srcBase64;
+        preview.style.display = 'block';
+        placeholder.style.display = 'none';
+    }
+}
+
+// --- FUZZY ALGORITHM & DISTRIBUTOR ---
+
+// Simple Token intersection helper for fuzzy matching
+calculateMatchScore(query, target) {
+    if (!query || !target) return 0;
+    const queryTokens = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(t => t.length > 1);
+    const targetTokens = target.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(t => t.length > 1);
+
+    let matches = 0;
+    for (const qt of queryTokens) {
+        // Direct word match or partial word match > 3 chars
+        if (targetTokens.some(tt => tt === qt || (qt.length > 3 && (tt.includes(qt) || qt.includes(tt))))) {
+            matches++;
         }
+    }
+    // Score based on how many query words were found in the target
+    return queryTokens.length > 0 ? matches / queryTokens.length : 0;
+}
 
-        let processedCount = 0;
+findBestProductMatch(aiProductName) {
+    let bestMatch = null;
+    let bestScore = 0;
 
-        for (const file of Array.from(files)) {
-            try {
-                // EXCEL HANDLING
-                if (file.name.match(/\.(xlsx|xls)$/i)) {
-                    console.log("Processing Excel:", file.name);
-                    const workbook = await readExcelFile(file);
-                    // Assume first sheet
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }); // Array of Arrays
+    // Iterate over master catalog
+    for (const code in this.data.products) {
+        const p = this.data.products[code];
+        const score = this.calculateMatchScore(aiProductName, p.desc);
 
-                    this.parseAndAppendExcelData(jsonData);
+        // Bonus if exactly identical
+        let finalScore = score;
+        if (p.desc.toLowerCase().trim() === aiProductName.toLowerCase().trim()) finalScore = 1.5;
 
-                    this.showToast("Excel procesado: " + file.name, "success");
-                    processedCount++;
-                    continue;
-                }
+        if (finalScore > bestScore) {
+            bestScore = finalScore;
+            bestMatch = { code, product: p, score: finalScore };
+        }
+    }
 
-                // IMAGE HANDLING (Existing Logic)
-                // 1. Convert to Base64
-                const base64 = await fileToBase64(file);
+    // Threshold of 0.5 means at least 50% of words match
+    if (bestScore > 0.45) return bestMatch.code;
+    return null; // No match found
+}
 
-                // 2. Add to Carousel (Optimistic)
-                const imgId = "ocr-img-" + Date.now() + Math.random().toString(36).substr(2, 5);
-                // Fix: Pass ID only. viewOCRImage can grab src from the DOM element.
-                const thumbHtml = `
-                    <div class="ocr-thumb" onclick="app.viewOCRImage('${imgId}')" 
-                         style="display:flex; gap:0.5rem; align-items:center; padding:0.5rem; background:white; border:1px solid #eee; border-radius:6px; cursor:pointer;"
-                         onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='white'">
-                        <img id="${imgId}" src="${base64}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;">
-                        <div style="flex:1; overflow:hidden;">
-                            <div style="font-size:0.8rem; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${file.name}</div>
-                            <div style="font-size:0.7rem; color:green;"><i class="fa-solid fa-check"></i> Imagen</div>
-                        </div>
-                    </div>
+// Stores current state of the parsed document
+currentPickupList = [];
+
+generatePickupList(aiList) {
+    // aiList = [{ nombre: 'Fideo', cantidad: 6, um: 'NIU' }, ...]
+    this.currentPickupList = [];
+
+    aiList.forEach((item, index) => {
+        const qtyReq = parseFloat(item.cantidad) || 1;
+        const originalName = item.nombre || 'Desconocido';
+
+        const matchedCode = this.findBestProductMatch(originalName);
+
+        if (matchedCode) {
+            const prod = this.data.products[matchedCode];
+            let currentStock = parseFloat(prod.stock) || 0;
+
+            this.currentPickupList.push({
+                id: 'item_' + index,
+                requestName: originalName,
+                requestQty: qtyReq,
+                matchedCode: matchedCode,
+                prodDesc: prod.desc,
+                prodUm: item.um || prod.um || 'NIU',  // if AI gives UM use it, else default
+                stock: currentStock,
+                dispatchQty: Math.min(qtyReq, Math.max(0, currentStock)) // Cannot dispatch more than stock, minimum 0
+            });
+        } else {
+            // No Match
+            this.currentPickupList.push({
+                id: 'item_' + index,
+                requestName: originalName,
+                requestQty: qtyReq,
+                matchedCode: null,
+                prodDesc: '',
+                prodUm: item.um || '',
+                stock: 0,
+                dispatchQty: 0
+            });
+        }
+    });
+
+    this.renderPickupLists();
+}
+
+handleManualCodeReassignment(itemId, inputElement) {
+    const newCode = inputElement.value.trim().toUpperCase();
+    if (!newCode) return;
+
+    const p = this.data.products[newCode];
+    if (!p) {
+        app.showToast('Código no existe en el catálogo', 'warning');
+        return;
+    }
+
+    // Found exactly! Update the item
+    const itemIndex = this.currentPickupList.findIndex(i => i.id === itemId);
+    if (itemIndex > -1) {
+        let item = this.currentPickupList[itemIndex];
+        item.matchedCode = newCode;
+        item.prodDesc = p.desc;
+        item.prodUm = p.um || item.prodUm || 'NIU';
+        item.stock = parseFloat(p.stock) || 0;
+        item.dispatchQty = Math.min(item.requestQty, Math.max(0, item.stock));
+
+        inputElement.value = ''; // clear input
+
+        // Re-render
+        this.renderPickupLists();
+        app.showToast('Producto enlazado correctamente', 'success');
+    }
+}
+
+handleQtyChange(itemId, newQtyStr) {
+    const newQty = parseFloat(newQtyStr) || 0;
+    const itemIndex = this.currentPickupList.findIndex(i => i.id === itemId);
+
+    if (itemIndex > -1) {
+        const it = this.currentPickupList[itemIndex];
+        // Rule: user can lower it, but cannot exceed physical stock
+        const safeQty = Math.min(newQty, Math.max(0, it.stock));
+        it.dispatchQty = safeQty;
+
+        if (newQty > it.stock) {
+            app.showToast('La cantidad excede el stock físico existente.', 'warning');
+        }
+        this.renderPickupLists();
+    }
+}
+
+renderPickupLists() {
+    const bStock = document.getElementById('bucket-stock');
+    const bNoStock = document.getElementById('bucket-nostock');
+    const bNoMatch = document.getElementById('bucket-nomatch');
+
+    let htmlStock = '', htmlNoStock = '', htmlNoMatch = '';
+    let cStock = 0, cNoStock = 0, cNoMatch = 0;
+
+    this.currentPickupList.forEach(item => {
+        if (item.matchedCode) {
+            // Has Match. Check Stock rules.
+            // Rule: If request was 0 logic might bend, but let's assume we want to ship > 0
+            if (item.stock >= item.requestQty && item.requestQty > 0) {
+                // Full stock valid OR partial stock valid
+                // Group 1: Encontrados con Stock (We have AT LEAST 1 unit, or we have EXACT req)
+                // Actually, let's put it in Group 1 if stock > 0
+                cStock++;
+                htmlStock += `
+                        <tr style="border-bottom:1px solid #f1f5f9; background:#fff;">
+                            <td style="padding:6px 10px; font-weight:600; color:#0f172a;">${item.matchedCode}</td>
+                            <td style="padding:6px 10px; font-size:0.8rem; color:#334155;">
+                                ${item.prodDesc}
+                                <div style="font-size:0.7rem; color:#94a3b8; font-style:italic;">(Req: ${item.requestName})</div>
+                            </td>
+                            <td style="padding:6px 10px; text-align:center;">${item.prodUm}</td>
+                            <td style="padding:6px 10px; text-align:center; font-weight:bold;">${item.requestQty}</td>
+                            <td style="padding:6px 10px; text-align:center;">
+                                <input type="number" value="${item.dispatchQty}" min="0" max="${item.stock}" 
+                                       onchange="app.handleQtyChange('${item.id}', this.value)"
+                                       style="width:60px; text-align:center; padding:2px 4px; border:1px solid #cbd5e1; border-radius:4px; font-weight:bold; color:#166534; background:#f0fdf4;">
+                            </td>
+                        </tr>
+                    `;
+            } else if (item.stock > 0 && item.stock < item.requestQty) {
+                // Partial Stock - Group 1 but warning
+                cStock++;
+                htmlStock += `
+                        <tr style="border-bottom:1px solid #f1f5f9; background:#fff;">
+                            <td style="padding:6px 10px; font-weight:600; color:#0f172a;">${item.matchedCode}</td>
+                            <td style="padding:6px 10px; font-size:0.8rem; color:#334155;">
+                                ${item.prodDesc} <span style="font-size:0.7rem; color:#ca8a04; background:#fefce8; padding:2px 4px; border-radius:4px;">Parcial</span>
+                                <div style="font-size:0.7rem; color:#94a3b8; font-style:italic;">(Req: ${item.requestName})</div>
+                            </td>
+                            <td style="padding:6px 10px; text-align:center;">${item.prodUm}</td>
+                            <td style="padding:6px 10px; text-align:center; font-weight:bold;">${item.requestQty}</td>
+                            <td style="padding:6px 10px; text-align:center;">
+                                <input type="number" value="${item.dispatchQty}" min="0" max="${item.stock}" 
+                                       onchange="app.handleQtyChange('${item.id}', this.value)"
+                                       style="width:60px; text-align:center; padding:2px 4px; border:1px solid #cbd5e1; border-radius:4px; font-weight:bold; color:#ca8a04; background:#fffbeb;">
+                            </td>
+                        </tr>
+                    `;
+            }
+            else {
+                // No Stock (0 or negative)
+                cNoStock++;
+                htmlNoStock += `
+                        <tr style="border-bottom:1px solid #f1f5f9; background:#fff;">
+                            <td style="padding:6px 10px; font-weight:600; color:#0f172a;">${item.matchedCode}</td>
+                            <td style="padding:6px 10px; font-size:0.8rem; color:#334155;">
+                                ${item.prodDesc}
+                                <div style="font-size:0.7rem; color:#94a3b8; font-style:italic;">(Req: ${item.requestName})</div>
+                            </td>
+                            <td style="padding:6px 10px; text-align:center;">${item.prodUm}</td>
+                            <td style="padding:6px 10px; text-align:center; font-weight:bold;">${item.requestQty}</td>
+                            <td style="padding:6px 10px; text-align:center;">
+                                <span style="font-size:0.75rem; background:#fee2e2; color:#991b1b; padding:2px 6px; border-radius:12px; font-weight:600;">[NO HAY]</span>
+                            </td>
+                        </tr>
+                    `;
+            }
+
+        } else {
+            // No Match Found! Group 3
+            cNoMatch++;
+            htmlNoMatch += `
+                    <tr style="border-bottom:1px solid #f1f5f9; background:#fff;">
+                        <td style="padding:6px 10px;">
+                            <input type="text" placeholder="Asignar Cód..." 
+                                   onchange="app.handleManualCodeReassignment('${item.id}', this)"
+                                   style="width:100%; padding:4px 6px; font-size:0.8rem; border:1px solid #cbd5e1; border-radius:4px;">
+                        </td>
+                        <td style="padding:6px 10px; font-size:0.85rem; color:#991b1b; font-weight:500;">
+                            <i class="fa-solid fa-triangle-exclamation"></i> ${item.requestName}
+                        </td>
+                        <td style="padding:6px 10px; text-align:center; font-weight:bold;">${item.requestQty}</td>
+                        <td style="padding:6px 10px; text-align:center;">
+                            <button onclick="app.removePickupItem('${item.id}')" style="border:none; background:none; color:#f87171; cursor:pointer;" title="Eliminar Ítem">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
                 `;
-                if (carouselEl) carouselEl.insertAdjacentHTML("beforeend", thumbHtml);
-                if (countEl) countEl.innerText = parseInt(countEl.innerText || 0) + 1;
-
-                // 3. Send to Backend
-                if (statusEl) statusEl.innerHTML = `<i class="fa-solid fa-eye"></i> Leyendo imagen ${processedCount + 1}/${files.length}...`;
-
-                const responseRaw = await fetch(LEVO_API_URL, {
-                    method: "POST",
-                    redirect: "follow",
-                    headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify({
-                        action: "processImageOCR",
-                        payload: { image: base64 }
-                    })
-                });
-                const response = await responseRaw.json();
-
-                if (response.status === "success" && response.text) {
-                    this.parseAndAppendOCRText(response.text);
-                } else {
-                    console.warn("OCR Failure:", response.message);
-                    this.showToast("Error OCR: " + response.message, "error");
-                }
-
-            } catch (err) {
-                console.error("Processing Error:", err);
-                this.showToast("Error al procesar: " + err.message, "error");
-            }
-            processedCount++;
         }
+    });
 
-        if (statusEl) statusEl.style.display = "none";
-    }
+    if (cStock === 0) htmlStock = '<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#94a3b8; font-style:italic;">No hay items con stock disponible.</td></tr>';
+    if (cNoStock === 0) htmlNoStock = '<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#94a3b8; font-style:italic;">No hay faltantes.</td></tr>';
+    if (cNoMatch === 0) htmlNoMatch = '<tr><td colspan="4" style="text-align:center; padding:1.5rem; color:#94a3b8; font-style:italic;">No hay items huérfanos.</td></tr>';
 
-    // EXCEL PARSER
-    parseAndAppendExcelData(rows) {
-        if (!rows || rows.length < 2) return; // Skip if empty or header only
+    bStock.innerHTML = htmlStock;
+    bNoStock.innerHTML = htmlNoStock;
+    bNoMatch.innerHTML = htmlNoMatch;
 
-        // Heuristic to find columns
-        // User says: Code, Name, Almacen (Qty+Uom)
-        // Usually Row 1 (Index 0) is Header. Let's look for "Código", "Nombre", "Almacen"
+    document.getElementById('count-group1').innerText = cStock;
+    document.getElementById('count-group2').innerText = cNoStock;
+    document.getElementById('count-group3').innerText = cNoMatch;
+}
 
-        // Find header row (scan first 5 rows)
-        let headerRowIndex = -1;
-        let colMap = { code: -1, desc: -1, almacen: -1 };
+removePickupItem(itemId) {
+    this.currentPickupList = this.currentPickupList.filter(i => i.id !== itemId);
+    this.renderPickupLists();
+}
 
-        for (let i = 0; i < Math.min(rows.length, 5); i++) {
-            const row = rows[i].map(c => String(c).toLowerCase());
-            if (row.some(c => c.includes("código") || c.includes("codigo"))) {
-                headerRowIndex = i;
-                row.forEach((cell, idx) => {
-                    if (cell.includes("código") || cell.includes("codigo")) colMap.code = idx;
-                    if (cell.includes("nombre") || cell.includes("descrip")) colMap.desc = idx;
-                    if (cell.includes("almacen") || cell.includes("cantidad")) colMap.almacen = idx;
-                });
-                break;
-            }
-        }
+clearOCRWorkspace() {
+    if (!confirm('¿Limpiar todo el espacio de trabajo?')) return;
+    this.currentPickupList = [];
+    this.renderPickupLists();
+    document.getElementById('ocr-preview-img').style.display = 'none';
+    document.getElementById('ocr-preview-placeholder').style.display = 'block';
+}
 
-        // If automatic detection fails, fallback to hardcoded user example A, B, C?
-        // User Image shows: Codigo Interno (Merged?) NO. 
-        // Let's assume standard layout if headers found. If not, maybe Columns 0, 1, 2?
+printOCRTicket() {
+    if (!this.currentPickupList || this.currentPickupList.length === 0) return alert('No hay datos procesados para imprimir');
 
-        if (headerRowIndex === -1) {
-            // Fallback: Assume Col 0=Code, Col 1=Desc, Col 2 or last = Qty
-            headerRowIndex = 0;
-            colMap = { code: 0, desc: 1, almacen: 2 };
-        }
+    // Filter only valid products to dispatch (Matched, and we decided to dispatch > 0)
+    const itemsToDispatch = this.currentPickupList.filter(i => i.matchedCode && i.dispatchQty > 0);
 
-        for (let i = headerRowIndex + 1; i < rows.length; i++) {
-            const row = rows[i];
-            if (!row || row.length === 0) continue;
+    let outOfStockNotes = this.currentPickupList.filter(i => i.matchedCode && i.dispatchQty === 0).map(i => i.prodDesc);
 
-            let code = (colMap.code > -1 && row[colMap.code]) ? String(row[colMap.code]).trim() : "";
-            let desc = (colMap.desc > -1 && row[colMap.desc]) ? String(row[colMap.desc]).trim() : "";
-            let rawQty = (colMap.almacen > -1 && row[colMap.almacen]) ? String(row[colMap.almacen]).trim() : "1";
+    if (itemsToDispatch.length === 0) return alert('No hay productos con cantidades válidas para despachar.');
 
-            // Allow column index shift if user uploaded weird file
-            // If Code is empty, maybe it's in Col A?
-            if (!code && row[0] && String(row[0]).length > 4) code = String(row[0]);
-            if (!desc && row[1]) desc = String(row[1]);
+    const printWindow = window.open('', '_blank', 'width=450,height=700');
 
-            // Parse Qty "01 CAJA" -> 1, CAJA
-            // "5" -> 5, ""
-            // "15" -> 15, ""
-            // "03 tiras" -> 3, tiras
-
-            let qty = "1";
-            let uom = "";
-
-            if (rawQty) {
-                // Regex for "Number Unit"
-                const m = rawQty.match(/^(\d+[\.,]?\d*)\s*(.*)$/);
-                if (m) {
-                    qty = m[1];
-                    uom = m[2].trim();
-                } else {
-                    // Try just number
-                    if (/\d/.test(rawQty)) qty = rawQty.replace(/[^\d\.,]/g, "");
-                }
-            }
-
-            if (code || desc) {
-                this.addOCRRow(desc, qty, code, uom);
-            }
-        }
-    }
-
-    viewOCRImage(id, src) {
-        const preview = document.getElementById('ocr-preview-img');
-        const placeholder = document.getElementById('ocr-preview-placeholder');
-
-        // If src is missing (called via onclick with ID only), grab it from DOM
-        if (!src && id) {
-            const thumb = document.getElementById(id);
-            if (thumb) src = thumb.src;
-        }
-
-        if (src) {
-            preview.src = src;
-            preview.style.display = 'block';
-            placeholder.style.display = 'none';
-        }
-    }
-
-    parseAndAppendOCRText(text) {
-        // V15 PARSER (Back to Basics - Row Split)
-        // User requested strict "row by row" logic.
-        // NO Columnar Bucketing. NO complex signatures.
-
-        const lines = text.split("\n")
-            .map(l => l.trim().replace(/^[-*•]\s*/, "")) // Clean bullets
-            .filter(l => l);
-
-        if (lines.length === 0) return;
-
-        // --- HELPERS ---
-        const strictQtyRegex = /^(\d+[\.,]?\d*)\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]{1,5})?$/i;
-
-        const isCode = (str) => {
-            // Strict: Must have at least 5 digits to be a "Code" in this context
-            // "coco" (4 letters) is NOT a code.
-            // "77522..." (13 digits) IS a code.
-            const dig = (str.match(/\d/g) || []).length;
-            return dig >= 5;
-        };
-
-        const extractTail = (line) => {
-            // Look for separator OR end of line quantity
-            // Matches: "Desc - 5 und" OR "Desc 5 und"
-            const tailRegex = /^(.*?)\s*(?:-|:)?\s*([0-9\.,]+\s*(?:und|unid|cajas?|paquetes?|bolsas?|kgs?|gramos?|grs?|lts?|ml|oz|lbs?|latas?|botellas?|pzas?|piezas?|[a-zA-Z]+)?)$/i;
-            const m = line.match(tailRegex);
-            if (m) {
-                const descPart = m[1].trim();
-                const qtyPart = m[2].trim();
-                const qm = qtyPart.match(/^(\d+[\.,]?\d*)\s*(.*)$/);
-                if (qm) {
-                    return { desc: descPart, qty: qm[1], uom: qm[2].trim(), found: true };
-                }
-            }
-            return { desc: line, qty: "1", uom: "", found: false };
-        };
-
-        // --- ROW BY ROW LOGIC ---
-        for (let i = 0; i < lines.length; i++) {
-            let line = lines[i];
-
-            // Skip Headers
-            if (line.match(/^(código|nombre|almacen|descripci|cantidad|item|lista de zona)/i)) continue;
-
-            let code = "";
-            let desc = "";
-            let qty = "1";
-            let uom = "";
-
-            if (isCode(line)) {
-                // CASE 1: Starts with CODE
-                // Split by first space
-                const parts = line.split(/\s+/);
-                code = parts[0];
-                desc = parts.slice(1).join(" ");
-
-                // Check for implicit Qty at end of this line
-                // e.g. "775... DESC... 02 cajas"
-                if (desc) {
-                    const t = extractTail(desc); // Check tail of description
-                    if (t.found && t.qty !== "1") {
-                        desc = t.desc;
-                        qty = t.qty;
-                        uom = t.uom;
-                    }
-                }
-
-                // If no qty found in line, look at NEXT line
-                // e.g. Row 1: "775... DESC..."
-                //      Row 2: "02 cajas"
-                if (qty === "1" && i + 1 < lines.length) {
-                    const nextLine = lines[i + 1].trim();
-                    // If next line is JUST quantity (or very short)
-                    if (nextLine.match(strictQtyRegex)) {
-                        const t2 = extractTail("DUMMY " + nextLine);
-                        qty = t2.qty;
-                        uom = t2.uom;
-                        i++; // Consume line
-                    }
-                }
-
-            } else {
-                // CASE 2: No Code (Just Description)
-                // e.g. "coco rallado... - 4 und"
-                code = "";
-                desc = line;
-
-                // Check internal separator/tail
-                const t = extractTail(desc);
-                if (t.found && t.qty !== "1") {
-                    desc = t.desc;
-                    qty = t.qty;
-                    uom = t.uom;
-                }
-
-                // If no qty, check next line (Orphan Qty)
-                if (qty === "1" && i + 1 < lines.length) {
-                    const nextLine = lines[i + 1].trim();
-                    if (nextLine.match(strictQtyRegex)) {
-                        const t2 = extractTail("DUMMY " + nextLine);
-                        qty = t2.qty;
-                        uom = t2.uom;
-                        i++;
-                    }
-                }
-            }
-
-            // Cleanups
-            if (desc) desc = desc.replace(/^[-*•]\s*/, "").trim();
-            if (uom) uom = uom.replace(/[^a-zA-Z0-9\.]/g, "");
-
-            this.addOCRRow(desc, qty, code, uom);
-        }
-    }
-
-    addOCRRow(desc = '', qty = '', code = '', uom = '') {
-        const tbody = document.getElementById('ocr-result-body');
-        const row = document.createElement('tr');
-        row.style.borderBottom = '1px solid #f0f0f0';
-        row.innerHTML = `
-            <td style="padding:4px;">
-                <input type="text" value="${code}" placeholder="Cod." 
-                       style="width:100%; border:none; padding:4px; font-size:0.85rem; color:#555; background:#f9fafb;">
-            </td>
-            <td style="padding:4px;">
-                <input type="text" value="${desc}" placeholder="Descripción" 
-                       style="width:100%; border:none; padding:4px; font-size:0.9rem;">
-            </td>
-            <td style="padding:4px;">
-                <input type="number" value="${qty}" placeholder="1" 
-                       style="width:100%; border:none; padding:4px; font-size:1rem; font-weight:bold; text-align:right;">
-            </td>
-            <td style="padding:4px;">
-                <input type="text" value="${uom}" placeholder="U.M" 
-                       style="width:100%; border:none; padding:4px; font-size:0.85rem; color:#666; text-align:left;">
-            </td>
-            <td style="padding:4px; text-align:center;">
-                <button onclick="this.parentElement.parentElement.remove()" style="border:none; background:none; color:#f87171; cursor:pointer;">
-                    <i class="fa-solid fa-times"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(row);
-    }
-
-    clearOCRWorkspace() {
-        if (!confirm('¿Borrar todo?')) return;
-        document.getElementById('ocr-carousel').innerHTML = '<div style="text-align:center; color:#ccc; padding:2rem; font-style:italic;">No hay imágenes</div>';
-        document.getElementById('ocr-result-body').innerHTML = '';
-        document.getElementById('ocr-preview-img').style.display = 'none';
-        document.getElementById('ocr-preview-placeholder').style.display = 'block';
-        document.getElementById('ocr-img-count').innerText = '0';
-    }
-
-    async printOCRTicket() {
-        const rows = document.querySelectorAll('#ocr-result-body tr');
-        if (rows.length === 0) return alert('No hay datos para imprimir');
-
-        const items = [];
-        rows.forEach(r => {
-            const inputs = r.querySelectorAll('input');
-            if (inputs.length >= 3) {
-                const code = inputs[0].value.trim();
-                const desc = inputs[1].value.trim();
-                const qty = inputs[2].value.trim();
-                const uom = inputs[3] ? inputs[3].value.trim() : '';
-
-                if (desc) items.push({ code, desc, qty: qty || '1', uom });
-            }
-        });
-
-        if (items.length === 0) return alert('Lista vacía');
-
-        // 1. OPEN PRINT WINDOW IMMEDIATELY (UX)
-        const printWindow = window.open('', '_blank', 'width=400,height=600');
-
-        let htmlContent = `
+    let htmlContent = `
+            <!DOCTYPE html>
             <html>
             <head>
-                <title>Ticket OCR</title>
+                <title>Lista Pickup - Inteligencia IA</title>
                 <style>
                     @page { margin: 0; size: 80mm auto; }
                     body { 
                         font-family: 'Arial', sans-serif; 
-                        width: 100%; 
-                        margin: 0; 
-                        padding: 5px; 
+                        width: 78mm; 
+                        margin: 0 auto; 
+                        padding: 10px 5px; 
                         box-sizing: border-box;
-                    }
-                    .header { margin-bottom: 5px; border-bottom: 3px solid black; padding-bottom: 5px; }
-                    .title { font-size: 18px; font-weight: 900; text-transform: uppercase; text-align: center;}
-                    .meta { font-size: 12px; text-align: center; margin-top:2px; font-weight: bold;}
-                    
-                    .item-row {
-                        display: flex;
-                        align-items: flex-start;
-                        border-bottom: 2px dashed black;
-                        padding: 6px 0;
-                    }
-                    
-                    .col-prod {
-                        flex: 1;
-                        padding-right: 5px;
-                    }
-                    
-                    .prod-name {
-                        font-size: 16px;
-                        font-weight: 800; /* Extra Bold */
-                        line-height: 1.1;
-                        text-transform: uppercase;
-                        display: block;
-                    }
-                    
-                    .prod-code {
-                        font-size: 14px;
-                        font-weight: 600;
                         color: #000;
-                        display: block;
-                        margin-top: 2px;
                     }
+                    .header { text-align:center; border-bottom: 2px solid black; padding-bottom: 5px; margin-bottom: 10px; }
+                    .title { font-size: 18px; font-weight: 900; }
+                    .subtitle { font-size: 12px; font-weight:bold; }
                     
-                    .col-qty {
-                        width: 60px; /* Fixed width for alignment */
-                        text-align: right;
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: center;
-                        align-items: flex-end;
-                    }
+                    .item-row { display: flex; align-items: flex-start; border-bottom: 1px dashed black; padding: 6px 0; }
+                    .item-info { flex: 1; padding-right: 5px; }
+                    .item-name { font-size: 14px; font-weight: 800; line-height: 1.1; display: block; margin-bottom:2px; }
+                    .item-code { font-size: 11px; font-weight: 600; display: block; }
                     
-                    .qty-val {
-                        font-size: 20px;
-                        font-weight: 900;
-                        line-height: 1;
-                    }
+                    .item-qty-box { width: 50px; text-align: right; }
+                    .item-qty { font-size: 22px; font-weight: 900; line-height: 1; }
+                    .item-um { font-size: 11px; font-weight: 700; margin-top:2px; display:block;}
                     
-                    .qty-uom {
-                        font-size: 12px;
-                        font-weight: 700;
-                        text-transform: uppercase;
-                        margin-top: 2px;
-                    }
-
-                    .footer { 
-                        margin-top: 10px; 
-                        border-top: 2px solid black; 
-                        padding-top: 5px; 
-                        text-align: center; 
-                        font-size: 10px; 
-                        font-weight: bold; 
-                    }
+                    .nostock-section { margin-top: 15px; border: 1px solid black; padding: 5px; border-radius: 4px;}
+                    .nostock-title { font-size:12px; font-weight:bold; border-bottom:1px solid black; margin-bottom:4px;}
+                    .nostock-item { font-size:10px; margin-bottom:2px;}
+                    
+                    .footer { margin-top: 15px; border-top: 2px solid black; padding-top: 10px; text-align: center; font-size: 10px; font-weight: bold; }
                 </style>
             </head>
             <body>
                 <div class="header">
-                    <div class="title">ORDEN DE PEDIDO</div>
-                    <div class="meta">${new Date().toLocaleString()}</div>
+                    <div class="title">LISTA PICKUP</div>
+                    <div class="subtitle">${new Date().toLocaleString()}</div>
+                    <div style="font-size:10px; margin-top:3px;">Asistente IA</div>
                 </div>
-                <div class="items-container">
+                
+                <div style="font-size:12px; font-weight:bold; margin-bottom:5px;">A DESPACHAR:</div>
+                <div class="items-list">
         `;
 
-        items.forEach(item => {
-            htmlContent += `
+    itemsToDispatch.forEach(item => {
+        htmlContent += `
                 <div class="item-row">
-                    <div class="col-prod">
-                        <span class="prod-name">${item.desc}</span>
-                        ${item.code ? `<span class="prod-code">${item.code}</span>` : ''}
+                    <div class="item-info">
+                        <span class="item-name">${item.prodDesc}</span>
+                        <span class="item-code">${item.matchedCode}</span>
                     </div>
-                    <div class="col-qty">
-                        <span class="qty-val">${item.qty}</span>
-                        ${item.uom ? `<span class="qty-uom">${item.uom}</span>` : ''}
+                    <div class="item-qty-box">
+                        <span class="item-qty">${item.dispatchQty}</span>
+                        <span class="item-um">${item.prodUm}</span>
                     </div>
                 </div>
             `;
-        });
+    });
 
+    htmlContent += `</div>`; // Close items-list
+
+    if (outOfStockNotes.length > 0) {
         htmlContent += `
+                <div class="nostock-section">
+                    <div class="nostock-title">NO HAY STOCK DE:</div>
+                    ${outOfStockNotes.map(n => `<div class="nostock-item">- ${n}</div>`).join('')}
                 </div>
+            `;
+    }
+
+    htmlContent += `
                 <div class="footer">
-                    LEVO ERP - Módulo OCR
+                    Válido sólo para almacén<br><br><br>
+                    RECIBIDO / DESPACHADO
                 </div>
                 <script>
-                    window.onload = function() { window.print(); }
+                    window.onload = function() { 
+                        setTimeout(function(){ window.print(); }, 500);
+                        window.onafterprint = function() { window.close(); };
+                    }
                 </script>
             </body>
             </html>
         `;
 
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
-
-        // 2. SAVE TO CLOUD (Background)
-        this.saveTicketToCloud(htmlContent);
-    }
-
-    async saveTicketToCloud(html) {
-        // Change Button State
-        const btn = document.querySelector('button[onclick="app.printOCRTicket()"]'); // We need to update HTML ref
-        if (btn) btn.innerHTML = '<i class="fa-solid fa-cloud-upload fa-spin"></i> Guardando...';
-
-        try {
-            const filename = "Ticket_" + new Date().toISOString().replace(/[:.]/g, "-");
-
-            const responseRaw = await fetch(LEVO_API_URL, {
-                method: "POST",
-                redirect: "follow",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({
-                    action: "saveOCRTicket",
-                    payload: { html: html, filename: filename }
-                })
-            });
-            const response = await responseRaw.json();
-
-            if (response.status === 'success') {
-                this.showToast("Ticket guardado en Drive", "success");
-                this.clearOCRWorkspace(true); // True = Silent/No Confirm
-                this.loadOCRHistory(); // Refresh table
-            } else {
-                this.showToast("Error guardando Ticket: " + response.message, "error");
-            }
-        } catch (e) {
-            console.error(e);
-            this.showToast("Error de red al guardar ticket", "error");
-        } finally {
-            if (btn) btn.innerHTML = '<i class="fa-solid fa-print"></i> Imprimir Ticket';
-        }
-    }
-
-    async loadOCRHistory() {
-        const container = document.getElementById('ocr-history-container');
-        if (!container) return;
-
-        container.innerHTML = '<div style="text-align:center; padding:1rem; color:#999;"><i class="fa-solid fa-circle-notch fa-spin"></i> Cargando historial...</div>';
-
-        try {
-            const responseRaw = await fetch(LEVO_API_URL, {
-                method: "POST",
-                redirect: "follow",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({ action: "getOCRTicketHistory" })
-            });
-            const response = await responseRaw.json();
-
-            if (response.status === 'success') {
-                if (response.data.length === 0) {
-                    container.innerHTML = '<div style="text-align:center; padding:1rem; color:#999;">No hay tickets guardados</div>';
-                    return;
-                }
-
-                let html = `
-                    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
-                        <thead style="background:#f8f9fa; color:#666;">
-                            <tr>
-                                <th style="padding:8px; text-align:left;">Fecha</th>
-                                <th style="padding:8px; text-align:left;">Archivo</th>
-                                <th style="padding:8px; text-align:right;">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
-
-                response.data.forEach(file => {
-                    const dateKey = new Date(file.date).toLocaleString();
-                    html += `
-                        <tr style="border-bottom:1px solid #eee;">
-                            <td style="padding:8px;">${dateKey}</td>
-                            <td style="padding:8px;">${file.name}</td>
-                            <td style="padding:8px; text-align:right;">
-                                <a href="${file.url}" target="_blank" style="text-decoration:none; color:var(--primary-color); font-weight:bold;">
-                                    <i class="fa-solid fa-print"></i> Reimprimir
-                                </a>
-                            </td>
-                        </tr>
-                     `;
-                });
-
-                html += '</tbody></table>';
-                container.innerHTML = html;
-
-            } else {
-                container.innerHTML = '<div style="color:red; padding:1rem;">Error cargando historial</div>';
-            }
-        } catch (e) {
-            container.innerHTML = '<div style="color:red; padding:1rem;">Error de conexión</div>';
-        }
-    }
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+}
 
     // --- FIFO ANALYSIS & EXPIRATION LOGIC ---
 
