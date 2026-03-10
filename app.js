@@ -8547,20 +8547,22 @@ class App {
                                 <h4 style="margin:0;"><i class="fa-solid fa-check-circle"></i> Disponibles (Encontrados con Stock)</h4>
                                 <span class="badge" id="count-group1" style="background:#166534; color:white; border-radius:12px; padding:2px 8px;">0</span>
                             </div>
-                            <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
-                                <thead style="background:#f8fafc; color:#64748b; border-bottom:1px solid #e2e8f0;">
-                                    <tr>
-                                        <th style="padding:6px 10px; text-align:left; width:15%;">Código</th>
-                                        <th style="padding:6px 10px; text-align:left;">Producto</th>
-                                        <th style="padding:6px 10px; text-align:center; width:10%;">U.M.</th>
-                                        <th style="padding:6px 10px; text-align:center; width:10%;">Pedido</th>
-                                        <th style="padding:6px 10px; text-align:center; width:15%;">Despachar</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="bucket-stock">
-                                    <tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#94a3b8; font-style:italic;">Esperando datos de n8n...</td></tr>
-                                </tbody>
-                            </table>
+                            <div style="max-height: 250px; overflow-y: auto;" class="custom-scrollbar">
+                                <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                                    <thead style="background:#f8fafc; color:#64748b; border-bottom:1px solid #e2e8f0; position: sticky; top: 0; z-index: 1;">
+                                        <tr>
+                                            <th style="padding:6px 10px; text-align:left; width:15%;">Código</th>
+                                            <th style="padding:6px 10px; text-align:left;">Producto</th>
+                                            <th style="padding:6px 10px; text-align:center; width:10%;">U.M.</th>
+                                            <th style="padding:6px 10px; text-align:center; width:10%;">Pedido</th>
+                                            <th style="padding:6px 10px; text-align:center; width:15%;">Despachar</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="bucket-stock">
+                                        <tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#94a3b8; font-style:italic;">Esperando datos de n8n...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
                         <!-- Grupo 2: Encontrados SIN Stock -->
@@ -8569,20 +8571,22 @@ class App {
                                 <h4 style="margin:0;"><i class="fa-solid fa-triangle-exclamation"></i> Faltantes (Sin Stock o Stock Insuficiente)</h4>
                                 <span class="badge" id="count-group2" style="background:#854d0e; color:white; border-radius:12px; padding:2px 8px;">0</span>
                             </div>
-                            <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
-                                <thead style="background:#f8fafc; color:#64748b; border-bottom:1px solid #e2e8f0;">
-                                    <tr>
-                                        <th style="padding:6px 10px; text-align:left; width:15%;">Código</th>
-                                        <th style="padding:6px 10px; text-align:left;">Producto</th>
-                                        <th style="padding:6px 10px; text-align:center; width:10%;">U.M.</th>
-                                        <th style="padding:6px 10px; text-align:center; width:10%;">Pedido</th>
-                                        <th style="padding:6px 10px; text-align:center; width:15%;">Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="bucket-nostock">
-                                    <tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#94a3b8; font-style:italic;">No hay faltantes.</td></tr>
-                                </tbody>
-                            </table>
+                            <div style="max-height: 250px; overflow-y: auto;" class="custom-scrollbar">
+                                <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                                    <thead style="background:#f8fafc; color:#64748b; border-bottom:1px solid #e2e8f0; position: sticky; top: 0; z-index: 1;">
+                                        <tr>
+                                            <th style="padding:6px 10px; text-align:left; width:15%;">Código</th>
+                                            <th style="padding:6px 10px; text-align:left;">Producto</th>
+                                            <th style="padding:6px 10px; text-align:center; width:10%;">U.M.</th>
+                                            <th style="padding:6px 10px; text-align:center; width:10%;">Pedido</th>
+                                            <th style="padding:6px 10px; text-align:center; width:15%;">Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="bucket-nostock">
+                                        <tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#94a3b8; font-style:italic;">No hay faltantes.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
                         <!-- Grupo 3: No Encontrados -->
@@ -8594,19 +8598,21 @@ class App {
                             <div style="padding:0.5rem 1rem; font-size:0.8rem; color:#7f1d1d; background:#fff5f5; border-bottom:1px solid #fee2e2;">
                                 💡 Tip: Digita manualmente el código correcto y presiona Enter para reasignarlo a esta lista.
                             </div>
-                            <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
-                                <thead style="background:#f8fafc; color:#64748b; border-bottom:1px solid #e2e8f0;">
-                                    <tr>
-                                        <th style="padding:6px 10px; text-align:left; width:25%;">Reasignar (Código)</th>
-                                        <th style="padding:6px 10px; text-align:left;">Texto Leído por IA</th>
-                                        <th style="padding:6px 10px; text-align:center; width:10%;">Pedido</th>
-                                        <th style="padding:6px 10px; text-align:center; width:15%;">Acción</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="bucket-nomatch">
-                                    <tr><td colspan="4" style="text-align:center; padding:1.5rem; color:#94a3b8; font-style:italic;">Todos los ítems identificados correctamente.</td></tr>
-                                </tbody>
-                            </table>
+                            <div style="max-height: 250px; overflow-y: auto;" class="custom-scrollbar">
+                                <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                                    <thead style="background:#f8fafc; color:#64748b; border-bottom:1px solid #e2e8f0; position: sticky; top: 0; z-index: 1;">
+                                        <tr>
+                                            <th style="padding:6px 10px; text-align:left; width:25%;">Reasignar (Código)</th>
+                                            <th style="padding:6px 10px; text-align:left;">Texto Leído por IA</th>
+                                            <th style="padding:6px 10px; text-align:center; width:10%;">Pedido</th>
+                                            <th style="padding:6px 10px; text-align:center; width:15%;">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="bucket-nomatch">
+                                        <tr><td colspan="4" style="text-align:center; padding:1.5rem; color:#94a3b8; font-style:italic;">Todos los ítems identificados correctamente.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
                     </div>
@@ -8706,7 +8712,11 @@ class App {
                 this.generatePickupList(aiResults.productos);
             } else {
                 console.error("Estructura devuelta por n8n:", rawResponse);
-                throw new Error("Formato JSON inválido desde n8n. Se esperaba un Array de productos.");
+                let errMsg = "Formato JSON inválido desde n8n. Se esperaba un Array de productos.";
+                if (Object.keys(rawResponse).length === 0) {
+                    errMsg = "n8n devolvió un objeto vacío {}. En n8n, asegúrese que el nodo de respuesta (Webhook Response) esté enviando los datos y no esté configurado en 'Respond Immediately'.";
+                }
+                throw new Error(errMsg);
             }
             statusEl.style.display = "none";
         } catch (err) {
@@ -8866,11 +8876,30 @@ class App {
 
     handleManualCodeReassignment(itemId, inputElement) {
         const newCode = inputElement.value.trim().toUpperCase();
-        if (!newCode) return;
+
+        if (!newCode) {
+            const itemIndex = this.currentPickupList.findIndex(i => i.id === itemId);
+            if (itemIndex > -1) {
+                let item = this.currentPickupList[itemIndex];
+                item.matchedCode = null;
+                item.prodDesc = '';
+                item.stock = 0;
+                item.dispatchQty = 0;
+                this.renderPickupLists();
+                app.showToast('Asignación de código eliminada', 'info');
+            }
+            return;
+        }
 
         const p = this.data.products[newCode];
         if (!p) {
-            app.showToast('Código no existe en el catálogo', 'warning');
+            app.showToast('El código "' + newCode + '" no existe en el catálogo.', 'warning');
+            const itemIndex = this.currentPickupList.findIndex(i => i.id === itemId);
+            if (itemIndex > -1 && this.currentPickupList[itemIndex].matchedCode) {
+                inputElement.value = this.currentPickupList[itemIndex].matchedCode;
+            } else {
+                inputElement.value = '';
+            }
             return;
         }
 
@@ -8884,11 +8913,9 @@ class App {
             item.stock = parseFloat(p.stock) || 0;
             item.dispatchQty = Math.min(item.requestQty, Math.max(0, item.stock));
 
-            inputElement.value = ''; // clear input
-
             // Re-render
             this.renderPickupLists();
-            app.showToast('Producto enlazado correctamente', 'success');
+            app.showToast('Producto actualizado correctamente', 'success');
         }
     }
 
@@ -8928,7 +8955,14 @@ class App {
                     cStock++;
                     htmlStock += `
                         <tr style="border-bottom:1px solid #f1f5f9; background:#fff;">
-                            <td style="padding:6px 10px; font-weight:600; color:#0f172a;">${item.matchedCode}</td>
+                            <td style="padding:6px 10px; font-weight:600; color:#0f172a;">
+                                <input type="text" value="${item.matchedCode}" 
+                                       onchange="app.handleManualCodeReassignment('${item.id}', this)"
+                                       style="width:100%; padding:2px 4px; font-size:0.8rem; border:1px solid transparent; border-radius:4px; font-weight:600; background:transparent;"
+                                       onfocus="this.style.border='1px solid #cbd5e1'; this.style.background='#fff';"
+                                       onblur="this.style.border='1px solid transparent'; this.style.background='transparent';"
+                                       title="Editar código">
+                            </td>
                             <td style="padding:6px 10px; font-size:0.8rem; color:#334155;">
                                 ${item.prodDesc}
                                 <div style="font-size:0.7rem; color:#94a3b8; font-style:italic;">(Req: ${item.requestName})</div>
@@ -8947,7 +8981,14 @@ class App {
                     cStock++;
                     htmlStock += `
                         <tr style="border-bottom:1px solid #f1f5f9; background:#fff;">
-                            <td style="padding:6px 10px; font-weight:600; color:#0f172a;">${item.matchedCode}</td>
+                            <td style="padding:6px 10px; font-weight:600; color:#0f172a;">
+                                <input type="text" value="${item.matchedCode}" 
+                                       onchange="app.handleManualCodeReassignment('${item.id}', this)"
+                                       style="width:100%; padding:2px 4px; font-size:0.8rem; border:1px solid transparent; border-radius:4px; font-weight:600; background:transparent;"
+                                       onfocus="this.style.border='1px solid #cbd5e1'; this.style.background='#fff';"
+                                       onblur="this.style.border='1px solid transparent'; this.style.background='transparent';"
+                                       title="Editar código">
+                            </td>
                             <td style="padding:6px 10px; font-size:0.8rem; color:#334155;">
                                 ${item.prodDesc} <span style="font-size:0.7rem; color:#ca8a04; background:#fefce8; padding:2px 4px; border-radius:4px;">Parcial</span>
                                 <div style="font-size:0.7rem; color:#94a3b8; font-style:italic;">(Req: ${item.requestName})</div>
@@ -8967,7 +9008,14 @@ class App {
                     cNoStock++;
                     htmlNoStock += `
                         <tr style="border-bottom:1px solid #f1f5f9; background:#fff;">
-                            <td style="padding:6px 10px; font-weight:600; color:#0f172a;">${item.matchedCode}</td>
+                            <td style="padding:6px 10px; font-weight:600; color:#0f172a;">
+                                <input type="text" value="${item.matchedCode}" 
+                                       onchange="app.handleManualCodeReassignment('${item.id}', this)"
+                                       style="width:100%; padding:2px 4px; font-size:0.8rem; border:1px solid transparent; border-radius:4px; font-weight:600; background:transparent;"
+                                       onfocus="this.style.border='1px solid #cbd5e1'; this.style.background='#fff';"
+                                       onblur="this.style.border='1px solid transparent'; this.style.background='transparent';"
+                                       title="Editar código">
+                            </td>
                             <td style="padding:6px 10px; font-size:0.8rem; color:#334155;">
                                 ${item.prodDesc}
                                 <div style="font-size:0.7rem; color:#94a3b8; font-style:italic;">(Req: ${item.requestName})</div>
