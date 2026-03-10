@@ -2,8 +2,8 @@
  * LEVO ERP - Main Application Script
  * Handles Navigation, State, and API communication.
  */
-
 const LEVO_API_URL = 'https://script.google.com/macros/s/AKfycbw1xfIC2UdqicDXK_k-ZuwVea0kNC69MM5amEKAbQ-YjIbyva_w5YMRF0XpQRBwQDjr/exec';
+const LEVO_N8N_WEBHOOK = 'https://n8n.srv1405941.hstgr.cloud/webhook/f6d930f2-b977-42e0-9eb5-830e69441a2a';
 
 class App {
     constructor() {
@@ -8470,9 +8470,6 @@ class App {
     renderToolsModule() {
         const container = document.getElementById('tools-content');
 
-        // Define Webhook locally for this module
-        const N8N_WEBHOOK_URL = localStorage.getItem('levo_n8n_webhook_url') || '';
-
         container.innerHTML = `
             <div style="display:flex; flex-direction:column; height:100%; gap:1rem;">
                 <!-- Header -->
@@ -8480,12 +8477,6 @@ class App {
                     <div>
                         <h2 style="margin:0; color:var(--primary-color);"><i class="fa-solid fa-wand-magic-sparkles"></i> Asistente IA de Pedidos (N8N)</h2>
                         <p style="margin:0.25rem 0 0; color:#666; font-size:0.9rem;">Sube una foto y la IA de n8n generará la lista de despacho con stock validado.</p>
-                        
-                        <div style="margin-top:0.5rem; display:flex; align-items:center; gap:0.5rem;">
-                            <span style="font-size:0.8rem; font-weight:bold; color:#555;">Webhook URL (N8N):</span>
-                            <input type="text" id="n8n-webhook-input" value="${N8N_WEBHOOK_URL}" placeholder="https://tu-n8n.com/webhook/..." style="font-size:0.8rem; padding:4px; width:280px; border:1px solid #ccc; border-radius:4px;">
-                            <button onclick="localStorage.setItem('levo_n8n_webhook_url', document.getElementById('n8n-webhook-input').value); app.showToast('Webhook guardado', 'success');" style="font-size:0.8rem; padding:4px 8px; border-radius:4px; background:#f1f5f9; border:1px solid #cbd5e1; cursor:pointer;">Guardar URL</button>
-                        </div>
                     </div>
                      <div style="display:flex; gap:0.5rem; height:fit-content;">
                          <button onclick="app.clearOCRWorkspace()" class="btn-secondary">
@@ -8627,10 +8618,7 @@ class App {
         const file = input.files[0]; // Only process the first file for simplicity in this new flow
         input.value = ""; // Reset form
 
-        const webhookUrl = document.getElementById('n8n-webhook-input').value.trim();
-        if (!webhookUrl) {
-            return alert("Por favor, configure primero la URL de su Webhook de N8N en la parte superior.");
-        }
+        const webhookUrl = LEVO_N8N_WEBHOOK;
 
         // Preview Image immediately
         if (file.type.startsWith('image/')) {
@@ -8736,8 +8724,7 @@ class App {
                     const blob = await item.getType(imageType);
                     blob.name = "Pasted_Image_" + Date.now() + ".png";
 
-                    const webhookUrl = document.getElementById('n8n-webhook-input').value.trim();
-                    if (!webhookUrl) return alert("Por favor configure la URL del Webhook N8N.");
+                    const webhookUrl = LEVO_N8N_WEBHOOK;
 
                     const reader = new FileReader();
                     reader.onload = (e) => this.viewOCRImage(e.target.result);
@@ -8763,8 +8750,7 @@ class App {
                 if (!blob.name || blob.name === "image.png") blob.name = "Pasted_Image_" + Date.now() + ".png";
 
                 e.preventDefault();
-                const webhookUrl = document.getElementById('n8n-webhook-input').value.trim();
-                if (!webhookUrl) return alert("Por favor configure la URL del Webhook N8N.");
+                const webhookUrl = LEVO_N8N_WEBHOOK;
 
                 const reader = new FileReader();
                 reader.onload = (ev) => this.viewOCRImage(ev.target.result);
