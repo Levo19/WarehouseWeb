@@ -9460,7 +9460,14 @@ class App {
                 });
                 const res = await response.json();
                 if (res.status !== 'success') throw new Error(res.message);
-                this.data.mermas = res.data || [];
+
+                // Sanitize estado on load
+                this.data.mermas = (res.data || []).map(m => {
+                    if (m && m.estado) {
+                        m.estado = String(m.estado).toUpperCase().trim();
+                    }
+                    return m;
+                });
             }
             this.renderMermasList();
         } catch (e) {
@@ -9534,9 +9541,10 @@ class App {
 
             // Check Age > 48h
             const diffHours = (new Date() - mDate) / 3600000;
-            const isCritical = (m.estado === 'PENDIENTE' || m.estado === 'PARCIAL') && diffHours > 48;
+            const estado = String(m.estado || '').toUpperCase().trim();
+            const isCritical = (estado === 'PENDIENTE' || estado === 'PARCIAL') && diffHours > 48;
 
-            const stateColor = m.estado === 'PENDIENTE' ? '#f59e0b' : m.estado === 'PARCIAL' ? '#3b82f6' : '#10b981';
+            const stateColor = estado === 'PENDIENTE' ? '#f59e0b' : estado === 'PARCIAL' ? '#3b82f6' : '#10b981';
             const borderGlow = isCritical ? 'border: 2px solid #ef4444; box-shadow: 0 4px 12px rgba(239,68,68,0.15);' : 'border: 1px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.04);';
 
             html += `
@@ -10048,7 +10056,8 @@ class App {
                 if (looseMatch) productName = looseMatch.desc;
             }
 
-            const stateCls = m.estado === 'RESUELTO' ? 'res' : (m.estado === 'PENDIENTE' ? 'pen' : 'par');
+            const estado = String(m.estado || '').toUpperCase().trim();
+            const stateCls = estado === 'RESUELTO' ? 'res' : (estado === 'PENDIENTE' ? 'pen' : 'par');
 
             const orig = parseFloat(m.cantidadOriginal) || 0;
             const pend = parseFloat(m.cantidadPendiente) || 0;
@@ -10064,7 +10073,7 @@ class App {
                     <td style="font-size:11px; font-style:italic;">${m.motivo || ''}</td>
                     <td style="text-align:right; font-weight:bold;">${orig.toFixed(2)}</td>
                     <td style="text-align:right; font-weight:bold; color:#d97706;">${pend.toFixed(2)}</td>
-                    <td class="${stateCls}" style="font-size:11px;">${m.estado}</td>
+                    <td class="${stateCls}" style="font-size:11px;">${estado}</td>
                 </tr>
             `;
         });
@@ -10112,7 +10121,8 @@ class App {
         let criticalCount = 0;
         this.data.mermas.forEach(m => {
             const diffHours = (new Date() - this.parseDate(m.fechaIngreso)) / 3600000;
-            if ((m.estado === 'PENDIENTE' || m.estado === 'PARCIAL') && diffHours > 48) {
+            const estado = String(m.estado || '').toUpperCase().trim();
+            if ((estado === 'PENDIENTE' || estado === 'PARCIAL') && diffHours > 48) {
                 criticalCount++;
             }
         });
