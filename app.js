@@ -8777,41 +8777,58 @@ class App {
     // Simple Token intersection helper for fuzzy matching
     calculateMatchScore(query, target) {
         if (!query || !target) return 0;
-        const queryTokens = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(t => t.length > 1);
+        const stopwords = ['de', 'la', 'el', 'en', 'un', 'una', 'por', 'con', 'sin', 'los', 'las', 'del', 'al', 'y', 'o'];
+        const queryTokens = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(t => t.length > 1 && !stopwords.includes(t));
         const targetTokens = target.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(t => t.length > 1);
+
+        if (queryTokens.length === 0) return 0;
 
         let matches = 0;
         for (const qt of queryTokens) {
             // Direct word match or partial word match > 3 chars
-            if (targetTokens.some(tt => tt === qt || (qt.length > 3 && (tt.includes(qt) || qt.includes(tt))))) {
+            // Allow substring match only if the token is at least 4 characters long to avoid false positives with short abbreviations
+            if (targetTokens.some(tt => tt === qt || (qt.length >= 4 && (tt.includes(qt) || qt.includes(tt))))) {
                 matches++;
             }
         }
         // Score based on how many query words were found in the target
-        return queryTokens.length > 0 ? matches / queryTokens.length : 0;
+        return matches / queryTokens.length;
     }
 
     findBestProductMatch(aiProductName) {
-        let bestMatch = null;
-        let bestScore = 0;
+        let bestMatches = [];
+        let maxScore = 0;
 
         // Iterate over master catalog
         for (const code in this.data.products) {
             const p = this.data.products[code];
             const score = this.calculateMatchScore(aiProductName, p.desc);
 
-            // Bonus if exactly identical
-            let finalScore = score;
-            if (p.desc.toLowerCase().trim() === aiProductName.toLowerCase().trim()) finalScore = 1.5;
+            // Immediate win if exactly identical (ignore case/trim)
+            if (p.desc.toLowerCase().trim() === aiProductName.toLowerCase().trim()) {
+                return code;
+            }
 
-            if (finalScore > bestScore) {
-                bestScore = finalScore;
-                bestMatch = { code, product: p, score: finalScore };
+            if (score > maxScore) {
+                maxScore = score;
+                bestMatches = [{ code, product: p, score }];
+            } else if (score === maxScore && score > 0) {
+                bestMatches.push({ code, product: p, score });
             }
         }
 
-        // Threshold of 0.5 means at least 50% of words match
-        if (bestScore > 0.45) return bestMatch.code;
+        // Threshold of 0.45 means at least ~50% of words must match
+        if (maxScore >= 0.45) {
+            if (bestMatches.length === 1) {
+                // Unambiguous match!
+                return bestMatches[0].code;
+            }
+            // Ambiguity detected (e.g. multiple products tied with the same highest score).
+            // Example: "ajinomoto" -> tied between "AJINOMOTO 1KG" and "AJINOMOTO 500GR".
+            // Since we don't know which one it is, we MUST return null so the user assigns it manually.
+            return null;
+        }
+
         return null; // No match found
     }
 
