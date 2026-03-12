@@ -8774,25 +8774,80 @@ class App {
 
     // --- FUZZY ALGORITHM & DISTRIBUTOR ---
 
-    // Simple Token intersection helper for fuzzy matching
+    // Intelligent Tokenizer for better fuzzy matches
+    tokenizeProductString(str) {
+        if (!str) return [];
+        const stopwords = ['de', 'la', 'el', 'en', 'un', 'una', 'por', 'con', 'sin', 'los', 'las', 'del', 'al', 'y', 'o'];
+
+        let s = String(str).toLowerCase();
+
+        // Normalize accents (e.g. azúcar -> azucar)
+        s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+        // General punctuation -> space
+        s = s.replace(/[^a-z0-9\s]/g, ' ');
+
+        // Split Numbers and Letters (e.g., "500gr" -> "500 gr")
+        s = s.replace(/([0-9]+)([a-z]+)/g, '$1 $2');
+        s = s.replace(/([a-z]+)([0-9]+)/g, '$1 $2');
+
+        // Common quantity synonyms mapping
+        s = s.replace(/\bkilo\b/g, ' 1 kg ');
+        s = s.replace(/\bkilos\b/g, ' kg ');
+        s = s.replace(/\bkilogramo\b/g, ' 1 kg ');
+        s = s.replace(/\bkilogramos\b/g, ' kg ');
+        s = s.replace(/\bgramos\b/g, ' gr ');
+        s = s.replace(/\bgramo\b/g, ' gr ');
+        s = s.replace(/\bg\b/g, ' gr ');
+        s = s.replace(/\blitro\b/g, ' 1 lt ');
+        s = s.replace(/\blitros\b/g, ' lt ');
+        s = s.replace(/\bl\b/g, ' lt ');
+        s = s.replace(/\bmedio kilo\b/g, ' 500 gr ');
+        s = s.replace(/\bcuarto de kilo\b/g, ' 250 gr ');
+
+        // Split to tokens and filter
+        const tokens = s.split(/\s+/).filter(t => {
+            if (!t) return false;
+            if (stopwords.includes(t)) return false;
+            // keep words > 1 char OR any pure number
+            return t.length > 1 || !isNaN(t);
+        });
+
+        // Deduplicate
+        return [...new Set(tokens)];
+    }
+
+    // Advanced intersection helper for fuzzy matching
     calculateMatchScore(query, target) {
         if (!query || !target) return 0;
-        const stopwords = ['de', 'la', 'el', 'en', 'un', 'una', 'por', 'con', 'sin', 'los', 'las', 'del', 'al', 'y', 'o'];
-        const queryTokens = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(t => t.length > 1 && !stopwords.includes(t));
-        const targetTokens = target.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(t => t.length > 1);
+
+        const queryTokens = this.tokenizeProductString(query);
+        const targetTokens = this.tokenizeProductString(target);
 
         if (queryTokens.length === 0) return 0;
 
         let matches = 0;
         for (const qt of queryTokens) {
-            // Direct word match or partial word match > 3 chars
-            // Allow substring match only if the token is at least 4 characters long to avoid false positives with short abbreviations
-            if (targetTokens.some(tt => tt === qt || (qt.length >= 4 && (tt.includes(qt) || qt.includes(tt))))) {
+            const isNumber = !isNaN(qt);
+            if (targetTokens.some(tt => {
+                if (tt === qt) return true;
+                // Text allows substring match if >= 4 chars, Numbers MUST be exact
+                if (!isNumber && qt.length >= 4 && (tt.includes(qt) || qt.includes(tt))) return true;
+                return false;
+            })) {
                 matches++;
             }
         }
+
+        // Extra boost if ALL query tokens are found sequentially exactly
+        let sequentialBoost = 0;
+        // This is safe since our token logic normalized both already
+        if (target.toLowerCase().includes(query.toLowerCase())) {
+            sequentialBoost = 0.1;
+        }
+
         // Score based on how many query words were found in the target
-        return matches / queryTokens.length;
+        return (matches / queryTokens.length) + sequentialBoost;
     }
 
     findBestProductMatch(aiProductName) {
@@ -8836,10 +8891,10 @@ class App {
     currentPickupList = [];
 
     generatePickupList(aiList) {
-        // aiList = [{ nombre: 'Fideo', cantidad: 6, um: 'NIU' }, ...]
-        this.currentPickupList = [];
+        // We no longer clear this array, we Accumulate:
+        // this.currentPickupList = [];
 
-        aiList.forEach((item, index) => {
+        aiList.forEach((item) => {
             const qtyReq = parseFloat(item.cantidad) || 1;
             const originalName = item.nombre || 'Desconocido';
 
@@ -8849,28 +8904,43 @@ class App {
                 const prod = this.data.products[matchedCode];
                 let currentStock = parseFloat(prod.stock) || 0;
 
-                this.currentPickupList.push({
-                    id: 'item_' + index,
-                    requestName: originalName,
-                    requestQty: qtyReq,
-                    matchedCode: matchedCode,
-                    prodDesc: prod.desc,
-                    prodUm: item.um || prod.um || 'NIU',  // if AI gives UM use it, else default
-                    stock: currentStock,
-                    dispatchQty: Math.min(qtyReq, Math.max(0, currentStock)) // Cannot dispatch more than stock, minimum 0
-                });
+                // Check if already in list to accumulate
+                let existingItem = this.currentPickupList.find(i => i.matchedCode === matchedCode);
+
+                if (existingItem) {
+                    existingItem.requestQty += qtyReq;
+                    // Recalculate dispatch bounds based on the new total requested vs stock
+                    existingItem.dispatchQty = Math.min(existingItem.requestQty, Math.max(0, currentStock));
+                } else {
+                    this.currentPickupList.push({
+                        id: 'item_' + Date.now() + '_' + Math.random().toString(36).substring(7),
+                        requestName: originalName,
+                        requestQty: qtyReq,
+                        matchedCode: matchedCode,
+                        prodDesc: prod.desc,
+                        prodUm: item.um || prod.um || 'NIU',
+                        stock: currentStock,
+                        dispatchQty: Math.min(qtyReq, Math.max(0, currentStock))
+                    });
+                }
             } else {
-                // No Match
-                this.currentPickupList.push({
-                    id: 'item_' + index,
-                    requestName: originalName,
-                    requestQty: qtyReq,
-                    matchedCode: null,
-                    prodDesc: '',
-                    prodUm: item.um || '',
-                    stock: 0,
-                    dispatchQty: 0
-                });
+                // No Match Found - Accumulate by exact original name
+                let existingUnknown = this.currentPickupList.find(i => !i.matchedCode && i.requestName.toLowerCase() === originalName.toLowerCase());
+
+                if (existingUnknown) {
+                    existingUnknown.requestQty += qtyReq;
+                } else {
+                    this.currentPickupList.push({
+                        id: 'item_' + Date.now() + '_' + Math.random().toString(36).substring(7),
+                        requestName: originalName,
+                        requestQty: qtyReq,
+                        matchedCode: null,
+                        prodDesc: '',
+                        prodUm: item.um || '',
+                        stock: 0,
+                        dispatchQty: 0
+                    });
+                }
             }
         });
 
@@ -8949,12 +9019,9 @@ class App {
 
         this.currentPickupList.forEach(item => {
             if (item.matchedCode) {
-                // Has Match. Check Stock rules.
-                // Rule: If request was 0 logic might bend, but let's assume we want to ship > 0
+
                 if (item.stock >= item.requestQty && item.requestQty > 0) {
-                    // Full stock valid OR partial stock valid
-                    // Group 1: Encontrados con Stock (We have AT LEAST 1 unit, or we have EXACT req)
-                    // Actually, let's put it in Group 1 if stock > 0
+                    // Full stock valid
                     cStock++;
                     htmlStock += `
                         <tr style="border-bottom:1px solid #f1f5f9; background:#fff;">
@@ -8980,7 +9047,7 @@ class App {
                         </tr>
                     `;
                 } else if (item.stock > 0 && item.stock < item.requestQty) {
-                    // Partial Stock - Group 1 but warning
+                    // Partial Stock - Group 1 for the stock we HAVE
                     cStock++;
                     htmlStock += `
                         <tr style="border-bottom:1px solid #f1f5f9; background:#fff;">
@@ -8993,11 +9060,11 @@ class App {
                                        title="Editar código">
                             </td>
                             <td style="padding:6px 10px; font-size:0.8rem; color:#334155;">
-                                ${item.prodDesc} <span style="font-size:0.7rem; color:#ca8a04; background:#fefce8; padding:2px 4px; border-radius:4px;">Parcial</span>
-                                <div style="font-size:0.7rem; color:#94a3b8; font-style:italic;">(Req: ${item.requestName})</div>
+                                ${item.prodDesc} <span style="font-size:0.7rem; color:#ca8a04; background:#fefce8; padding:2px 4px; border-radius:4px; font-weight:bold;">STOCK PARCIAL: Solo ${item.stock} un.</span>
+                                <div style="font-size:0.7rem; color:#94a3b8; font-style:italic;">(Req Original: ${item.requestQty} | Cubierto: ${item.stock})</div>
                             </td>
                             <td style="padding:6px 10px; text-align:center;">${item.prodUm}</td>
-                            <td style="padding:6px 10px; text-align:center; font-weight:bold;">${item.requestQty}</td>
+                            <td style="padding:6px 10px; text-align:center; font-weight:bold; color:#166534;">${item.stock}</td>
                             <td style="padding:6px 10px; text-align:center;">
                                 <input type="number" value="${item.dispatchQty}" min="0" max="${item.stock}" 
                                        onchange="app.handleQtyChange('${item.id}', this.value)"
@@ -9005,9 +9072,28 @@ class App {
                             </td>
                         </tr>
                     `;
+
+                    // PLUS automatically spawn the remaining missing quantity into Group 2 (Faltantes)
+                    const missingQty = item.requestQty - item.stock;
+                    cNoStock++;
+                    htmlNoStock += `
+                        <tr style="border-bottom:1px solid #f1f5f9; background:#fff;">
+                            <td style="padding:6px 10px; font-weight:600; color:#0f172a;">${item.matchedCode}</td>
+                            <td style="padding:6px 10px; font-size:0.8rem; color:#334155;">
+                                ${item.prodDesc}
+                                <div style="font-size:0.7rem; color:#94a3b8; font-style:italic;">(Saldo pendiente de req: ${item.requestName})</div>
+                            </td>
+                            <td style="padding:6px 10px; text-align:center;">${item.prodUm}</td>
+                            <td style="padding:6px 10px; text-align:center; font-weight:bold; color:#991b1b;">${missingQty}</td>
+                            <td style="padding:6px 10px; text-align:center;">
+                                <span style="font-size:0.75rem; background:#fee2e2; color:#991b1b; padding:2px 6px; border-radius:12px; font-weight:600;">[FALTANTE PARCIAL]</span>
+                            </td>
+                        </tr>
+                    `;
+
                 }
                 else {
-                    // No Stock (0 or negative)
+                    // No Stock at all (0 or negative)
                     cNoStock++;
                     htmlNoStock += `
                         <tr style="border-bottom:1px solid #f1f5f9; background:#fff;">
