@@ -9466,6 +9466,11 @@ class App {
                     if (m && m.estado) {
                         m.estado = String(m.estado).toUpperCase().trim();
                     }
+                    // Retroactively auto-resolve items with floating point 0 or manual 0
+                    if (m && parseFloat(m.cantidadPendiente) <= 0.001) {
+                        m.cantidadPendiente = 0; // Normalize UI Display
+                        m.estado = 'RESUELTO';    // Override DB status
+                    }
                     return m;
                 });
             }
