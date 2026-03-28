@@ -1,1151 +1,447 @@
 <!DOCTYPE html>
-<html lang="es" class="h-full">
+<html lang="es">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#4f46e5">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>WarehouseWeb</title>
-  <link rel="manifest" href="./manifest.json">
-  <script src="https://unpkg.com/vue@3.4.21/dist/vue.global.prod.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>tailwind.config = { darkMode: 'class' }</script>
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <style>
-    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; }
-    [v-cloak] { display: none; }
-    .safe-pb { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
-    .safe-pt { padding-top: max(0px, env(safe-area-inset-top)); }
-    .toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
-    .toast-enter-from { opacity: 0; transform: translateY(-8px); }
-    .toast-leave-to   { opacity: 0; transform: translateY(-8px); }
-    input[type=number]::-webkit-inner-spin-button,
-    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
-    input[type=number] { -moz-appearance: textfield; }
-    ::-webkit-scrollbar { width: 3px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-    .modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
-    .modal-enter-from, .modal-leave-to { opacity: 0; }
-    .modal-enter-active .modal-sheet, .modal-leave-active .modal-sheet { transition: transform 0.25s ease; }
-    .modal-enter-from .modal-sheet { transform: translateY(40px); }
-    .modal-leave-to .modal-sheet   { transform: translateY(40px); }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LEVO ERP | Warehouse Management</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@500;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS for Excel Parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.css"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <link rel="stylesheet" href="style.css?v=1001">
+    <style>
+        /* Modern Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
 </head>
-<body class="bg-slate-100 dark:bg-slate-900 h-full">
-<div id="app" v-cloak class="h-full">
 
-  <!-- ═══ TOASTS ═══════════════════════════════════════════ -->
-  <div class="fixed top-4 inset-x-3 z-[60] flex flex-col gap-2 pointer-events-none max-w-md mx-auto">
-    <transition-group name="toast">
-      <div v-for="t in toasts" :key="t.id"
-        class="rounded-xl px-4 py-3 text-white text-sm shadow-xl pointer-events-auto"
-        :class="{ 'bg-red-500': t.tipo==='error', 'bg-emerald-500': t.tipo==='ok', 'bg-indigo-600': t.tipo==='info' }">
-        <div class="font-semibold text-xs uppercase tracking-wide opacity-75">{{ t.titulo }}</div>
-        <div class="font-medium">{{ t.msg }}</div>
-      </div>
-    </transition-group>
-  </div>
-
-  <!-- ═══ LOGIN ════════════════════════════════════════════ -->
-  <div v-if="!usuario" class="flex items-center justify-center min-h-screen p-4 bg-gradient-to-br from-indigo-50 to-slate-100 dark:from-slate-900 dark:to-indigo-950">
-    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 w-full max-w-sm">
-      <div class="text-center mb-8">
-        <div class="w-16 h-16 bg-indigo-100 dark:bg-indigo-900 rounded-2xl flex items-center justify-center mx-auto mb-3">
-          <svg class="w-9 h-9 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-          </svg>
-        </div>
-        <h1 class="text-2xl font-bold text-slate-800 dark:text-white">WarehouseWeb</h1>
-        <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">Gestión de almacén</p>
-      </div>
-      <div class="space-y-3">
-        <input v-model="loginForm.usuario" type="text" placeholder="Usuario" autocomplete="username"
-          class="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          @keyup.enter="login">
-        <input v-model="loginForm.clave" type="password" placeholder="Contraseña" autocomplete="current-password"
-          class="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          @keyup.enter="login">
-        <button @click="login" :disabled="loginCargando"
-          class="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold rounded-xl py-3 transition-colors disabled:opacity-50 text-sm">
-          {{ loginCargando ? 'Ingresando...' : 'Ingresar' }}
-        </button>
-      </div>
-      <p class="text-center text-xs text-slate-400 dark:text-slate-500 mt-6">
-        v1.1 · {{ apiConfigurada ? 'GAS conectado' : 'Sin GAS — modo demo' }}
-      </p>
+<body>
+    <!-- PANTALLA DE CARGA / PRELOADER INICIAL -->
+    <div id="initial-loader"
+        style="position:fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%); z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; color:white; transition: opacity 0.5s ease, visibility 0.5s ease;">
+        <i class="fa-solid fa-boxes-packing fa-4x fa-bounce"
+            style="margin-bottom: 20px; color:var(--primary-color);"></i>
+        <h2 style="font-family: 'Poppins', sans-serif; font-weight: 700; letter-spacing: 2px; margin:0;">LEVO ERP</h2>
+        <p style="font-size: 0.95rem; color:#94a3b8; margin-top: 8px;">Conectando al sistema...</p>
     </div>
-  </div>
 
-  <!-- ═══ APP ══════════════════════════════════════════════ -->
-  <div v-else class="flex flex-col h-full max-w-md mx-auto">
+    <!-- NOTIFICATION SYSTEM -->
+    <div id="notification-container"></div>
 
-    <!-- HEADER -->
-    <header class="safe-pt bg-indigo-700 dark:bg-indigo-900 text-white px-4 py-3 flex items-center gap-3 shadow-lg flex-shrink-0 z-10">
-      <div class="flex-1 min-w-0">
-        <h1 class="font-bold text-base leading-tight truncate">{{ tituloModulo }}</h1>
-        <p class="text-indigo-200 dark:text-indigo-300 text-xs truncate">{{ usuario.nombre }}</p>
-      </div>
-      <!-- Badge carrito -->
-      <button v-if="modulo==='DESPACHOS'" @click="mostrarCarrito=true"
-        class="relative p-2 rounded-xl bg-white/10 hover:bg-white/20 active:bg-white/30 transition-colors">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
-        </svg>
-        <span v-if="carritoDespacho.length"
-          class="absolute -top-1 -right-1 bg-amber-400 text-indigo-900 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
-          {{ carritoDespacho.length > 9 ? '9+' : carritoDespacho.length }}
-        </span>
-      </button>
-      <!-- Dark mode -->
-      <button @click="toggleDarkMode" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 active:bg-white/30 transition-colors">
-        <svg v-if="darkMode" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-        </svg>
-        <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-        </svg>
-      </button>
-    </header>
+    <!-- MODAL CONTAINER -->
+    <div id="modal-container" class="modal-overlay"></div>
 
-    <!-- CONTENIDO -->
-    <main class="flex-1 overflow-y-auto">
-
-      <!-- ══ DASHBOARD ══════════════════════════════════════ -->
-      <div v-if="modulo==='DASHBOARD'" class="p-4 space-y-4">
-
-        <!-- Stats grid -->
-        <div class="grid grid-cols-3 gap-2">
-          <div class="bg-white dark:bg-slate-800 rounded-2xl p-3 shadow-sm text-center">
-            <div class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ totalProductos }}</div>
-            <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium leading-tight">Productos</div>
-          </div>
-          <div class="bg-white dark:bg-slate-800 rounded-2xl p-3 shadow-sm text-center">
-            <div class="text-2xl font-bold text-amber-500">{{ stockBajo }}</div>
-            <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium leading-tight">Stock bajo</div>
-          </div>
-          <div class="bg-white dark:bg-slate-800 rounded-2xl p-3 shadow-sm text-center">
-            <div class="text-2xl font-bold text-red-500">{{ stockAgotado }}</div>
-            <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium leading-tight">Agotados</div>
-          </div>
-        </div>
-
-        <!-- Alertas de stock -->
-        <div v-if="alertasStock.length > 0">
-          <h2 class="font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wide mb-2 px-1">
-            Requieren atención
-          </h2>
-          <div class="space-y-2">
-            <div v-for="a in alertasStock" :key="a.skuBase"
-              class="bg-white dark:bg-slate-800 rounded-xl p-3 shadow-sm flex items-center gap-3 cursor-pointer active:bg-slate-50 dark:active:bg-slate-700"
-              @click="modulo='DESPACHOS'; busquedaDespacho=a.nombre">
-              <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-lg"
-                :class="a.stock === 0 ? 'bg-red-100 dark:bg-red-900/30' : 'bg-amber-100 dark:bg-amber-900/30'">
-                {{ a.stock === 0 ? '🚫' : '⚠️' }}
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="font-medium text-sm text-slate-800 dark:text-slate-100 truncate">{{ a.nombre }}</div>
-                <div class="text-xs text-slate-400">{{ a.skuBase }}</div>
-              </div>
-              <span class="font-bold text-sm flex-shrink-0"
-                :class="a.stock === 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'">
-                {{ a.stock }} uds
-              </span>
+    <!-- LOGIN SCREEN -->
+    <section id="login-view" class="view active">
+        <div class="login-container">
+            <div class="login-card">
+                <div class="login-header">
+                    <div class="logo-circle">
+                        <i class="fa-solid fa-cube"></i>
+                    </div>
+                    <h1>LEVO ERP</h1>
+                    <p>Logística y Almacén</p>
+                </div>
+                <form id="login-form">
+                    <div class="input-group">
+                        <i class="fa-regular fa-user"></i>
+                        <input type="text" id="username" placeholder="Usuario" required autocomplete="username">
+                    </div>
+                    <div class="input-group">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" id="password" placeholder="Contraseña" required
+                            autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn-primary">
+                        Ingresar <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                    <p class="login-footer">Sistema Interno v1.0</p>
+                </form>
             </div>
-          </div>
         </div>
+    </section>
 
-        <div v-else class="bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl p-5 text-center">
-          <div class="text-3xl mb-2">✅</div>
-          <div class="text-sm font-semibold text-emerald-700 dark:text-emerald-400">Stock en buen estado</div>
-        </div>
+    <!-- MAIN DASHBOARD SHELL (Hidden by default) -->
+    <section id="main-app" class="view">
 
-        <!-- Info impresora -->
-        <div v-if="printerId" class="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-3 flex items-center gap-3">
-          <span class="text-lg">🖨️</span>
-          <div class="flex-1 text-xs text-indigo-700 dark:text-indigo-300">
-            Impresora configurada · ID {{ printerId }}
-          </div>
-        </div>
-        <div v-else class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 flex items-center gap-3">
-          <span class="text-lg">⚠️</span>
-          <div class="flex-1 text-xs text-amber-700 dark:text-amber-300">
-            Sin impresora — configura el Printer ID en Herramientas
-          </div>
-        </div>
-
-        <button @click="cargarCatalogo(true)" :disabled="cargandoCatalogo"
-          class="w-full bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-xl py-3 text-sm font-semibold disabled:opacity-50 transition-colors">
-          {{ cargandoCatalogo ? 'Actualizando...' : '🔄 Actualizar catálogo' }}
-        </button>
-        <button @click="logout" class="w-full border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 rounded-xl py-3 text-sm font-medium">
-          Cerrar sesión
-        </button>
-      </div>
-
-      <!-- ══ DESPACHOS ═══════════════════════════════════════ -->
-      <div v-if="modulo==='DESPACHOS'" class="flex flex-col">
-
-        <!-- Barra de búsqueda -->
-        <div class="sticky top-0 z-10 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 px-3 py-2 flex gap-2 shadow-sm">
-          <input v-model="busquedaDespacho" type="search" placeholder="Nombre, código, presentación..."
-            class="flex-1 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-          <button @click="toggleCamaraDespacho"
-            class="p-2 rounded-xl border transition-colors flex-shrink-0"
-            :class="camaraDespachoAbierta ? 'bg-indigo-100 dark:bg-indigo-900 border-indigo-400 text-indigo-700' : 'border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400'">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-          </button>
-        </div>
-
-        <!-- Cámara QR -->
-        <div v-if="camaraDespachoAbierta" class="px-3 pt-3">
-          <div id="reader-despacho" class="rounded-2xl overflow-hidden"></div>
-        </div>
-
-        <!-- Lista productos -->
-        <div class="p-3 space-y-2">
-          <div v-if="cargandoCatalogo" class="text-center py-16 text-slate-400">
-            <div class="text-3xl mb-2 animate-pulse">⏳</div>
-            <div class="text-sm">Cargando catálogo...</div>
-          </div>
-          <div v-else-if="productosFiltrados.length === 0" class="text-center py-16 text-slate-400 dark:text-slate-500">
-            <div class="text-3xl mb-2">🔍</div>
-            <div class="text-sm">Sin resultados</div>
-            <div v-if="busquedaDespacho" class="text-xs mt-1 text-slate-400">"{{ busquedaDespacho }}"</div>
-          </div>
-
-          <div v-for="prod in productosFiltrados" :key="prod.codBarras"
-            class="bg-white dark:bg-slate-800 rounded-xl shadow-sm flex items-center gap-3 p-3 cursor-pointer active:bg-slate-50 dark:active:bg-slate-700 transition-colors"
-            @click="seleccionarProductoDespacho(prod)">
-
-            <div class="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
-              <img v-if="prod.imagen" :src="prod.imagen" class="w-full h-full object-cover" @error="$event.target.style.display='none'">
-              <span v-else class="text-xl">📦</span>
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <i class="fa-solid fa-cubes-stacked"></i>
+                    <div class="brand-text">
+                        <span class="erp">ERP</span>
+                        <span class="levo">LEVO</span>
+                    </div>
+                </div>
             </div>
 
-            <div class="flex-1 min-w-0">
-              <div class="font-medium text-sm text-slate-800 dark:text-slate-100 leading-tight truncate">{{ prod.nombre }}</div>
-              <div class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                {{ prod.empaque }}<span v-if="prod.factor > 1"> · ×{{ prod.factor }}</span>
-              </div>
-              <div class="mt-1 flex items-center gap-1.5">
-                <span v-if="prod.stock !== null" class="text-[10px] font-bold rounded-md px-1.5 py-0.5"
-                  :class="prod.stock > 10
-                    ? 'text-emerald-700 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/40'
-                    : prod.stock > 0
-                      ? 'text-amber-700 bg-amber-100 dark:text-amber-300 dark:bg-amber-900/40'
-                      : 'text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-900/40'">
-                  {{ prod.stock > 0 ? prod.stock + ' uds' : 'Sin stock' }}
-                </span>
-              </div>
-            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-link active" data-target="dashboard">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
 
-            <div class="flex-shrink-0 flex flex-col items-end gap-1.5">
-              <div class="text-sm font-bold text-indigo-700 dark:text-indigo-400">S/ {{ prod.precio.toFixed(2) }}</div>
-              <div class="flex gap-1">
-                <button @click.stop="imprimirMembrete(prod)" title="Imprimir etiqueta"
-                  class="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-sm rounded-lg px-2 py-1">
-                  🏷️
+                <a href="#" class="nav-link" data-target="movements">
+                    <i class="fa-solid fa-dolly"></i>
+                    <span>Movimientos</span>
+                </a>
+
+                <a href="#" class="nav-link" data-target="dispatch">
+                    <i class="fa-solid fa-truck-fast"></i>
+                    <span>Despachos</span>
+                </a>
+
+                <a href="#" class="nav-link" data-target="prepedidos">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                    <span>Prepedidos</span>
+                </a>
+
+                <a href="#" class="nav-link" data-target="envasador">
+                    <i class="fa-solid fa-box-open"></i>
+                    <span>Envasador</span>
+                </a>
+
+                <a href="#" class="nav-link" data-target="users" id="nav-users" style="display: none;">
+                    <i class="fa-solid fa-users-gear"></i>
+                    <span>Usuarios</span>
+                </a>
+
+                <a href="#" class="nav-link" data-target="tools">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>Herramientas</span>
+                </a>
+            </nav>
+
+            <div class="user-profile">
+                <div class="user-info">
+                    <div class="avatar" id="user-avatar-icon"><i class="fa-solid fa-user"></i></div>
+                    <div class="user-details">
+                        <span id="user-name">Usuario</span>
+                        <span id="user-role" class="role-badge">User</span>
+                    </div>
+                </div>
+                <button id="logout-btn" style="background:none; border:none; color:#999; cursor:pointer;"
+                    title="Cerrar Sesión">
+                    <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
-                <button @click.stop="agregarRapidoDespacho(prod)"
-                  class="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs rounded-lg px-2 py-1 font-bold transition-colors">
-                  +1
+            </div>
+        </aside>
+
+        <!-- MOBILE SIDEBAR OVERLAY -->
+        <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="content-area">
+
+            <!-- HEADER -->
+            <header class="top-bar">
+                <button id="mobile-menu-btn" class="icon-btn mobile-only">
+                    <i class="fa-solid fa-bars"></i>
                 </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ══ ENVASADOR ═══════════════════════════════════════ -->
-      <div v-if="modulo==='ENVASADOR'" class="p-4 space-y-4">
-
-        <!-- Producto terminado -->
-        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm p-4">
-          <h2 class="font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
-            Producto terminado
-          </h2>
-
-          <div v-if="!productoTerminado">
-            <input v-model="busquedaTerminado" type="search" placeholder="Buscar producto a envasar..."
-              class="w-full bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-            <div v-if="busquedaTerminado.length >= 2" class="mt-2 space-y-1 max-h-44 overflow-y-auto">
-              <div v-if="productosBusquedaTerminado.length === 0" class="text-center py-3 text-xs text-slate-400">Sin resultados</div>
-              <div v-for="p in productosBusquedaTerminado" :key="p.codBarras"
-                @click="productoTerminado = p; busquedaTerminado = ''"
-                class="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer">
-                <div class="flex-1 min-w-0">
-                  <div class="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{{ p.nombre }}</div>
-                  <div class="text-xs text-slate-400">{{ p.empaque }}<span v-if="p.factor > 1"> · ×{{ p.factor }}</span></div>
+                <h2 id="page-title">Dashboard</h2>
+                <div class="top-actions">
+                    <div id="header-dynamic-actions"></div>
+                    <button class="icon-btn" id="header-notification-bell" style="position:relative;">
+                        <i class="fa-regular fa-bell"></i>
+                        <span id="notification-badge"
+                            style="display:none; position:absolute; top:-2px; right:-2px; background:red; color:white; font-size:0.6rem; padding:2px 4px; border-radius:50%;">0</span>
+                    </button>
+                    <button class="icon-btn"><i class="fa-solid fa-gear"></i></button>
                 </div>
-                <span v-if="p.stock !== null" class="text-xs font-semibold flex-shrink-0"
-                  :class="p.stock > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'">
-                  {{ p.stock }} uds
-                </span>
-              </div>
-            </div>
-          </div>
+            </header>
 
-          <div v-else>
-            <div class="bg-indigo-50 dark:bg-indigo-900/30 rounded-xl p-3 flex items-center gap-3 mb-4">
-              <div class="flex-1 min-w-0">
-                <div class="font-semibold text-sm text-slate-800 dark:text-slate-100">{{ productoTerminado.nombre }}</div>
-                <div class="text-xs text-slate-500 dark:text-slate-400">
-                  {{ productoTerminado.empaque }}
-                  <span v-if="productoTerminado.factor > 1"> · ×{{ productoTerminado.factor }} por unidad</span>
+            <!-- VIEWS CONTAINER -->
+            <div class="views-wrapper">
+
+                <!-- DASHBOARD VIEW -->
+                <div id="view-dashboard" class="sub-view active">
+
+                    <!-- NEW WIDGETS CONTAINER: To prevent app.js from overwriting Mermas -->
+                    <div id="dashboard-widgets-container"></div>
+
+                    <!-- Dashboard container for dynamic alerts (Mermas critical) -->
+                    <div id="dashboard-overview" style="margin-bottom: 1rem;"></div>
+
+                    <!-- MERMAS EN DASHBOARD -->
+                    <div id="tab-mermas"
+                        style="display:block; flex:1; display:flex; flex-direction:column; height: calc(100vh - 120px);">
+                        <div class="action-bar" style="margin-top:0; margin-bottom: 0;">
+                            <h3 style="margin:0; flex:1; display:flex; align-items:center; gap:0.5rem; color:#475569;">
+                                <i class="fa-solid fa-recycle"></i> Gestión de Mermas
+                            </h3>
+                            <button class="btn-secondary" onclick="window.app.printWeeklyMermas()"
+                                style="margin-right:10px; background:white; color:#475569; border:1px solid #cbd5e1;">
+                                <i class="fa-solid fa-print"></i> Reporte Semanal
+                            </button>
+                            <button class="btn-primary" onclick="window.app.openNewMermaModal()">
+                                <i class="fa-solid fa-plus"></i> Ingresar Merma
+                            </button>
+                        </div>
+
+                        <!-- MERMAS LAYOUT WRAPPER -->
+                        <div id="mermas-layout-wrapper"
+                            style="display:flex; flex:1; gap: 1rem; position: relative; overflow: hidden; margin-top: 1rem;">
+
+                            <!-- LEFT COLUMN: LIST -->
+                            <div id="mermas-left-col"
+                                style="flex:1; display:flex; flex-direction:column; min-width: 0; transition: all 0.3s ease;">
+                                <!-- Filters -->
+                                <div class="filter-bar"
+                                    style="display:flex; gap:1rem; padding-bottom:1rem; border-bottom:1px solid #eee; margin-bottom:1rem; align-items: center;">
+                                    <div class="search-neon-wrapper" style="flex:1 1 auto; position: relative;">
+                                        <i class="fa-solid fa-magnifying-glass"
+                                            style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#999;"></i>
+                                        <input type="text" id="merma-filter-text"
+                                            placeholder="Buscar merma por código o motivo..."
+                                            style="width:100%; padding-left:35px; height:40px; border-radius: 8px; border: 1px solid #ddd;"
+                                            onkeyup="window.app.filterMermasList()">
+                                    </div>
+                                    <div class="date-filter-wrapper" title="Filtrar por origen" style="flex: 0 0 auto;">
+                                        <select id="merma-filter-status" onchange="window.app.filterMermasList()"
+                                            style="height:40px; min-width: 150px; padding:0 10px; border-radius:8px; border:1px solid #ddd; outline:none; font-family:inherit;">
+                                            <option value="">Todos</option>
+                                            <option value="PENDIENTE">Pendientes</option>
+                                            <option value="PARCIAL">Parciales</option>
+                                            <option value="RESUELTO">Resueltos</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Scrollable List -->
+                                <div id="mermas-list-scroll" style="flex:1; overflow-y:auto; padding-right:0.5rem;">
+                                    <div style="text-align:center; padding:2rem; color:#999;">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Cargando mermas...
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- RIGHT COLUMN: DETAIL PANEL -->
+                            <div id="merma-detail-panel" class="detail-panel"
+                                style="width:0; overflow:hidden; border-left:1px solid #eee; background:white; display:flex; flex-direction:column; transition: width 0.3s ease;">
+                                <!-- Detail Content -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div v-if="productoTerminado.stock !== null" class="mt-1">
-                  <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    Stock actual: {{ productoTerminado.stock }} uds
-                    → después: <span class="text-emerald-600 dark:text-emerald-400">{{ productoTerminado.stock + cantEnvasado * productoTerminado.factor }} uds</span>
-                  </span>
+
+                <!-- MOVEMENTS VIEW (Placeholder) -->
+                <!-- MOVEMENTS VIEW -->
+                <div id="view-movements" class="sub-view">
+                    <!-- REMOVED TABS - MOVED TO HEADER -->
+                    <div class="mov-tab-buttons">
+                        <button id="btn-guias" class="mov-tab-btn active" onclick="window.app.switchMovTab('guias')">
+                            <i class="fa-solid fa-clipboard-list"></i> Guías
+                        </button>
+                        <button id="btn-preingresos" class="mov-tab-btn"
+                            onclick="window.app.switchMovTab('preingresos')">
+                            <i class="fa-solid fa-boxes-packing"></i> Pre-Ingresos
+                        </button>
+                    </div>
+
+                    <!-- TAB: GUIAS -->
+                    <div id="tab-guias" class="mov-tab-content active">
+                        <div class="action-bar" style="margin-bottom:0;">
+                            <button class="btn-primary" onclick="window.app.openNewGuiaModal('INGRESO')">
+                                <i class="fa-solid fa-arrow-down"></i> Ingreso
+                            </button>
+                            <button class="btn-secondary" onclick="window.app.openNewGuiaModal('SALIDA')">
+                                <i class="fa-solid fa-arrow-up"></i> Salida
+                            </button>
+                        </div>
+                        <!-- STATIC GUIAS LAYOUT -->
+                        <div id="guias-layout-wrapper"
+                            style="display:flex; height: calc(100vh - 180px); gap: 1rem; position: relative; overflow: hidden; margin-top: 1rem;">
+
+                            <!-- LEFT COLUMN: LIST -->
+                            <div id="guias-left-col"
+                                style="flex:1; display:flex; flex-direction:column; min-width: 0; transition: all 0.3s ease;">
+                                <!-- Filters -->
+                                <div class="filter-bar"
+                                    style="display:flex; gap:1rem; padding-bottom:1rem; border-bottom:1px solid #eee; margin-bottom:1rem; align-items: center;">
+                                    <div class="search-neon-wrapper" style="flex:1; position: relative;">
+                                        <i class="fa-solid fa-magnifying-glass"
+                                            style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#999;"></i>
+                                        <input type="text" id="guia-filter-text"
+                                            placeholder="Buscar por Proveedor o ID..."
+                                            style="width:100%; padding-left:35px; height:40px; border-radius: 8px; border: 1px solid #ddd;"
+                                            onkeyup="window.app.filterGuiasList()">
+                                    </div>
+
+                                    <!-- Compact Date Filter -->
+                                    <div class="date-filter-wrapper" title="Filtrar por fecha"
+                                        onclick="this.querySelector('input').showPicker()">
+                                        <i class="fa-regular fa-calendar" style="font-size: 1.2rem;"></i>
+                                        <input type="date" id="guia-filter-date" onchange="window.app.filterGuiasList()"
+                                            onclick="event.stopPropagation()">
+                                    </div>
+
+                                    <!-- Clear Filter Button -->
+                                    <button class="icon-btn" onclick="window.app.clearGuiaFilters()"
+                                        title="Limpiar filtros" style="font-size: 1rem;">
+                                        <i class="fa-solid fa-filter-circle-xmark"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Scrollable List -->
+                                <div id="guias-list-scroll" style="flex:1; overflow-y:auto; padding-right:0.5rem;">
+                                    <!-- Content goes here -->
+                                    <div style="text-align:center; padding:2rem; color:#999;">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Inicializando...
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- RIGHT COLUMN: DETAIL PANEL (Hidden by default) -->
+                            <div id="guia-detail-panel" class="detail-panel"
+                                style="width:0; overflow:hidden; border-left:1px solid #eee; background:white; display:flex; flex-direction:column; transition: width 0.3s ease;">
+                                <!-- Detail Content -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB: PREINGRESOS -->
+                    <div id="tab-preingresos" class="mov-tab-content">
+                        <div class="action-bar">
+                            <button class="btn-primary" onclick="window.app.openNewPreingresoModal()">
+                                <i class="fa-solid fa-plus"></i> Nuevo Preingreso
+                            </button>
+                        </div>
+
+                        <!-- PREINGRESOS LAYOUT WRAPPER (Mirroring Guias) -->
+                        <div id="preingresos-layout-wrapper"
+                            style="display:flex; height: calc(100vh - 180px); gap: 1rem; position: relative; overflow: hidden; margin-top: 1rem;">
+
+                            <!-- LEFT COLUMN: LIST -->
+                            <div id="preingresos-left-col"
+                                style="flex:1; display:flex; flex-direction:column; min-width: 0; transition: all 0.3s ease;">
+
+                                <!-- Filters -->
+                                <div class="filter-bar"
+                                    style="display:flex; gap:1rem; padding-bottom:1rem; border-bottom:1px solid #eee; margin-bottom:1rem; align-items: center;">
+                                    <div class="search-neon-wrapper" style="flex:1; position: relative;">
+                                        <i class="fa-solid fa-magnifying-glass"
+                                            style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#999;"></i>
+                                        <input type="text" id="preingreso-filter-text"
+                                            placeholder="Buscar por Proveedor..."
+                                            style="width:100%; padding-left:35px; height:40px; border-radius: 8px; border: 1px solid #ddd;"
+                                            onkeyup="window.app.filterPreingresosList()">
+                                    </div>
+
+                                    <!-- Compact Date Filter -->
+                                    <div class="date-filter-wrapper" title="Filtrar por fecha"
+                                        onclick="this.querySelector('input').showPicker()">
+                                        <i class="fa-regular fa-calendar" style="font-size: 1.2rem;"></i>
+                                        <input type="date" id="preingreso-filter-date"
+                                            onchange="window.app.filterPreingresosList()"
+                                            onclick="event.stopPropagation()">
+                                    </div>
+
+                                    <!-- Clear Filter Button -->
+                                    <button class="icon-btn" onclick="window.app.clearPreingresoFilters()"
+                                        title="Limpiar filtros" style="font-size: 1rem;">
+                                        <i class="fa-solid fa-filter-circle-xmark"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Scrollable List -->
+                                <div id="preingresos-list-scroll"
+                                    style="flex:1; overflow-y:auto; padding-right:0.5rem;">
+                                    <div style="text-align:center; padding:2rem; color:#999;">
+                                        <i class="fa-solid fa-spinner fa-spin"></i> Cargando preingresos...
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- RIGHT COLUMN: DETAIL PANEL -->
+                            <div id="preingreso-detail-panel" class="detail-panel"
+                                style="width:0; overflow:hidden; border-left:1px solid #eee; background:white; display:flex; flex-direction:column; transition: width 0.3s ease;">
+                                <!-- Detail Content -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
-              </div>
-              <button @click="productoTerminado = null; busquedaTerminado = ''"
-                class="text-slate-400 hover:text-red-500 text-xl leading-none flex-shrink-0">×</button>
+
             </div>
 
-            <label class="block text-xs text-slate-500 dark:text-slate-400 font-medium mb-2">Cantidad a envasar</label>
-            <div class="flex items-center gap-3">
-              <button @click="cantEnvasado = Math.max(1, cantEnvasado - 1)"
-                class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xl flex items-center justify-center active:scale-95">−</button>
-              <input v-model.number="cantEnvasado" type="number" min="1" @focus="$event.target.select()"
-                class="flex-1 border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl px-3 py-3 text-center text-xl font-bold focus:outline-none focus:ring-2 focus:ring-indigo-400">
-              <button @click="cantEnvasado++"
-                class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xl flex items-center justify-center active:scale-95">+</button>
+
+
+            <!-- DISPATCH VIEW -->
+            <div id="view-dispatch" class="sub-view">
+                <!-- Header Removed as per user request -->
+                <div id="dispatch-content">
+                    <!-- Dynamic Content Loads Here -->
+                </div> <!-- Content injected via JS -->
             </div>
-          </div>
-        </div>
 
-        <!-- Materias primas -->
-        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm p-4">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-              Materias primas consumidas
-            </h2>
-            <button @click="mostrarBusquedaMP = !mostrarBusquedaMP"
-              class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-3 py-1.5 font-semibold">
-              + Agregar
-            </button>
-          </div>
-
-          <div v-if="mostrarBusquedaMP" class="mb-3">
-            <input v-model="busquedaMP" type="search" placeholder="Buscar materia prima..."
-              class="w-full bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 mb-2">
-            <div class="space-y-1 max-h-36 overflow-y-auto">
-              <div v-for="p in productosBusquedaMP" :key="p.codBarras"
-                @click="agregarMateriaPrima(p)"
-                class="flex items-center gap-2 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer">
-                <div class="flex-1 min-w-0">
-                  <div class="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{{ p.nombre }}</div>
-                  <div class="text-xs text-slate-400">{{ p.empaque }} · {{ p.stock !== null ? p.stock + ' uds' : 'sin stock' }}</div>
+            <!-- PREPEDIDOS VIEW -->
+            <div id="view-prepedidos" class="sub-view">
+                <div id="prepedidos-container"
+                    style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; padding: 1.5rem; height: calc(100vh - 100px); overflow-y: auto; padding-bottom: 3rem;">
+                    <!-- Provider Cards injected here -->
+                    <div style="text-align:center; grid-column: 1/-1; color:#666;">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando proveedores...
+                    </div>
                 </div>
-              </div>
-              <div v-if="busquedaMP.length >= 2 && productosBusquedaMP.length === 0"
-                class="text-center py-3 text-xs text-slate-400">Sin resultados</div>
             </div>
-          </div>
 
-          <div v-if="materiasPrimas.length === 0 && !mostrarBusquedaMP"
-            class="text-center py-4 text-slate-400 dark:text-slate-500 text-sm">
-            Sin materias primas — opcional
-          </div>
+            <!-- ENVASADOR VIEW -->
+            <div id="view-envasador" class="sub-view">
+                <div style="position: relative; height: calc(100vh - 140px); overflow: hidden;">
+                    <!-- HEADER SEARCH (Injected via JS) -->
 
-          <div class="space-y-2">
-            <div v-for="(mp, idx) in materiasPrimas" :key="idx"
-              class="flex items-center gap-2 p-2.5 bg-slate-50 dark:bg-slate-700 rounded-xl">
-              <div class="flex-1 min-w-0">
-                <div class="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{{ mp.nombre }}</div>
-                <div class="text-xs text-slate-400">{{ mp.empaque }}
-                  <span v-if="mp.stock !== null"> · stock: {{ mp.stock }}</span>
-                  <span v-if="mp.stock !== null && mp.cantidad > 0" class="text-orange-500">
-                    → {{ Math.max(0, mp.stock - mp.cantidad * mp.factor) }}
-                  </span>
+                    <!-- MAIN LIST CONTAINER -->
+                    <div id="packing-list-container" class="packing-list-container">
+                        <div style="text-align:center; padding:2rem; color:#999;">
+                            <i class="fa-solid fa-spinner fa-spin"></i> Cargando lista de envasado...
+                        </div>
+                    </div>
+
+                    <!-- SIDE DRAWER (Quick View) -->
+                    <div id="packing-drawer-backdrop" class="drawer-backdrop"></div>
+                    <div id="packing-drawer" class="packing-drawer">
+                        <!-- Drawer Content injected via JS -->
+                    </div>
                 </div>
-              </div>
-              <input v-model.number="mp.cantidad" type="number" min="1" @focus="$event.target.select()"
-                class="w-16 border border-slate-200 dark:border-slate-600 dark:bg-slate-600 dark:text-white rounded-lg text-center text-sm py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-400">
-              <button @click="materiasPrimas.splice(idx, 1)"
-                class="text-slate-400 hover:text-red-500 text-xl leading-none flex-shrink-0">×</button>
             </div>
-          </div>
-        </div>
 
-        <button @click="confirmarEnvasado"
-          :disabled="!productoTerminado || cantEnvasado < 1 || procesandoEnvasado"
-          class="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold rounded-xl py-4 disabled:opacity-50 transition-colors text-sm">
-          {{ procesandoEnvasado ? 'Registrando...' : '✓ Confirmar envasado' }}
-        </button>
-      </div>
-
-      <!-- ══ HERRAMIENTAS ════════════════════════════════════ -->
-      <div v-if="modulo==='HERRAMIENTAS'" class="p-4 space-y-4">
-
-        <!-- Impresora config -->
-        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm p-4">
-          <h2 class="font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
-            🖨️ Impresora térmica (PrintNode)
-          </h2>
-
-          <div class="mb-3">
-            <label class="block text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">Printer ID</label>
-            <div class="flex gap-2">
-              <input v-model="printerId" type="text" placeholder="ej. 12345"
-                class="flex-1 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                @blur="guardarPrinterId" @keyup.enter="guardarPrinterId">
-              <button @click="probarImpresora" :disabled="!printerId"
-                class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded-xl px-3 py-2.5 font-semibold disabled:opacity-40 transition-colors whitespace-nowrap">
-                Test
-              </button>
+            <!-- TOOLS VIEW (OCR) -->
+            <div id="view-tools" class="sub-view">
+                <div id="tools-content" style="height: calc(100vh - 80px); overflow: hidden;">
+                    <!-- Content injected via JS -->
+                </div>
             </div>
-            <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
-              80mm · buzzer · corte parcial. Configura PRINTNODE_API_KEY en GAS Script Properties.
-            </p>
-          </div>
+        </main>
+    </section>
 
-          <!-- Test de etiqueta -->
-          <div v-if="printerId && productosCatalogo.length > 0"
-            class="flex items-center justify-between bg-slate-50 dark:bg-slate-700 rounded-xl p-3">
-            <span class="text-xs text-slate-600 dark:text-slate-300">Imprimir etiqueta de prueba</span>
-            <button @click="imprimirMembrete(productosCatalogo[0])"
-              class="text-xs bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg px-3 py-1.5 font-medium">
-              🏷️ Membrete
-            </button>
-          </div>
-        </div>
-
-        <!-- n8n -->
-        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm p-4">
-          <h2 class="font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">
-            🤖 Agente IA vía n8n
-          </h2>
-
-          <div class="mb-4">
-            <label class="block text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">URL del webhook n8n</label>
-            <input v-model="n8nUrl" type="url" placeholder="https://n8n.tudominio.com/webhook/..."
-              class="w-full bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-            <button @click="guardarN8nUrl" class="mt-1 text-xs text-indigo-600 dark:text-indigo-400 font-medium">Guardar URL</button>
-          </div>
-
-          <div class="mb-3">
-            <label class="block text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">Lista de productos</label>
-            <textarea v-model="textoHerramientas" rows="5"
-              placeholder="Pega aquí la lista de productos, o escanea QRs uno a uno..."
-              class="w-full bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"></textarea>
-            <button v-if="textoHerramientas" @click="textoHerramientas = ''"
-              class="mt-1 text-xs text-slate-400 hover:text-red-500">Limpiar</button>
-          </div>
-
-          <button @click="toggleCamaraHerramientas"
-            class="w-full border rounded-xl py-2.5 text-sm font-medium mb-3 flex items-center justify-center gap-2 transition-colors"
-            :class="camaraHerramientasAbierta
-              ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-400 text-indigo-700 dark:text-indigo-300'
-              : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400'">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-            {{ camaraHerramientasAbierta ? 'Cerrar cámara' : 'Escanear QR' }}
-          </button>
-          <div v-if="camaraHerramientasAbierta" class="mb-3">
-            <div id="reader-herramientas" class="rounded-2xl overflow-hidden"></div>
-          </div>
-
-          <button @click="enviarAN8n" :disabled="!textoHerramientas.trim() || !n8nUrl || procesandoN8n"
-            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl py-3 disabled:opacity-50 text-sm">
-            {{ procesandoN8n ? '⏳ Procesando...' : '🤖 Procesar con IA' }}
-          </button>
-        </div>
-
-        <!-- Respuesta n8n -->
-        <div v-if="respuestaN8n" class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm p-4">
-          <h2 class="font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">Respuesta del agente</h2>
-          <pre class="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed overflow-x-auto">{{ typeof respuestaN8n === 'string' ? respuestaN8n : JSON.stringify(respuestaN8n, null, 2) }}</pre>
-        </div>
-      </div>
-
-    </main>
-
-    <!-- BOTTOM NAV -->
-    <nav class="safe-pb bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex flex-shrink-0 shadow-[0_-1px_8px_rgba(0,0,0,0.06)]">
-      <button v-for="m in modulosNav" :key="m.id" @click="modulo = m.id"
-        class="flex-1 flex flex-col items-center py-2 transition-colors"
-        :class="modulo === m.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'">
-        <span class="text-2xl leading-none mb-0.5">{{ m.icono }}</span>
-        <span class="text-[10px] font-semibold">{{ m.nombre }}</span>
-      </button>
-    </nav>
-  </div>
-
-  <!-- ═══ MODAL: Seleccionar producto ══════════════════════════ -->
-  <transition name="modal">
-    <div v-if="productoSeleccionado" class="fixed inset-0 z-50 flex items-end justify-center">
-      <div class="absolute inset-0 bg-black/50 dark:bg-black/70" @click="productoSeleccionado = null"></div>
-      <div class="modal-sheet relative w-full max-w-md bg-white dark:bg-slate-800 rounded-t-2xl p-5 shadow-2xl safe-pb">
-
-        <div class="flex items-start gap-4 mb-5">
-          <div class="w-16 h-16 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
-            <img v-if="productoSeleccionado.imagen" :src="productoSeleccionado.imagen" class="w-full h-full object-cover rounded-xl" @error="$event.target.style.display='none'">
-            <span v-else class="text-3xl">📦</span>
-          </div>
-          <div class="flex-1 min-w-0">
-            <h3 class="font-bold text-slate-800 dark:text-slate-100">{{ productoSeleccionado.nombre }}</h3>
-            <p class="text-sm text-slate-500 dark:text-slate-400">
-              {{ productoSeleccionado.empaque }}
-              <span v-if="productoSeleccionado.factor > 1"> · ×{{ productoSeleccionado.factor }}</span>
-            </p>
-            <div class="flex gap-2 mt-1.5 items-center">
-              <span v-if="productoSeleccionado.stock !== null" class="text-xs font-bold rounded-md px-1.5 py-0.5"
-                :class="productoSeleccionado.stock > 10
-                  ? 'text-emerald-700 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/40'
-                  : productoSeleccionado.stock > 0
-                    ? 'text-amber-700 bg-amber-100 dark:text-amber-300 dark:bg-amber-900/40'
-                    : 'text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-900/40'">
-                {{ productoSeleccionado.stock > 0 ? productoSeleccionado.stock + ' uds' : 'Sin stock' }}
-              </span>
-              <button @click="imprimirMembrete(productoSeleccionado)"
-                class="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg px-2 py-0.5 font-medium">
-                🏷️ Etiqueta
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <label class="block text-xs text-slate-500 dark:text-slate-400 font-medium mb-2">Cantidad a despachar</label>
-        <div class="flex items-center gap-3 mb-5">
-          <button @click="cantidadDespacho = Math.max(1, cantidadDespacho - 1)"
-            class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xl flex items-center justify-center active:scale-95">−</button>
-          <input v-model.number="cantidadDespacho" type="number" min="1" @focus="$event.target.select()"
-            class="flex-1 border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl px-3 py-3 text-center text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-indigo-400">
-          <button @click="cantidadDespacho++"
-            class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xl flex items-center justify-center active:scale-95">+</button>
-        </div>
-
-        <!-- Stock preview -->
-        <div v-if="productoSeleccionado.stock !== null" class="mb-4 text-xs text-slate-500 dark:text-slate-400 text-center">
-          Stock después: <span class="font-semibold"
-            :class="(productoSeleccionado.stock - cantidadDespacho) < 0 ? 'text-red-500' : 'text-slate-700 dark:text-slate-200'">
-            {{ Math.max(0, productoSeleccionado.stock - cantidadDespacho) }} uds
-          </span>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-          <button @click="agregarAlCarrito"
-            class="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold rounded-xl py-3 text-sm active:bg-slate-200">
-            + Al carrito
-          </button>
-          <button @click="despachoRapido"
-            class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl py-3 text-sm">
-            Despachar ahora
-          </button>
-        </div>
-      </div>
-    </div>
-  </transition>
-
-  <!-- ═══ MODAL: Carrito de despacho ═══════════════════════════ -->
-  <transition name="modal">
-    <div v-if="mostrarCarrito" class="fixed inset-0 z-50 flex items-end justify-center">
-      <div class="absolute inset-0 bg-black/50 dark:bg-black/70" @click="mostrarCarrito = false"></div>
-      <div class="modal-sheet relative w-full max-w-md bg-white dark:bg-slate-800 rounded-t-2xl shadow-2xl flex flex-col" style="max-height:80vh">
-
-        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex-shrink-0">
-          <div>
-            <h3 class="font-bold text-slate-800 dark:text-slate-100">Carrito de despacho</h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400">
-              {{ carritoDespacho.length }} productos ·
-              {{ carritoDespacho.reduce((s,i) => s+i.cantidad, 0) }} uds total
-            </p>
-          </div>
-          <button @click="mostrarCarrito = false" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">×</button>
-        </div>
-
-        <div class="flex-1 overflow-y-auto p-4 space-y-2">
-          <div v-if="carritoDespacho.length === 0" class="text-center py-10 text-slate-400 dark:text-slate-500">
-            <div class="text-3xl mb-2">🛒</div>
-            <div class="text-sm">Carrito vacío</div>
-          </div>
-          <div v-for="(item, idx) in carritoDespacho" :key="idx"
-            class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-700 rounded-xl">
-            <div class="flex-1 min-w-0">
-              <div class="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{{ item.nombre }}</div>
-              <div class="text-xs text-slate-400">{{ item.empaque }}</div>
-            </div>
-            <div class="flex items-center gap-1 flex-shrink-0">
-              <button @click="item.cantidad = Math.max(1, item.cantidad - 1)"
-                class="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-600 font-bold text-sm flex items-center justify-center active:scale-95">−</button>
-              <input v-model.number="item.cantidad" type="number" min="1" @focus="$event.target.select()"
-                class="w-10 text-center text-sm font-bold text-slate-800 dark:text-slate-100 bg-transparent focus:outline-none">
-              <button @click="item.cantidad++"
-                class="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-600 font-bold text-sm flex items-center justify-center active:scale-95">+</button>
-            </div>
-            <button @click="carritoDespacho.splice(idx, 1)"
-              class="text-slate-400 hover:text-red-500 text-xl leading-none flex-shrink-0">×</button>
-          </div>
-        </div>
-
-        <div class="p-4 border-t border-slate-100 dark:border-slate-700 flex-shrink-0 safe-pb">
-          <input v-model="comentarioDespacho" type="text" placeholder="Comentario (ej: Para producción)"
-            class="w-full bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 mb-3">
-          <button @click="confirmarDespachoCarrito"
-            :disabled="carritoDespacho.length === 0 || procesandoDespacho"
-            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl py-3.5 disabled:opacity-50 transition-colors text-sm">
-            {{ procesandoDespacho ? 'Despachando...' : '✓ Confirmar despacho (' + carritoDespacho.reduce((s,i) => s+i.cantidad, 0) + ' uds)' }}
-          </button>
-        </div>
-      </div>
-    </div>
-  </transition>
-
-</div><!-- #app -->
-
-<script>
-const { createApp, ref, computed, onMounted } = Vue;
-
-// ══════════════════════════════════════════════════════════════
-// ⚠️  REEMPLAZA ESTA URL CON TU GOOGLE APPS SCRIPT DEPLOY URL
-// ══════════════════════════════════════════════════════════════
-const API_URL = 'ENLACE_DE_TU_GAS_AQUI';
-
-const CACHE_KEY    = 'ww_catalogo_v1';
-const CACHE_TTL    = 4 * 60 * 60 * 1000; // 4 horas
-const PRINTER_KEY  = 'ww_printer_id';
-
-const MODULOS_DEF = [
-  { id: 'DASHBOARD',    nombre: 'Inicio',       icono: '📊' },
-  { id: 'DESPACHOS',    nombre: 'Despachos',    icono: '🚚' },
-  { id: 'ENVASADOR',    nombre: 'Envasado',     icono: '🏭' },
-  { id: 'HERRAMIENTAS', nombre: 'Herramientas', icono: '🔧' }
-];
-
-// ── ESC/POS constants ─────────────────────────────────────────
-const E = '\x1b', G = '\x1d';
-const ESC_INIT     = E + '@';
-const ESC_CENTER   = E + 'a\x01';
-const ESC_LEFT     = E + 'a\x00';
-const ESC_BOLD_ON  = E + 'E\x01';
-const ESC_BOLD_OFF = E + 'E\x00';
-const ESC_DBL_H    = E + '!\x10';      // double height
-const ESC_DBL_WH   = E + '!\x30';      // double width + height
-const ESC_NORMAL   = E + '!\x00';
-const ESC_LINE_MIN = E + '3\x10';      // minimal line spacing
-const ESC_CUT      = G + 'V\x42\x00'; // partial cut
-const ESC_BEEP     = '\x07';           // BEL
-const LINE42       = '='.repeat(42);
-const LINE42D      = '-'.repeat(42);
-
-// Normalizar tildes/especiales para impresión térmica (solo ASCII imprimible)
-const N = s => String(s || '')
-  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  .replace(/[^\x20-\x7E]/g, '?');
-
-// Normalizar para búsqueda (accent-insensitive)
-const normS = s => String(s || '').toLowerCase()
-  .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-createApp({
-  setup() {
-    // ── ESTADO GLOBAL ──────────────────────────────────────────
-    const usuario          = ref(null);
-    const modulo           = ref('DASHBOARD');
-    const db               = ref({ PRODUCTO_BASE: [], PRESENTACIONES: [], EQUIVALENCIAS: [] });
-    const cargandoCatalogo = ref(false);
-    const toasts           = ref([]);
-    const darkMode         = ref(false);
-    const printerId        = ref('');
-    const apiConfigurada   = API_URL !== 'ENLACE_DE_TU_GAS_AQUI';
-
-    // ── LOGIN ──────────────────────────────────────────────────
-    const loginForm     = ref({ usuario: '', clave: '' });
-    const loginCargando = ref(false);
-
-    // ── CATÁLOGO ───────────────────────────────────────────────
-    const productosCatalogo = computed(() => {
-      const bases = db.value.PRODUCTO_BASE  || [];
-      const pres  = db.value.PRESENTACIONES || [];
-      return pres.map(p => {
-        const base  = bases.find(b => String(b.SKU_Base) === String(p.SKU_Base)) || {};
-        const stock = (base.Stock_Almacen !== undefined && base.Stock_Almacen !== '')
-          ? (parseInt(base.Stock_Almacen) || 0) : null;
-        return {
-          codBarras: String(p.Cod_Barras     || ''),
-          skuBase:   String(p.SKU_Base       || ''),
-          nombre:    String(base.Nombre      || ''),
-          categoria: String(base.Categoria   || ''),
-          empaque:   String(p.Empaque        || ''),
-          factor:    parseFloat(p.Factor)    || 1,
-          precio:    parseFloat(p.Precio_Venta) || 0,
-          stock,
-          imagen:    String(base.Imagen      || '')
-        };
-      }).filter(p => p.nombre);
-    });
-
-    // ── DASHBOARD ──────────────────────────────────────────────
-    const totalProductos = computed(() => db.value.PRODUCTO_BASE.length);
-    const alertasStock = computed(() =>
-      (db.value.PRODUCTO_BASE || [])
-        .filter(b => {
-          const s = (b.Stock_Almacen !== undefined && b.Stock_Almacen !== '') ? (parseInt(b.Stock_Almacen) || 0) : null;
-          return s !== null && s <= 10;
-        })
-        .map(b => ({ skuBase: b.SKU_Base, nombre: b.Nombre, stock: parseInt(b.Stock_Almacen) || 0 }))
-        .sort((a, b) => a.stock - b.stock)
-    );
-    const stockAgotado = computed(() => alertasStock.value.filter(a => a.stock === 0).length);
-    const stockBajo    = computed(() => alertasStock.value.filter(a => a.stock > 0).length);
-
-    // ── DESPACHOS ──────────────────────────────────────────────
-    const busquedaDespacho      = ref('');
-    const camaraDespachoAbierta = ref(false);
-    const productoSeleccionado  = ref(null);
-    const cantidadDespacho      = ref(1);
-    const carritoDespacho       = ref([]);
-    const mostrarCarrito        = ref(false);
-    const comentarioDespacho    = ref('');
-    const procesandoDespacho    = ref(false);
-    let   html5QrDespacho       = null;
-
-    const productosFiltrados = computed(() => {
-      const q = normS(busquedaDespacho.value.trim());
-      if (!q) return productosCatalogo.value;
-      return productosCatalogo.value.filter(p =>
-        normS(p.nombre).includes(q) ||
-        normS(p.codBarras).includes(q) ||
-        normS(p.empaque).includes(q) ||
-        normS(p.categoria).includes(q)
-      );
-    });
-
-    // ── ENVASADOR ──────────────────────────────────────────────
-    const busquedaTerminado  = ref('');
-    const productoTerminado  = ref(null);
-    const cantEnvasado       = ref(1);
-    const materiasPrimas     = ref([]);
-    const mostrarBusquedaMP  = ref(false);
-    const busquedaMP         = ref('');
-    const procesandoEnvasado = ref(false);
-
-    const productosBusquedaTerminado = computed(() => {
-      const q = normS(busquedaTerminado.value.trim());
-      if (!q || q.length < 2) return [];
-      return productosCatalogo.value.filter(p => normS(p.nombre).includes(q) || normS(p.codBarras).includes(q)).slice(0, 8);
-    });
-    const productosBusquedaMP = computed(() => {
-      const q = normS(busquedaMP.value.trim());
-      if (!q || q.length < 2) return [];
-      return productosCatalogo.value.filter(p => normS(p.nombre).includes(q) || normS(p.codBarras).includes(q)).slice(0, 8);
-    });
-
-    // ── HERRAMIENTAS ───────────────────────────────────────────
-    const n8nUrl                    = ref('');
-    const textoHerramientas         = ref('');
-    const camaraHerramientasAbierta = ref(false);
-    const procesandoN8n             = ref(false);
-    const respuestaN8n              = ref(null);
-    let   html5QrHerramientas       = null;
-
-    // ── NAVEGACIÓN ─────────────────────────────────────────────
-    const modulosNav = computed(() => {
-      if (!usuario.value?.modulos) return MODULOS_DEF;
-      const perms = String(usuario.value.modulos).toUpperCase().split(',').map(s => s.trim()).filter(Boolean);
-      if (!perms.includes('DASHBOARD')) perms.unshift('DASHBOARD');
-      return MODULOS_DEF.filter(m => perms.some(p => p === m.id));
-    });
-    const tituloModulo = computed(() => (MODULOS_DEF.find(m => m.id === modulo.value) || {}).nombre || 'WarehouseWeb');
-
-    // ── TOAST ──────────────────────────────────────────────────
-    const agregarToast = (titulo, msg, tipo = 'info') => {
-      const id = Date.now() + Math.random();
-      toasts.value.push({ id, titulo, msg, tipo });
-      setTimeout(() => { toasts.value = toasts.value.filter(t => t.id !== id); }, 3500);
-    };
-
-    // ── DARK MODE ──────────────────────────────────────────────
-    const toggleDarkMode = () => {
-      darkMode.value = !darkMode.value;
-      document.documentElement.classList.toggle('dark', darkMode.value);
-      localStorage.setItem('ww_darkmode', darkMode.value ? '1' : '0');
-    };
-
-    // ── IMPRESIÓN ──────────────────────────────────────────────
-    const mandarImpresion = async (content, titulo) => {
-      if (!apiConfigurada) { console.log('[MOCK PRINT]', titulo); return { status: 'mock' }; }
-      const pid = printerId.value;
-      if (!pid) { agregarToast('Sin impresora', 'Configura el Printer ID en Herramientas', 'error'); return; }
-      const res  = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ accion: 'imprimir', printerId: pid, title: titulo, content }) });
-      if (!res.ok) throw new Error('Error HTTP: ' + res.status);
-      const data = await res.json();
-      if (data.status === 'error') throw new Error(data.mensaje || 'Error de impresión');
-      return data;
-    };
-
-    const imprimirTicketDespacho = (idGuia, items, comentario) => {
-      if (!printerId.value && apiConfigurada) return; // sin impresora, no imprimir
-      const fStr = new Date().toLocaleDateString('es-PE') + '  ' + new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-      let txt = ESC_INIT + ESC_LINE_MIN;
-      txt += ESC_CENTER + ESC_BOLD_ON + ESC_DBL_H;
-      txt += 'ALMACEN\n' + 'DESPACHO\n';
-      txt += ESC_NORMAL + ESC_BOLD_OFF + ESC_LEFT;
-      txt += LINE42 + '\n';
-      txt += 'Guia   : ' + N(idGuia) + '\n';
-      txt += 'Fecha  : ' + N(fStr)   + '\n';
-      txt += 'Usuario: ' + N(usuario.value?.nombre || '') + '\n';
-      if (comentario) txt += 'Nota   : ' + N(comentario).substring(0, 34) + '\n';
-      txt += LINE42D + '\n';
-      txt += ESC_BOLD_ON + 'PRODUCTO'.padEnd(34) + 'CANT'.padStart(8) + '\n' + ESC_BOLD_OFF;
-      txt += LINE42D + '\n';
-      let totalUds = 0;
-      items.forEach(item => {
-        txt += N(item.nombre).substring(0, 34).padEnd(34) + String(item.cantidad).padStart(8) + '\n';
-        if (item.empaque && item.empaque !== '-') txt += '  ' + N(item.empaque) + '\n';
-        totalUds += item.cantidad;
-      });
-      txt += LINE42 + '\n';
-      txt += 'TOTAL  : ' + items.length + ' productos | ' + totalUds + ' uds\n';
-      txt += LINE42 + '\n\n';
-      txt += ESC_BEEP + ESC_CUT;
-      mandarImpresion(btoa(txt), 'Despacho ' + idGuia)
-        .catch(e => agregarToast('Error Impresion', e.message, 'error'));
-    };
-
-    const imprimirTicketEnvasado = (pt, cant, mps) => {
-      if (!printerId.value && apiConfigurada) return;
-      const fStr = new Date().toLocaleDateString('es-PE') + '  ' + new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-      let txt = ESC_INIT + ESC_LINE_MIN;
-      txt += ESC_CENTER + ESC_BOLD_ON + ESC_DBL_H;
-      txt += 'ALMACEN\n' + 'ENVASADO\n';
-      txt += ESC_NORMAL + ESC_BOLD_OFF + ESC_LEFT;
-      txt += LINE42 + '\n';
-      txt += 'Fecha  : ' + N(fStr) + '\n';
-      txt += 'Usuario: ' + N(usuario.value?.nombre || '') + '\n';
-      txt += LINE42D + '\n';
-      txt += ESC_BOLD_ON + 'PRODUCTO TERMINADO:\n' + ESC_BOLD_OFF;
-      txt += N(pt.nombre).substring(0, 30).padEnd(30) + '  x' + cant + '\n';
-      if (pt.empaque && pt.empaque !== '-') txt += '  ' + N(pt.empaque) + '\n';
-      if (mps.length > 0) {
-        txt += LINE42D + '\n';
-        txt += ESC_BOLD_ON + 'MATERIAS PRIMAS:\n' + ESC_BOLD_OFF;
-        mps.forEach(mp => {
-          txt += N(mp.nombre).substring(0, 30).padEnd(30) + '  x' + mp.cantidad + '\n';
-        });
-      }
-      txt += LINE42 + '\n\n';
-      txt += ESC_BEEP + ESC_CUT;
-      mandarImpresion(btoa(txt), 'Envasado')
-        .catch(e => agregarToast('Error Impresion', e.message, 'error'));
-    };
-
-    const imprimirMembrete = prod => {
-      if (!printerId.value) { agregarToast('Sin impresora', 'Configura el Printer ID en Herramientas', 'error'); return; }
-      const nombre  = N(prod.nombre);
-      const MAX_N   = 24;
-      const n1      = nombre.substring(0, MAX_N);
-      const n2      = nombre.length > MAX_N ? nombre.substring(MAX_N, MAX_N * 2) : '';
-      const bLen    = String.fromCharCode(prod.codBarras.length);
-      let raw = ESC_INIT + ESC_LINE_MIN + ESC_CENTER;
-      raw += ESC_BOLD_ON + ESC_DBL_H;
-      raw += n1 + '\n' + (n2 ? n2 + '\n' : '');
-      raw += ESC_NORMAL + ESC_BOLD_OFF;
-      raw += G + 'h\x30';    // alto barras 48 dots
-      raw += G + 'w\x02';    // módulo 2 dots
-      raw += G + 'H\x02';    // HRI debajo
-      raw += G + 'f\x00';    // fuente HRI A
-      raw += G + 'k\x49';    // CODE128
-      raw += bLen + prod.codBarras + '\n';
-      raw += ESC_DBL_WH + ESC_BOLD_ON;
-      raw += 'S/ ' + parseFloat(prod.precio || 0).toFixed(2) + '\n';
-      raw += ESC_NORMAL + ESC_BOLD_OFF;
-      raw += ESC_BEEP + ESC_CUT;
-      mandarImpresion(btoa(raw), 'Membrete ' + prod.codBarras)
-        .catch(e => agregarToast('Error Impresion', e.message, 'error'));
-    };
-
-    const probarImpresora = async () => {
-      if (!printerId.value) { agregarToast('Error', 'Ingresa un Printer ID primero', 'error'); return; }
-      const fecha = N(new Date().toLocaleString('es-PE'));
-      let txt = ESC_INIT + ESC_LINE_MIN;
-      txt += ESC_CENTER + ESC_BOLD_ON + ESC_DBL_H;
-      txt += 'WAREHOUSE WEB\n';
-      txt += ESC_NORMAL + ESC_BOLD_OFF;
-      txt += LINE42D + '\n';
-      txt += ESC_CENTER;
-      txt += 'Prueba de impresion OK\n';
-      txt += fecha + '\n';
-      txt += 'Printer ID: ' + printerId.value + '\n';
-      txt += LINE42D + '\n\n';
-      txt += ESC_BEEP + ESC_CUT;
-      try {
-        await mandarImpresion(btoa(txt), 'Test WarehouseWeb');
-        agregarToast('Impresora', 'Prueba enviada correctamente', 'ok');
-      } catch(e) { agregarToast('Error Impresion', e.message, 'error'); }
-    };
-
-    const guardarPrinterId = () => {
-      localStorage.setItem(PRINTER_KEY, printerId.value);
-      if (printerId.value) agregarToast('Impresora', 'Printer ID ' + printerId.value + ' guardado', 'ok');
-    };
-
-    // ── LOGIN ──────────────────────────────────────────────────
-    const login = async () => {
-      if (!loginForm.value.usuario || !loginForm.value.clave) {
-        agregarToast('Error', 'Ingresa usuario y contraseña', 'error'); return;
-      }
-      loginCargando.value = true;
-      try {
-        if (!apiConfigurada) {
-          usuario.value = { usuario: loginForm.value.usuario, nombre: loginForm.value.usuario + ' (demo)', modulos: 'DASHBOARD,DESPACHOS,ENVASADOR,HERRAMIENTAS' };
-          localStorage.setItem('ww_usuario', JSON.stringify(usuario.value));
-          return;
-        }
-        const url = API_URL + '?accion=login&u=' + encodeURIComponent(loginForm.value.usuario) + '&c=' + encodeURIComponent(loginForm.value.clave);
-        const res  = await fetch(url);
-        const data = await res.json();
-        if (data.status === 'success') {
-          usuario.value = data.usuario;
-          localStorage.setItem('ww_usuario', JSON.stringify(data.usuario));
-          await cargarCatalogo();
-        } else { agregarToast('Error', data.mensaje || 'Login fallido', 'error'); }
-      } catch(e) { agregarToast('Sin conexión', e.message, 'error'); }
-      finally { loginCargando.value = false; }
-    };
-
-    const logout = () => { usuario.value = null; localStorage.removeItem('ww_usuario'); };
-
-    // ── CATÁLOGO ───────────────────────────────────────────────
-    const cargarCatalogo = async (forzar = false) => {
-      if (!forzar) {
-        try {
-          const raw = localStorage.getItem(CACHE_KEY);
-          if (raw) {
-            const { data, ts } = JSON.parse(raw);
-            if (Date.now() - ts < CACHE_TTL) { db.value = data; return; }
-          }
-        } catch(e) {}
-      }
-      if (!apiConfigurada) return;
-      cargandoCatalogo.value = true;
-      try {
-        const res  = await fetch(API_URL + '?accion=catalogo');
-        const json = await res.json();
-        if (json.status === 'success') {
-          db.value = json.data;
-          localStorage.setItem(CACHE_KEY, JSON.stringify({ data: json.data, ts: Date.now() }));
-          if (forzar) agregarToast('Catálogo', 'Actualizado correctamente', 'ok');
-        } else { agregarToast('Error', json.mensaje || 'No se pudo cargar catálogo', 'error'); }
-      } catch(e) { agregarToast('Sin conexión', 'Usando datos en caché', 'info'); }
-      finally { cargandoCatalogo.value = false; }
-    };
-
-    // ── STOCK LOCAL OPTIMISTA ──────────────────────────────────
-    const actualizarStockLocal = (codBarras, deltaCajas) => {
-      const pres = (db.value.PRESENTACIONES || []).find(p => String(p.Cod_Barras) === String(codBarras));
-      if (!pres) return;
-      const delta = deltaCajas * (parseFloat(pres.Factor) || 1);
-      const idx   = (db.value.PRODUCTO_BASE || []).findIndex(b => String(b.SKU_Base) === String(pres.SKU_Base));
-      if (idx === -1) return;
-      const actual = parseInt(db.value.PRODUCTO_BASE[idx].Stock_Almacen) || 0;
-      db.value.PRODUCTO_BASE[idx] = { ...db.value.PRODUCTO_BASE[idx], Stock_Almacen: Math.max(0, actual + delta) };
-      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data: db.value, ts: Date.now() })); } catch(e) {}
-    };
-
-    // ── DESPACHOS ──────────────────────────────────────────────
-    const toggleCamaraDespacho = () => {
-      camaraDespachoAbierta.value = !camaraDespachoAbierta.value;
-      if (camaraDespachoAbierta.value) {
-        setTimeout(() => {
-          html5QrDespacho = new Html5Qrcode('reader-despacho');
-          html5QrDespacho.start(
-            { facingMode: 'environment' },
-            { fps: 10, qrbox: { width: 250, height: 150 } },
-            txt => {
-              busquedaDespacho.value = txt; toggleCamaraDespacho();
-              const prod = productosCatalogo.value.find(p => p.codBarras === txt);
-              if (prod) seleccionarProductoDespacho(prod);
-              else agregarToast('QR', 'Código no encontrado: ' + txt);
-            },
-            () => {}
-          ).catch(() => {
-            agregarToast('Cámara', 'Permiso denegado', 'error');
-            camaraDespachoAbierta.value = false;
-            if (html5QrDespacho) { try { html5QrDespacho.clear(); } catch(e) {} html5QrDespacho = null; }
-          });
-        }, 200);
-      } else {
-        if (html5QrDespacho) html5QrDespacho.stop().then(() => { try { html5QrDespacho.clear(); } catch(e) {} html5QrDespacho = null; }).catch(() => { html5QrDespacho = null; });
-      }
-    };
-
-    const seleccionarProductoDespacho = prod => { productoSeleccionado.value = prod; cantidadDespacho.value = 1; };
-
-    const agregarRapidoDespacho = prod => {
-      const ex = carritoDespacho.value.find(i => i.codBarras === prod.codBarras);
-      if (ex) ex.cantidad++; else carritoDespacho.value.push({ ...prod, cantidad: 1 });
-      agregarToast('Carrito', prod.nombre, 'ok');
-    };
-
-    const agregarAlCarrito = () => {
-      const prod = productoSeleccionado.value, cant = cantidadDespacho.value;
-      const ex = carritoDespacho.value.find(i => i.codBarras === prod.codBarras);
-      if (ex) ex.cantidad += cant; else carritoDespacho.value.push({ ...prod, cantidad: cant });
-      productoSeleccionado.value = null;
-      agregarToast('Carrito', prod.nombre + ' ×' + cant, 'ok');
-    };
-
-    const despachoRapido = async () => {
-      const prod = productoSeleccionado.value, cant = cantidadDespacho.value;
-      productoSeleccionado.value = null;
-      actualizarStockLocal(prod.codBarras, -cant);
-      try {
-        const res  = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ accion: 'despacho', usuario: usuario.value.usuario, comentario: '', items: [{ codBarras: prod.codBarras, cantidad: cant, nombre: prod.nombre, empaque: prod.empaque }] }) });
-        const data = await res.json();
-        if (data.status === 'success') {
-          agregarToast('Despacho OK', prod.nombre + ' ×' + cant, 'ok');
-          imprimirTicketDespacho(data.idGuia, [{ ...prod, cantidad: cant }], '');
-        } else { actualizarStockLocal(prod.codBarras, cant); agregarToast('Error GAS', data.mensaje, 'error'); }
-      } catch(e) { actualizarStockLocal(prod.codBarras, cant); agregarToast('Error', e.message, 'error'); }
-    };
-
-    const confirmarDespachoCarrito = async () => {
-      if (!carritoDespacho.value.length) return;
-      procesandoDespacho.value = true;
-      const items = carritoDespacho.value.map(i => ({ codBarras: i.codBarras, cantidad: i.cantidad, nombre: i.nombre, empaque: i.empaque }));
-      items.forEach(i => actualizarStockLocal(i.codBarras, -i.cantidad));
-      try {
-        const res  = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ accion: 'despacho', usuario: usuario.value.usuario, comentario: comentarioDespacho.value, items }) });
-        const data = await res.json();
-        if (data.status === 'success') {
-          agregarToast('Despacho OK', items.length + ' productos despachados', 'ok');
-          imprimirTicketDespacho(data.idGuia, items, comentarioDespacho.value);
-          carritoDespacho.value = []; comentarioDespacho.value = ''; mostrarCarrito.value = false;
-        } else {
-          items.forEach(i => actualizarStockLocal(i.codBarras, i.cantidad));
-          agregarToast('Error GAS', data.mensaje, 'error');
-        }
-      } catch(e) {
-        items.forEach(i => actualizarStockLocal(i.codBarras, i.cantidad));
-        agregarToast('Error', e.message, 'error');
-      } finally { procesandoDespacho.value = false; }
-    };
-
-    // ── ENVASADOR ──────────────────────────────────────────────
-    const agregarMateriaPrima = prod => {
-      if (!materiasPrimas.value.find(m => m.codBarras === prod.codBarras))
-        materiasPrimas.value.push({ ...prod, cantidad: 1 });
-      mostrarBusquedaMP.value = false; busquedaMP.value = '';
-    };
-
-    const confirmarEnvasado = async () => {
-      const pt = productoTerminado.value, cant = cantEnvasado.value;
-      const mps = materiasPrimas.value.map(m => ({ ...m }));
-      procesandoEnvasado.value = true;
-      actualizarStockLocal(pt.codBarras, cant);
-      mps.forEach(mp => actualizarStockLocal(mp.codBarras, -mp.cantidad));
-      try {
-        const res  = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ accion: 'envasado', usuario: usuario.value.usuario, productoTerminado: { codBarras: pt.codBarras, cantidad: cant }, materiasPrimas: mps.map(m => ({ codBarras: m.codBarras, cantidad: m.cantidad })) }) });
-        const data = await res.json();
-        if (data.status === 'success') {
-          agregarToast('Envasado OK', pt.nombre + ' ×' + cant, 'ok');
-          imprimirTicketEnvasado(pt, cant, mps);
-          productoTerminado.value = null; cantEnvasado.value = 1; materiasPrimas.value = [];
-        } else {
-          actualizarStockLocal(pt.codBarras, -cant);
-          mps.forEach(mp => actualizarStockLocal(mp.codBarras, mp.cantidad));
-          agregarToast('Error GAS', data.mensaje, 'error');
-        }
-      } catch(e) {
-        actualizarStockLocal(pt.codBarras, -cant);
-        mps.forEach(mp => actualizarStockLocal(mp.codBarras, mp.cantidad));
-        agregarToast('Error', e.message, 'error');
-      } finally { procesandoEnvasado.value = false; }
-    };
-
-    // ── HERRAMIENTAS ───────────────────────────────────────────
-    const guardarN8nUrl = () => { localStorage.setItem('ww_n8n_url', n8nUrl.value); agregarToast('Guardado', 'URL de n8n guardada', 'ok'); };
-
-    const toggleCamaraHerramientas = () => {
-      camaraHerramientasAbierta.value = !camaraHerramientasAbierta.value;
-      if (camaraHerramientasAbierta.value) {
-        setTimeout(() => {
-          html5QrHerramientas = new Html5Qrcode('reader-herramientas');
-          html5QrHerramientas.start(
-            { facingMode: 'environment' },
-            { fps: 10, qrbox: { width: 250, height: 150 } },
-            txt => {
-              textoHerramientas.value += (textoHerramientas.value ? '\n' : '') + txt;
-              agregarToast('QR escaneado', txt, 'ok');
-              // NO cerramos la cámara — sigue escaneando múltiples items
-            },
-            () => {}
-          ).catch(() => {
-            agregarToast('Cámara', 'Permiso denegado', 'error');
-            camaraHerramientasAbierta.value = false;
-            if (html5QrHerramientas) { try { html5QrHerramientas.clear(); } catch(e) {} html5QrHerramientas = null; }
-          });
-        }, 200);
-      } else {
-        if (html5QrHerramientas) html5QrHerramientas.stop().then(() => { try { html5QrHerramientas.clear(); } catch(e) {} html5QrHerramientas = null; }).catch(() => { html5QrHerramientas = null; });
-      }
-    };
-
-    const enviarAN8n = async () => {
-      if (!textoHerramientas.value.trim() || !n8nUrl.value) return;
-      procesandoN8n.value = true; respuestaN8n.value = null;
-      try {
-        const res  = await fetch(n8nUrl.value, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ texto: textoHerramientas.value, usuario: usuario.value.usuario }) });
-        const data = await res.json();
-        respuestaN8n.value = data;
-        agregarToast('IA', 'Respuesta recibida', 'ok');
-      } catch(e) { agregarToast('Error n8n', e.message, 'error'); }
-      finally { procesandoN8n.value = false; }
-    };
-
-    // ── INIT ───────────────────────────────────────────────────
-    onMounted(() => {
-      if (localStorage.getItem('ww_darkmode') === '1') { darkMode.value = true; document.documentElement.classList.add('dark'); }
-      try {
-        const u = localStorage.getItem('ww_usuario');
-        if (u) { usuario.value = JSON.parse(u); cargarCatalogo(); }
-      } catch(e) { localStorage.removeItem('ww_usuario'); }
-      printerId.value = localStorage.getItem(PRINTER_KEY) || '';
-      n8nUrl.value    = localStorage.getItem('ww_n8n_url')  || '';
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').then(reg => {
-          reg.addEventListener('updatefound', () => {
-            const nw = reg.installing;
-            nw.addEventListener('statechange', () => {
-              if (nw.state === 'installed' && navigator.serviceWorker.controller) { nw.postMessage('skipWaiting'); window.location.reload(); }
-            });
-          });
-        });
-      }
-    });
-
-    return {
-      usuario, modulo, db, cargandoCatalogo, toasts, darkMode, printerId, apiConfigurada,
-      loginForm, loginCargando,
-      productosCatalogo, productosFiltrados, totalProductos, alertasStock, stockAgotado, stockBajo,
-      busquedaDespacho, camaraDespachoAbierta, productoSeleccionado, cantidadDespacho,
-      carritoDespacho, mostrarCarrito, comentarioDespacho, procesandoDespacho,
-      busquedaTerminado, productoTerminado, cantEnvasado, materiasPrimas,
-      mostrarBusquedaMP, busquedaMP, procesandoEnvasado,
-      productosBusquedaTerminado, productosBusquedaMP,
-      n8nUrl, textoHerramientas, camaraHerramientasAbierta, procesandoN8n, respuestaN8n,
-      modulosNav, tituloModulo,
-      toggleDarkMode, login, logout, cargarCatalogo,
-      toggleCamaraDespacho, seleccionarProductoDespacho, agregarRapidoDespacho,
-      agregarAlCarrito, despachoRapido, confirmarDespachoCarrito,
-      agregarMateriaPrima, confirmarEnvasado,
-      imprimirMembrete, probarImpresora, guardarPrinterId,
-      guardarN8nUrl, toggleCamaraHerramientas, enviarAN8n
-    };
-  }
-}).mount('#app');
-</script>
+    <!-- Load Scripts -->
+    <script src="code_gs_partial.js?v=31"></script>
+    <script src="app.js?v=1013"></script>
 </body>
+
 </html>
