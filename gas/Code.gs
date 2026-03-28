@@ -20,6 +20,7 @@ function doPost(e) {
     if (data.accion === 'despacho')         return procesarDespacho(data);
     if (data.accion === 'envasado')         return procesarEnvasado(data);
     if (data.accion === 'actualizar_stock') return actualizarStockManual(data);
+    if (data.accion === 'imprimir')         return procesarImpresion(data);
     return resp({ status: 'error', mensaje: 'Accion desconocida: ' + data.accion });
   } catch (err) {
     return resp({ status: 'error', mensaje: err.toString() });
@@ -181,6 +182,37 @@ function obtenerDashboard() {
   });
   alertas.sort(function(a, b) { return a.stock - b.stock; });
   return resp({ status: 'success', alertas: alertas });
+}
+
+// ─── PRINTNODE PROXY ────────────────────────────────────────
+// Guardar la clave en Proyecto > Propiedades del script > PRINTNODE_API_KEY
+
+function procesarImpresion(data) {
+  var key = PropertiesService.getScriptProperties().getProperty('PRINTNODE_API_KEY');
+  if (!key) return resp({ status: 'error', mensaje: 'PRINTNODE_API_KEY no configurada en Propiedades del script' });
+  if (!data.printerId || !data.content) return resp({ status: 'error', mensaje: 'Faltan printerId o content' });
+
+  var options = {
+    method: 'post',
+    headers: { 'Authorization': 'Basic ' + Utilities.base64Encode(key + ':') },
+    contentType: 'application/json',
+    payload: JSON.stringify({
+      printerId: parseInt(data.printerId, 10),
+      title: data.title || 'WarehouseWeb',
+      contentType: 'raw_base64',
+      content: data.content
+    }),
+    muteHttpExceptions: true
+  };
+
+  try {
+    var r = UrlFetchApp.fetch('https://api.printnode.com/printjobs', options);
+    var code = r.getResponseCode();
+    if (code !== 201) return resp({ status: 'error', mensaje: 'PrintNode respondio ' + code + ': ' + r.getContentText() });
+    return resp({ status: 'success', printJobId: r.getContentText() });
+  } catch(err) {
+    return resp({ status: 'error', mensaje: 'Error llamando PrintNode: ' + err.toString() });
+  }
 }
 
 // ─── HELPERS ────────────────────────────────────────────────
