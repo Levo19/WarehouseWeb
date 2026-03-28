@@ -1,0 +1,14 @@
+{
+  "name": "WarehouseWeb",
+  "short_name": "Almacén",
+  "description": "Gestión de almacén mobile-first",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#4f46e5",
+  "background_color": "#f1f5f9",
+  "icons": [
+    { "src": "./recursos/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "./recursos/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
